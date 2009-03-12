@@ -20,7 +20,7 @@ class XYObject
 
 class XYNumber : public XYObject
 {
-  private:
+  public:
     int mValue;
 
   public:
@@ -37,6 +37,23 @@ class XYSymbol : public XYObject
   public:
     XYSymbol(string v);
     virtual string toString();
+    virtual void eval1(XY* xy);
+};
+
+class XYPrimitive : public XYObject
+{
+  private:
+    string mName;
+
+  public:
+    XYPrimitive(string name);
+    virtual string toString();
+};
+
+class XYAddition : public XYPrimitive
+{
+  public:
+    XYAddition();
     virtual void eval1(XY* xy);
 };
 
@@ -111,14 +128,40 @@ void XYSymbol::eval1(XY* xy) {
   xy->mX.push_back(this);
 }
 
+// XYPrimitive
+XYPrimitive::XYPrimitive(string n) : mName(n) { }
+
+string XYPrimitive::toString() {
+  ostringstream s;
+  s << mName;
+  return s.str();
+}
+
+// XYAddition
+XYAddition::XYAddition() : XYPrimitive("+") { }
+
+void XYAddition::eval1(XY* xy) {
+  assert(xy->mX.size() >= 2);
+  XYNumber* rhs = dynamic_cast<XYNumber*>(xy->mX.back());
+  assert(rhs);
+  xy->mX.pop_back();
+
+  XYNumber* lhs = dynamic_cast<XYNumber*>(xy->mX.back());
+  assert(lhs);
+  xy->mX.pop_back();
+
+  xy->mX.push_back(new XYNumber(lhs->mValue + rhs->mValue));
+}
+
+
 void testXY() {
   XY* xy = new XY();
   XYObject* program1[] = {
     new XYNumber(1),
     new XYNumber(2),
     new XYNumber(3),
-    new XYSymbol("*"),
-    new XYSymbol("+")
+    new XYAddition(),
+    new XYAddition()
   };
 
   xy->mY.insert(xy->mY.begin(), program1, program1 + (sizeof(program1)/sizeof(XYObject*)));
