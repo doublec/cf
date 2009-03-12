@@ -7,21 +7,37 @@
 #include <iterator>
 #include <string>
 
-class XY;
-class XYObject;
-
 using namespace std;
 
+// XY is the object that contains the state of the running
+// system. For example, the stack (X), the queue (Y) and
+// the environment.
+class XY;
+
+// Base class for all objects in the XY system. Anything
+// stored on the stack, in the queue, in the the environment
+// must be derived from this.
 class XYObject
 {
   public:
+    // Call when the object has been removed from the XY
+    // queue and some action needs to be taken. For
+    // literal objects (numbers, strings, etc) this 
+    // involves pushing the object on the stack.
     virtual void eval1(XY* xy) = 0;
+
+    // Convert the object into a string repesentation for
+    // printing.
     virtual string toString() = 0;
 };
 
+// All numbers are represented by this object, or a class
+// derived from it.
+// TODO: Do something better than signed integers for numbers.
 class XYNumber : public XYObject
 {
   public:
+    // Numbers are signed integers for now.
     int mValue;
 
   public:
@@ -30,6 +46,7 @@ class XYNumber : public XYObject
     virtual void eval1(XY* xy);
 };
 
+// A symbol is an unquoted string.
 class XYSymbol : public XYObject
 {
   public:
@@ -41,6 +58,9 @@ class XYSymbol : public XYObject
     virtual void eval1(XY* xy);
 };
 
+// A list of objects. Can include other nested
+// lists. All items in the list are derived from
+// XYObject. 
 class XYList : public XYObject
 {
   public:
@@ -54,6 +74,9 @@ class XYList : public XYObject
     virtual void eval1(XY* xy);
 };
 
+// A primitive is the implementation of a core function.
+// Primitives execute immediately when taken off the queue
+// and do not need to have their value looked up.
 class XYPrimitive : public XYObject
 {
   public:
@@ -64,6 +87,7 @@ class XYPrimitive : public XYObject
     virtual string toString();
 };
 
+// [X^lhs^rhs] Y] -> [X^lhs+rhs Y]
 class XYAddition : public XYPrimitive
 {
   public:
@@ -71,6 +95,7 @@ class XYAddition : public XYPrimitive
     virtual void eval1(XY* xy);
 };
 
+// [X^value^name Y] -> [X Y] 
 class XYSet : public XYPrimitive
 {
   public:
@@ -78,6 +103,7 @@ class XYSet : public XYPrimitive
     virtual void eval1(XY* xy);
 };
 
+// [X^name Y] [X^value Y]
 class XYGet : public XYPrimitive
 {
   public:
@@ -85,6 +111,7 @@ class XYGet : public XYPrimitive
     virtual void eval1(XY* xy);
 };
 
+// [X^{O1..On} Y] [X O1^..^On^Y]
 class XYUnquote : public XYPrimitive
 {
   public:
@@ -92,18 +119,35 @@ class XYUnquote : public XYPrimitive
     virtual void eval1(XY* xy);
 };
 
+// The environment maps names to objects
 typedef map<string, XYObject*> XYEnv;
 
+// The state of the runtime interpreter.
+// Holds the environment, stack and queue
+// and provides methods to step through or run
+// the interpreter.
 class XY {
   public:
+    // Environment holding mappings of names
+    // to objects.
     XYEnv mEnv;
+
+    // The Stack
     vector<XYObject*> mX;
+
+    // The Queue
     deque<XYObject*> mY;
 
   public:
+    // Print a representation of the state of the
+    // interpter.
     void print();
-    XY* eval1();
-    XY* eval();
+
+    // Remove one item from the queue and evaluate it.
+    void eval1();
+
+    // Evaluate all items in the queue.
+    void eval();
 };
 
 // XY
@@ -121,7 +165,7 @@ void XY::print() {
   cout << endl;
 }
 
-XY* XY::eval1() {
+void XY::eval1() {
   assert(mY.size() > 0);
 
   XYObject* o = mY.front();
@@ -129,14 +173,12 @@ XY* XY::eval1() {
 
   mY.pop_front();
   o->eval1(this);
-  return this;
 }
 
-XY* XY::eval() {
+void XY::eval() {
   while (mY.size() > 0) {
     eval1();
   }
-  return this;
 }
 
 // XYNumber
