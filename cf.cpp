@@ -6,15 +6,11 @@
 #include <deque>
 #include <iterator>
 #include <string>
+#include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
 
 using namespace std;
-
-// Define the following to enable debugging of the reference counting
-#define RC_DEBUG
-
-// Define the following for object allocation details to be printed
-// as counts are incremented and decremented.
-#define RC_DEBUG_VERBOSE
+using namespace boost;
 
 // XY is the object that contains the state of the running
 // system. For example, the stack (X), the queue (Y) and
@@ -25,61 +21,14 @@ class XY;
 // stored on the stack, in the queue, in the the environment
 // must be derived from this.
 //
-// Memory allocation and freeing is handled via reference
-// counting so care must be taken to ensure that references
-// are incremented and decremented properly.
-class XYObject
+// Memory allocation and freeing is handled via the shared_ptr
+// class. This means all allocation via 'new' must be assigned
+// to a shared_ptr.
+class XYObject : public enable_shared_from_this<XYObject>
 {
   public:
-    // Reference count. When this drops back to zero after
-    // its initial creation the object is deleted.
-    int mCount;
-
-#if defined(RC_DEBUG)
-    // Total count of all objects for debugging purposes
-    static int mTotalCount;
-#endif
-
-  public:
-    XYObject() : mCount(1) { 
-#if defined(RC_DEBUG)
-      ++mTotalCount;
-#endif
-#if defined(RC_DEBUG_VERBOSE)
-      cout << "Object Created: " << mTotalCount << endl;
-#endif
-    }
-    virtual ~XYObject() { 
-#if defined(RC_DEBUG_VERBOSE)
-      cout << "Object Deleted: " << mCount << " out of " << mTotalCount << endl;
-#endif
-      assert(mCount == 0);
-    }
-
-    // Increment reference count
-    void addRef() {
-#if defined(RC_DEBUG)
-      ++mTotalCount;
-#endif
-      ++mCount; 
-#if defined(RC_DEBUG_VERBOSE)
-      cout << "addRef(" << toString() << "): " << mCount << " of " << mTotalCount << endl;
-#endif
-    }
-
-    // Decrement reference count. Object is destroyed when
-    // it reaches zero.
-    void decRef() { 
-#if defined(RC_DEBUG_VERBOSE)
-      cout << "decRef(" << toString() << "): " << mCount << " of " << mTotalCount << endl;
-#endif
-      assert(mCount >= 1);
-#if defined(RC_DEBUG)
-      --mTotalCount;
-#endif
-      if(--mCount == 0)
-        delete this;
-    }
+    // Ensure virtual destructors for base classes
+    virtual ~XYObject() { }
 
     // Call when the object has been removed from the XY
     // queue and some action needs to be taken. For
@@ -125,14 +74,13 @@ class XYSymbol : public XYObject
 class XYList : public XYObject
 {
   public:
-    typedef vector<XYObject*> List;
+    typedef vector< shared_ptr<XYObject> > List;
     typedef List::iterator    iterator;
     List mList;
 
   public:
     XYList();
     template <class InputIterator> XYList(InputIterator first, InputIterator last);
-    virtual ~XYList();
     virtual string toString();
     virtual void eval1(XY* xy);
 };
@@ -183,7 +131,7 @@ class XYUnquote : public XYPrimitive
 };
 
 // The environment maps names to objects
-typedef map<string, XYObject*> XYEnv;
+typedef map<string, shared_ptr<XYObject> > XYEnv;
 
 // The state of the runtime interpreter.
 // Holds the environment, stack and queue
@@ -196,14 +144,12 @@ class XY {
     XYEnv mEnv;
 
     // The Stack
-    vector<XYObject*> mX;
+    vector<shared_ptr<XYObject> > mX;
 
     // The Queue
-    deque<XYObject*> mY;
+    deque<shared_ptr<XYObject> > mY;
 
   public:
-    ~XY();
-
     // Print a representation of the state of the
     // interpter.
     void print();
@@ -216,17 +162,6 @@ class XY {
 };
 
 // XY
-XY::~XY() {
-  for(XYEnv::iterator it = mEnv.begin(); it != mEnv.end(); ++it)
-    (*it).second->decRef();
-
-  for(vector<XYObject*>::iterator it = mX.begin(); it != mX.end(); ++it)
-    (*it)->decRef();
-
-  for(deque<XYObject*>::iterator it = mY.begin(); it != mY.end(); ++it)
-    (*it)->decRef();
-}
-
 void XY::print() {
   for(int i=0; i < mX.size(); ++i) {
     cout << mX[i]->toString() << " ";
@@ -244,9 +179,10 @@ void XY::print() {
 void XY::eval1() {
   assert(mY.size() > 0);
 
-  XYObject* o = mY.front();
+  shared_ptr<XYObject> o = mY.front();
   assert(o);
 
+  mY.pop_front();
   o->eval1(this);
 }
 
@@ -255,11 +191,6 @@ void XY::eval() {
     eval1();
   }
 }
-
-// XYObject
-#if defined(RC_DEBUG)
-int XYObject::mTotalCount = 0;
-#endif
 
 // XYNumber
 XYNumber::XYNumber(int v) : mValue(v) { }
@@ -271,8 +202,7 @@ string XYNumber::toString() {
 }
 
 void XYNumber::eval1(XY* xy) {
-  xy->mY.pop_front();
-  xy->mX.push_back(this);
+  xy->mX.push_back(shared_from_this());
 }
 
 // XYSymbol
@@ -285,8 +215,7 @@ string XYSymbol::toString() {
 }
 
 void XYSymbol::eval1(XY* xy) {
-  xy->mY.pop_front();
-  xy->mX.push_back(this);
+  xy->mX.push_back(shared_from_this());
 }
 
 // XYList
@@ -294,14 +223,7 @@ XYList::XYList() { }
 
 template <class InputIterator>
 XYList::XYList(InputIterator first, InputIterator last) {
-  for(InputIterator it = first; it != last; ++it)
-    (*it)->addRef();
   mList.assign(first, last);
-}
-
-XYList::~XYList() {
-  for(iterator it = mList.begin(); it != mList.end(); ++it)
-    (*it)->decRef();
 }
 
 string XYList::toString() {
@@ -315,8 +237,7 @@ string XYList::toString() {
 }
 
 void XYList::eval1(XY* xy) {
-  xy->mY.pop_front();
-  xy->mX.push_back(this);
+  xy->mX.push_back(shared_from_this());
 }
 
 
@@ -334,19 +255,15 @@ XYAddition::XYAddition() : XYPrimitive("+") { }
 
 void XYAddition::eval1(XY* xy) {
   assert(xy->mX.size() >= 2);
-  XYNumber* rhs = dynamic_cast<XYNumber*>(xy->mX.back());
+  shared_ptr<XYNumber> rhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
 
-  XYNumber* lhs = dynamic_cast<XYNumber*>(xy->mX.back());
+  shared_ptr<XYNumber> lhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
   assert(lhs);
   xy->mX.pop_back();
 
-  xy->mX.push_back(new XYNumber(lhs->mValue + rhs->mValue));
-  lhs->decRef();
-  rhs->decRef();
-  xy->mY.pop_front();
-  decRef();
+  xy->mX.push_back(shared_ptr<XYNumber>(new XYNumber(lhs->mValue + rhs->mValue)));
 }
 
 // XYSet
@@ -354,18 +271,14 @@ XYSet::XYSet() : XYPrimitive("set") { }
 
 void XYSet::eval1(XY* xy) {
   assert(xy->mX.size() >= 2);
-  XYSymbol* name = dynamic_cast<XYSymbol*>(xy->mX.back());
+  shared_ptr<XYSymbol> name = dynamic_pointer_cast<XYSymbol>(xy->mX.back());
   assert(name);
   xy->mX.pop_back();
 
-  XYObject* value = xy->mX.back();
+  shared_ptr<XYObject> value = xy->mX.back();
   xy->mX.pop_back();
 
   xy->mEnv[name->mValue] = value;
-  name->decRef();
-
-  xy->mY.pop_front();
-  decRef();
 }
 
 // XYGet
@@ -373,49 +286,32 @@ XYGet::XYGet() : XYPrimitive(";") { }
 
 void XYGet::eval1(XY* xy) {
   assert(xy->mX.size() >= 1);
-  XYSymbol* name = dynamic_cast<XYSymbol*>(xy->mX.back());
+  shared_ptr<XYSymbol> name = dynamic_pointer_cast<XYSymbol>(xy->mX.back());
   assert(name);
   xy->mX.pop_back();
 
   XYEnv::iterator it = xy->mEnv.find(name->mValue);
   assert(it != xy->mEnv.end());
 
-  XYObject* value = (*it).second;
+  shared_ptr<XYObject> value = (*it).second;
   xy->mX.push_back(value);
-  value->addRef();
-  name->decRef();
-
-  xy->mY.pop_front();
-  decRef();
 }
 
 // XYUnquote
 XYUnquote::XYUnquote() : XYPrimitive("!") { }
 
 void XYUnquote::eval1(XY* xy) {
-  // We pop ourselves off the Y queue first since
-  // we insert items into the queue later. The 
-  // reference for this is decremented at the end of the
-  // method since that call can result in ourselves being
-  // deleted.
-  xy->mY.pop_front();
-
   assert(xy->mX.size() >= 1);
-  XYObject* o = xy->mX.back();
+  shared_ptr<XYObject> o = xy->mX.back();
   xy->mX.pop_back();
-  XYList* list = dynamic_cast<XYList*>(o);
+  shared_ptr<XYList> list = dynamic_pointer_cast<XYList>(o);
 
   if (list) {
     xy->mY.insert(xy->mY.begin(), list->mList.begin(), list->mList.end());
-    for(XYList::iterator it = list->mList.begin(); it != list->mList.end(); ++it)
-      (*it)->addRef();
-    list->decRef();
   }
   else {
     xy->mY.push_front(o);
   }
-
-  decRef();
 }
 
 enum XYState {
@@ -482,10 +378,10 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
         else if (is_symbol_break(ch)) {
           if (ch == '!') {
             ++first;
-            *out++ = new XYUnquote();
+            *out++ = shared_ptr<XYUnquote>(new XYUnquote());
           }
           else
-            *out++ = new XYSymbol(string(1, *first++));
+            *out++ = shared_ptr<XYSymbol>(new XYSymbol(string(1, *first++)));
         }
         else if (is_numeric_digit(ch))
           state = XYSTATE_NUMBER_START;
@@ -516,7 +412,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
           istringstream s(result);
           s >> number;
           cout << "Outing " << number << " from " << result << endl;
-          *out++ = new XYNumber(number);
+          *out++ = shared_ptr<XYNumber>(new XYNumber(number));
           state = XYSTATE_INIT;
         }
       }
@@ -535,7 +431,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
         char ch = *first++;
         if (is_symbol_break(ch)) {
           cout << "Symbol(" << result << ")" << endl;
-          *out++ = new XYSymbol(result);
+          *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
           state = XYSTATE_INIT;
         }
         else {
@@ -546,7 +442,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
 
       case XYSTATE_LIST_START:
       {
-        XYList* list = new XYList();
+        shared_ptr<XYList> list(new XYList());
         cout << "Recursing for list" << endl;
         first = parse(++first, last, back_inserter(list->mList));
         cout << "Recursion for list ended" << endl;
@@ -567,13 +463,13 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
      istringstream s(result);
      s >> number;
      cout << "Outing " << number << " from " << result << endl;
-     *out++ = new XYNumber(number);
+     *out++ = shared_ptr<XYNumber>(new XYNumber(number));
     }
     break;
 
     case XYSTATE_SYMBOL_REST:
     {
-      *out++ = new XYSymbol(result);
+      *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
     }
     break;
 
@@ -592,32 +488,37 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
   return last;
 }
 
+template <class T> shared_ptr<T> msp(T* o)
+{
+  return shared_ptr<T>(o);
+}
+
 void testXY() {
-  XY* xy = new XY();
-  XYObject* program2[] = {
-    new XYNumber(100),
-    new XYNumber(200),
-    new XYAddition()
+  shared_ptr<XY> xy(new XY());
+  shared_ptr<XYObject> program2[] = {
+    msp(new XYNumber(100)),
+    msp(new XYNumber(200)),
+    msp(new XYAddition())
   };
 
-  XYObject* program1[] = {
-    new XYNumber(1),
-    new XYNumber(2),
-    new XYNumber(3),
-    new XYAddition(),
-    new XYAddition(),
-    new XYNumber(42),
-    new XYSymbol("a"),
-    new XYSet(),
-    new XYSymbol("a"),
-    new XYGet(),
-    new XYAddition(),
-    new XYList(program2, program2+sizeof(program2)/sizeof(XYObject*)),
-    new XYUnquote(),
-    new XYUnquote()
+  shared_ptr<XYObject> program1[] = {
+    msp(new XYNumber(1)),
+    msp(new XYNumber(2)),
+    msp(new XYNumber(3)),
+    msp(new XYAddition()),
+    msp(new XYAddition()),
+    msp( new XYNumber(42)),
+    msp(new XYSymbol("a")),
+    msp(new XYSet()),
+    msp(new XYSymbol("a")),
+    msp(new XYGet()),
+    msp(new XYAddition()),
+    msp(new XYList(program2, program2+sizeof(program2)/sizeof(shared_ptr<XYObject>))),
+    msp(new XYUnquote()),
+    msp(new XYUnquote())
   };
 
-  xy->mY.insert(xy->mY.begin(), program1, program1 + (sizeof(program1)/sizeof(XYObject*)));
+  xy->mY.insert(xy->mY.begin(), program1, program1 + (sizeof(program1)/sizeof(shared_ptr<XYObject>)));
   string s("1 2 3 45 + a;! [1 2 3] !");
   parse(s.begin(), s.end(), back_inserter(xy->mY));
   while(xy->mY.size() > 0) {
@@ -626,40 +527,15 @@ void testXY() {
   }
 
   xy->print();
-  delete xy;
-
-  for(XYObject** it = program2; it != program2 + (sizeof(program2)/sizeof(XYObject*)); ++it)
-    (*it)->decRef();
 }
 
 void runTests() {
   testXY();
-  XY* xy = new XY();
-
-  xy->mY.push_front(new XYUnquote());
-  XYList* list = new XYList();
-  list->mList.push_back(new XYNumber(1));
-  xy->mY.push_front(list);
-  xy->mY.push_front(new XYAddition());
-  xy->mY.push_front(new XYNumber(1));
-  xy->mY.push_front(new XYNumber(1));
-
-  while(xy->mY.size() > 0) {
-    xy->print();
-    xy->eval1();
-  }
-
-  xy->print();
- 
-  delete xy;
 }
 
 int main() {
   runTests();
 
-#if defined(RC_DEBUG)
-  assert(XYObject::mTotalCount == 0);
-#endif
   return 0;
 }
 
