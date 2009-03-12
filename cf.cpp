@@ -31,7 +31,7 @@ class XYNumber : public XYObject
 
 class XYSymbol : public XYObject
 {
-  private:
+  public:
     string mValue;
 
   public:
@@ -42,7 +42,7 @@ class XYSymbol : public XYObject
 
 class XYPrimitive : public XYObject
 {
-  private:
+  public:
     string mName;
 
   public:
@@ -57,9 +57,25 @@ class XYAddition : public XYPrimitive
     virtual void eval1(XY* xy);
 };
 
+class XYSet : public XYPrimitive
+{
+  public:
+    XYSet();
+    virtual void eval1(XY* xy);
+};
+
+class XYGet : public XYPrimitive
+{
+  public:
+    XYGet();
+    virtual void eval1(XY* xy);
+};
+
+typedef map<string, XYObject*> XYEnv;
+
 class XY {
   public:
-    map<string, XYObject*> mEnv;
+    XYEnv mEnv;
     vector<XYObject*> mX;
     deque<XYObject*> mY;
 
@@ -153,6 +169,35 @@ void XYAddition::eval1(XY* xy) {
   xy->mX.push_back(new XYNumber(lhs->mValue + rhs->mValue));
 }
 
+// XYSet
+XYSet::XYSet() : XYPrimitive("set") { }
+
+void XYSet::eval1(XY* xy) {
+  assert(xy->mX.size() >= 2);
+  XYSymbol* name = dynamic_cast<XYSymbol*>(xy->mX.back());
+  assert(name);
+  xy->mX.pop_back();
+
+  XYObject* value = xy->mX.back();
+  xy->mX.pop_back();
+
+  xy->mEnv[name->mValue] = value;
+}
+
+// XYGet
+XYGet::XYGet() : XYPrimitive(";") { }
+
+void XYGet::eval1(XY* xy) {
+  assert(xy->mX.size() >= 1);
+  XYSymbol* name = dynamic_cast<XYSymbol*>(xy->mX.back());
+  assert(name);
+  xy->mX.pop_back();
+
+  XYEnv::iterator it = xy->mEnv.find(name->mValue);
+  assert(it != xy->mEnv.end());
+
+  xy->mX.push_back((*it).second);
+}
 
 void testXY() {
   XY* xy = new XY();
@@ -161,6 +206,12 @@ void testXY() {
     new XYNumber(2),
     new XYNumber(3),
     new XYAddition(),
+    new XYAddition(),
+    new XYNumber(42),
+    new XYSymbol("a"),
+    new XYSet(),
+    new XYSymbol("a"),
+    new XYGet(),
     new XYAddition()
   };
 
