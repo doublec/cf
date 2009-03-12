@@ -29,32 +29,30 @@ class XYNumber : public XYObject
     virtual void eval1(XY* xy);
 };
 
-class XY {
+class XYSymbol : public XYObject
+{
   private:
+    string mValue;
+
+  public:
+    XYSymbol(string v);
+    virtual string toString();
+    virtual void eval1(XY* xy);
+};
+
+class XY {
+  public:
     map<string, XYObject*> mEnv;
     vector<XYObject*> mX;
     deque<XYObject*> mY;
 
   public:
-    void pushX(XYObject* o);
-    void pushFrontY(XYObject* o);
-    void pushBackY(XYObject* o);
     void print();
     XY* eval1();
+    XY* eval();
 };
 
-void XY::pushX(XYObject* o) {
-  mX.push_back(o);
-}
-
-void XY::pushFrontY(XYObject* o) {
-  mY.push_front(o);
-}
-
-void XY::pushBackY(XYObject* o) {
-  mY.push_back(o);
-}
-
+// XY
 void XY::print() {
   for(int i=0; i < mX.size(); ++i) {
     cout << mX[i]->toString() << " ";
@@ -79,8 +77,17 @@ XY* XY::eval1() {
   o->eval1(this);
   return this;
 }
- 
+
+XY* XY::eval() {
+  while (mY.size() > 0) {
+    eval1();
+  }
+  return this;
+}
+
+// XYNumber
 XYNumber::XYNumber(int v) : mValue(v) { }
+
 string XYNumber::toString() {
   ostringstream s;
   s << mValue;
@@ -88,14 +95,39 @@ string XYNumber::toString() {
 }
 
 void XYNumber::eval1(XY* xy) {
-  xy->pushX(this);
+  xy->mX.push_back(this);
 }
 
+// XYSymbol
+XYSymbol::XYSymbol(string v) : mValue(v) { }
+
+string XYSymbol::toString() {
+  ostringstream s;
+  s << mValue;
+  return s.str();
+}
+
+void XYSymbol::eval1(XY* xy) {
+  xy->mX.push_back(this);
+}
 
 void testXY() {
   XY* xy = new XY();
-  xy->pushX(new XYNumber(42));
-  xy->pushFrontY(new XYNumber(84));
+  XYObject* program1[] = {
+    new XYNumber(1),
+    new XYNumber(2),
+    new XYNumber(3),
+    new XYSymbol("*"),
+    new XYSymbol("+")
+  };
+
+  xy->mY.insert(xy->mY.begin(), program1, program1 + (sizeof(program1)/sizeof(XYObject*)));
+
+  while(xy->mY.size() > 0) {
+    xy->print();
+    xy->eval1();
+  }
+
   xy->print();
   delete xy;
 }
