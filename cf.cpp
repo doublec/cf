@@ -268,7 +268,8 @@ enum XYState {
   XYSTATE_NUMBER_START,
   XYSTATE_NUMBER_REST,
   XYSTATE_SYMBOL_START,
-  XYSTATE_SYMBOL_REST
+  XYSTATE_SYMBOL_REST,
+  XYSTATE_LIST_START
 };
 
 // Returns true if the character is whitespace
@@ -304,7 +305,7 @@ bool is_numeric_digit(char ch) {
 }
 
 template <class InputIterator, class OutputIterator>
-void parse(InputIterator first, InputIterator last, OutputIterator out) {
+InputIterator parse(InputIterator first, InputIterator last, OutputIterator out) {
   XYState state = XYSTATE_INIT;
   string result;
 
@@ -316,8 +317,18 @@ void parse(InputIterator first, InputIterator last, OutputIterator out) {
         char ch = *first;
         if (is_whitespace(ch))
           *first++;
-        else if (is_symbol_break(ch))
-          state = XYSTATE_SYMBOL_REST;
+        else if (ch == '[')
+          state = XYSTATE_LIST_START;
+        else if (ch == ']')
+          return ++first;
+        else if (is_symbol_break(ch)) {
+          if (ch == '!') {
+            ++first;
+            *out++ = new XYUnquote();
+          }
+          else
+            *out++ = new XYSymbol(string(1, *first++));
+        }
         else if (is_numeric_digit(ch))
           state = XYSTATE_NUMBER_START;
         else if (ch == '\"') 
@@ -363,26 +374,29 @@ void parse(InputIterator first, InputIterator last, OutputIterator out) {
 
       case XYSTATE_SYMBOL_REST:
       {
-        char ch = *first;
+        char ch = *first++;
         if (is_symbol_break(ch)) {
-          if (result.size() > 0) {
-            cout << "Symbol(" << result << ")" << endl;
-            *out++ = new XYSymbol(result);
-          }
-          if (!is_whitespace(ch)) {
-            cout << "Symbol(" << ch << ")" << endl;
-            *out++ = new XYSymbol(string(1, ch));
-          }
-          ++first;
+          cout << "Symbol(" << result << ")" << endl;
+          *out++ = new XYSymbol(result);
           state = XYSTATE_INIT;
         }
         else {
           result.push_back(ch);
-          ++first;
         }
       }
       break;
- 
+
+      case XYSTATE_LIST_START:
+      {
+        XYList* list = new XYList();
+        cout << "Recursing for list" << endl;
+        first = parse(++first, last, back_inserter(list->mList));
+        cout << "Recursion for list ended" << endl;
+        *out++ = list;
+        state = XYSTATE_INIT;
+      }
+      break;
+
       default:
         assert(1 == 0);
         break;
@@ -416,6 +430,8 @@ void parse(InputIterator first, InputIterator last, OutputIterator out) {
       assert(1 == 0);
       break;
   }
+
+  return last;
 }
 
 void testXY() {
@@ -444,7 +460,7 @@ void testXY() {
   };
 
   xy->mY.insert(xy->mY.begin(), program1, program1 + (sizeof(program1)/sizeof(XYObject*)));
-  string s("1 2 3 45 + a;!");
+  string s("1 2 3 45 + a;! [1 2 3] !");
   parse(s.begin(), s.end(), back_inserter(xy->mY));
   while(xy->mY.size() > 0) {
     xy->print();
