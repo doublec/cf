@@ -8,6 +8,7 @@
 #include <string>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include <boost/lexical_cast.hpp>
 
 using namespace std;
 using namespace boost;
@@ -196,9 +197,7 @@ void XY::eval() {
 XYNumber::XYNumber(int v) : mValue(v) { }
 
 string XYNumber::toString() {
-  ostringstream s;
-  s << mValue;
-  return s.str();
+  return lexical_cast<string>(mValue);
 }
 
 void XYNumber::eval1(XY* xy) {
@@ -209,9 +208,7 @@ void XYNumber::eval1(XY* xy) {
 XYSymbol::XYSymbol(string v) : mValue(v) { }
 
 string XYSymbol::toString() {
-  ostringstream s;
-  s << mValue;
-  return s.str();
+  return mValue;
 }
 
 void XYSymbol::eval1(XY* xy) {
@@ -245,9 +242,7 @@ void XYList::eval1(XY* xy) {
 XYPrimitive::XYPrimitive(string n) : mName(n) { }
 
 string XYPrimitive::toString() {
-  ostringstream s;
-  s << mName;
-  return s.str();
+  return mName;
 }
 
 // XYAddition
