@@ -270,7 +270,39 @@ enum XYState {
   XYSTATE_SYMBOL_START,
   XYSTATE_SYMBOL_REST
 };
-  
+
+// Returns true if the character is whitespace
+bool is_whitespace(char ch) {
+  return ch == '\r' || ch == '\t' || ch == '\n' || ch == ' ';
+}
+
+// Returns true if the character is one that indicates a symbol has ended
+// in the token stream.
+bool is_symbol_break(char ch) {
+  switch(ch) {
+    case '[':
+    case ']':
+    case '{':
+    case '}':
+    case '(':
+    case ')':
+    case ';':
+    case '!':
+    case '\'':
+    case ',':
+    case '`':
+      return true;
+
+    default:
+      return is_whitespace(ch);
+  }
+}
+
+// Returns true if the character is a numeric digit
+bool is_numeric_digit(char ch) {
+  return (ch >= '0' && ch <='9');
+}
+
 template <class InputIterator, class OutputIterator>
 void parse(InputIterator first, InputIterator last, OutputIterator out) {
   XYState state = XYSTATE_INIT;
@@ -282,49 +314,16 @@ void parse(InputIterator first, InputIterator last, OutputIterator out) {
       case XYSTATE_INIT: {
         result = "";
         char ch = *first;
-        switch (ch) {
-          case '[':
-          case ']':
-          case '{':
-          case '}':
-          case '(':
-          case ')':
-          case ';':
-          case '!':
-          case '\'':
-          case ',':
-          case '`':
-            state = XYSTATE_SYMBOL_REST;
-            break;
-
-          case '0':
-          case '1':
-          case '2':
-          case '3':
-          case '4':
-          case '5':
-          case '6':
-          case '7':
-          case '8':
-          case '9':
-            state = XYSTATE_NUMBER_START;
-            break;
-
-          case '\"':
-            state = XYSTATE_STRING_START;
-            break;
-
-          case ' ':
-          case '\r':
-          case '\n':
-            // Consume
-            ++first;
-            break;
-
-          default:
-            state = XYSTATE_SYMBOL_START;
-           break;
-        }
+        if (is_whitespace(ch))
+          *first++;
+        else if (is_symbol_break(ch))
+          state = XYSTATE_SYMBOL_REST;
+        else if (is_numeric_digit(ch))
+          state = XYSTATE_NUMBER_START;
+        else if (ch == '\"') 
+          state = XYSTATE_STRING_START;
+        else
+          state = XYSTATE_SYMBOL_START;
       }
       break;
 
@@ -338,19 +337,19 @@ void parse(InputIterator first, InputIterator last, OutputIterator out) {
 
       case XYSTATE_NUMBER_REST:
       {
-       char ch = *first;
-       if (ch >= '0' && ch <= '9') {
-         result.push_back(ch);
-         ++first;
-       }
-       else {
-         int number = 0;
-         istringstream s(result);
-         s >> number;
-         cout << "Outing " << number << " from " << result << endl;
-         *out++ = new XYNumber(number);
-         state = XYSTATE_INIT;
-       }
+        char ch = *first;
+        if (is_numeric_digit(ch)) {
+          result.push_back(ch);
+          ++first;
+        }
+        else {
+          int number = 0;
+          istringstream s(result);
+          s >> number;
+          cout << "Outing " << number << " from " << result << endl;
+          *out++ = new XYNumber(number);
+          state = XYSTATE_INIT;
+        }
       }
       break;
 
@@ -365,28 +364,21 @@ void parse(InputIterator first, InputIterator last, OutputIterator out) {
       case XYSTATE_SYMBOL_REST:
       {
         char ch = *first;
-        switch (ch) {
-          case '[':
-          case ']':
-          case '{':
-          case '}':
-          case '(':
-          case ')':
-          case ';':
-          case '!':
-          case '\'':
-          case ',':
-          case '`':
+        if (is_symbol_break(ch)) {
+          if (result.size() > 0) {
+            cout << "Symbol(" << result << ")" << endl;
             *out++ = new XYSymbol(result);
+          }
+          if (!is_whitespace(ch)) {
+            cout << "Symbol(" << ch << ")" << endl;
             *out++ = new XYSymbol(string(1, ch));
-            ++first;
-            state = XYSTATE_INIT;
-            break;
-
-          default:
-            result.push_back(ch);
-            ++first;
-            break;
+          }
+          ++first;
+          state = XYSTATE_INIT;
+        }
+        else {
+          result.push_back(ch);
+          ++first;
         }
       }
       break;
@@ -452,7 +444,7 @@ void testXY() {
   };
 
   xy->mY.insert(xy->mY.begin(), program1, program1 + (sizeof(program1)/sizeof(XYObject*)));
-  string s("1 2 3 45 + abc;!");
+  string s("1 2 3 45 + a;!");
   parse(s.begin(), s.end(), back_inserter(xy->mY));
   while(xy->mY.size() > 0) {
     xy->print();
