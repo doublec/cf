@@ -40,6 +40,19 @@ class XYSymbol : public XYObject
     virtual void eval1(XY* xy);
 };
 
+class XYList : public XYObject
+{
+  public:
+    typedef vector<XYObject*> type;
+    type mList;
+
+  public:
+    XYList();
+    template <class InputIterator> XYList(InputIterator first, InputIterator last);
+    virtual string toString();
+    virtual void eval1(XY* xy);
+};
+
 class XYPrimitive : public XYObject
 {
   public:
@@ -68,6 +81,13 @@ class XYGet : public XYPrimitive
 {
   public:
     XYGet();
+    virtual void eval1(XY* xy);
+};
+
+class XYUnquote : public XYPrimitive
+{
+  public:
+    XYUnquote();
     virtual void eval1(XY* xy);
 };
 
@@ -144,6 +164,29 @@ void XYSymbol::eval1(XY* xy) {
   xy->mX.push_back(this);
 }
 
+// XYList
+XYList::XYList() { }
+
+template <class InputIterator>
+XYList::XYList(InputIterator first, InputIterator last) {
+  mList.assign(first, last);
+}
+
+string XYList::toString() {
+  ostringstream s;
+  s << "[ ";
+  for(type::iterator it = mList.begin(); it != mList.end(); ++it) {
+    s << (*it)->toString() << " ";
+  }
+  s << "]";
+  return s.str();
+}
+
+void XYList::eval1(XY* xy) {
+  xy->mX.push_back(this);
+}
+
+
 // XYPrimitive
 XYPrimitive::XYPrimitive(string n) : mName(n) { }
 
@@ -199,8 +242,32 @@ void XYGet::eval1(XY* xy) {
   xy->mX.push_back((*it).second);
 }
 
+// XYUnquote
+XYUnquote::XYUnquote() : XYPrimitive("!") { }
+
+void XYUnquote::eval1(XY* xy) {
+  assert(xy->mX.size() >= 1);
+  XYObject* o = xy->mX.back();
+  xy->mX.pop_back();
+  XYList* list = dynamic_cast<XYList*>(o);
+
+  if (list) {
+    xy->mY.insert(xy->mY.begin(), list->mList.begin(), list->mList.end());
+  }
+  else {
+    xy->mY.push_front(o);
+  }
+}
+
+
 void testXY() {
   XY* xy = new XY();
+  XYObject* program2[] = {
+    new XYNumber(100),
+    new XYNumber(200),
+    new XYAddition()
+  };
+
   XYObject* program1[] = {
     new XYNumber(1),
     new XYNumber(2),
@@ -212,7 +279,10 @@ void testXY() {
     new XYSet(),
     new XYSymbol("a"),
     new XYGet(),
-    new XYAddition()
+    new XYAddition(),
+    new XYList(program2, program2+sizeof(program2)/sizeof(XYObject*)),
+    new XYUnquote(),
+    new XYUnquote()
   };
 
   xy->mY.insert(xy->mY.begin(), program1, program1 + (sizeof(program1)/sizeof(XYObject*)));
