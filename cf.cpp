@@ -9,6 +9,13 @@
 
 using namespace std;
 
+// Define the following to enable debugging of the reference counting
+#define RC_DEBUG
+
+// Define the following for object allocation details to be printed
+// as counts are incremented and decremented.
+#define RC_DEBUG_VERBOSE
+
 // XY is the object that contains the state of the running
 // system. For example, the stack (X), the queue (Y) and
 // the environment.
@@ -17,9 +24,63 @@ class XY;
 // Base class for all objects in the XY system. Anything
 // stored on the stack, in the queue, in the the environment
 // must be derived from this.
+//
+// Memory allocation and freeing is handled via reference
+// counting so care must be taken to ensure that references
+// are incremented and decremented properly.
 class XYObject
 {
   public:
+    // Reference count. When this drops back to zero after
+    // its initial creation the object is deleted.
+    int mCount;
+
+#if defined(RC_DEBUG)
+    // Total count of all objects for debugging purposes
+    static int mTotalCount;
+#endif
+
+  public:
+    XYObject() : mCount(1) { 
+#if defined(RC_DEBUG)
+      ++mTotalCount;
+#endif
+#if defined(RC_DEBUG_VERBOSE)
+      cout << "Object Created: " << mTotalCount << endl;
+#endif
+    }
+    virtual ~XYObject() { 
+#if defined(RC_DEBUG_VERBOSE)
+      cout << "Object Deleted: " << mCount << " out of " << mTotalCount << endl;
+#endif
+      assert(mCount == 0);
+    }
+
+    // Increment reference count
+    void addRef() {
+#if defined(RC_DEBUG)
+      ++mTotalCount;
+#endif
+      ++mCount; 
+#if defined(RC_DEBUG_VERBOSE)
+      cout << "addRef(" << toString() << "): " << mCount << " of " << mTotalCount << endl;
+#endif
+    }
+
+    // Decrement reference count. Object is destroyed when
+    // it reaches zero.
+    void decRef() { 
+#if defined(RC_DEBUG_VERBOSE)
+      cout << "decRef(" << toString() << "): " << mCount << " of " << mTotalCount << endl;
+#endif
+      assert(mCount >= 1);
+#if defined(RC_DEBUG)
+      --mTotalCount;
+#endif
+      if(--mCount == 0)
+        delete this;
+    }
+
     // Call when the object has been removed from the XY
     // queue and some action needs to be taken. For
     // literal objects (numbers, strings, etc) this 
@@ -64,12 +125,14 @@ class XYSymbol : public XYObject
 class XYList : public XYObject
 {
   public:
-    typedef vector<XYObject*> type;
-    type mList;
+    typedef vector<XYObject*> List;
+    typedef List::iterator    iterator;
+    List mList;
 
   public:
     XYList();
     template <class InputIterator> XYList(InputIterator first, InputIterator last);
+    virtual ~XYList();
     virtual string toString();
     virtual void eval1(XY* xy);
 };
@@ -139,6 +202,8 @@ class XY {
     deque<XYObject*> mY;
 
   public:
+    ~XY();
+
     // Print a representation of the state of the
     // interpter.
     void print();
@@ -151,6 +216,17 @@ class XY {
 };
 
 // XY
+XY::~XY() {
+  for(XYEnv::iterator it = mEnv.begin(); it != mEnv.end(); ++it)
+    (*it).second->decRef();
+
+  for(vector<XYObject*>::iterator it = mX.begin(); it != mX.end(); ++it)
+    (*it)->decRef();
+
+  for(deque<XYObject*>::iterator it = mY.begin(); it != mY.end(); ++it)
+    (*it)->decRef();
+}
+
 void XY::print() {
   for(int i=0; i < mX.size(); ++i) {
     cout << mX[i]->toString() << " ";
@@ -171,7 +247,6 @@ void XY::eval1() {
   XYObject* o = mY.front();
   assert(o);
 
-  mY.pop_front();
   o->eval1(this);
 }
 
@@ -180,6 +255,11 @@ void XY::eval() {
     eval1();
   }
 }
+
+// XYObject
+#if defined(RC_DEBUG)
+int XYObject::mTotalCount = 0;
+#endif
 
 // XYNumber
 XYNumber::XYNumber(int v) : mValue(v) { }
@@ -191,6 +271,7 @@ string XYNumber::toString() {
 }
 
 void XYNumber::eval1(XY* xy) {
+  xy->mY.pop_front();
   xy->mX.push_back(this);
 }
 
@@ -204,6 +285,7 @@ string XYSymbol::toString() {
 }
 
 void XYSymbol::eval1(XY* xy) {
+  xy->mY.pop_front();
   xy->mX.push_back(this);
 }
 
@@ -212,13 +294,20 @@ XYList::XYList() { }
 
 template <class InputIterator>
 XYList::XYList(InputIterator first, InputIterator last) {
+  for(InputIterator it = first; it != last; ++it)
+    (*it)->addRef();
   mList.assign(first, last);
+}
+
+XYList::~XYList() {
+  for(iterator it = mList.begin(); it != mList.end(); ++it)
+    (*it)->decRef();
 }
 
 string XYList::toString() {
   ostringstream s;
   s << "[ ";
-  for(type::iterator it = mList.begin(); it != mList.end(); ++it) {
+  for(iterator it = mList.begin(); it != mList.end(); ++it) {
     s << (*it)->toString() << " ";
   }
   s << "]";
@@ -226,6 +315,7 @@ string XYList::toString() {
 }
 
 void XYList::eval1(XY* xy) {
+  xy->mY.pop_front();
   xy->mX.push_back(this);
 }
 
@@ -253,6 +343,10 @@ void XYAddition::eval1(XY* xy) {
   xy->mX.pop_back();
 
   xy->mX.push_back(new XYNumber(lhs->mValue + rhs->mValue));
+  lhs->decRef();
+  rhs->decRef();
+  xy->mY.pop_front();
+  decRef();
 }
 
 // XYSet
@@ -268,6 +362,10 @@ void XYSet::eval1(XY* xy) {
   xy->mX.pop_back();
 
   xy->mEnv[name->mValue] = value;
+  name->decRef();
+
+  xy->mY.pop_front();
+  decRef();
 }
 
 // XYGet
@@ -282,13 +380,26 @@ void XYGet::eval1(XY* xy) {
   XYEnv::iterator it = xy->mEnv.find(name->mValue);
   assert(it != xy->mEnv.end());
 
-  xy->mX.push_back((*it).second);
+  XYObject* value = (*it).second;
+  xy->mX.push_back(value);
+  value->addRef();
+  name->decRef();
+
+  xy->mY.pop_front();
+  decRef();
 }
 
 // XYUnquote
 XYUnquote::XYUnquote() : XYPrimitive("!") { }
 
 void XYUnquote::eval1(XY* xy) {
+  // We pop ourselves off the Y queue first since
+  // we insert items into the queue later. The 
+  // reference for this is decremented at the end of the
+  // method since that call can result in ourselves being
+  // deleted.
+  xy->mY.pop_front();
+
   assert(xy->mX.size() >= 1);
   XYObject* o = xy->mX.back();
   xy->mX.pop_back();
@@ -296,10 +407,15 @@ void XYUnquote::eval1(XY* xy) {
 
   if (list) {
     xy->mY.insert(xy->mY.begin(), list->mList.begin(), list->mList.end());
+    for(XYList::iterator it = list->mList.begin(); it != list->mList.end(); ++it)
+      (*it)->addRef();
+    list->decRef();
   }
   else {
     xy->mY.push_front(o);
   }
+
+  decRef();
 }
 
 enum XYState {
@@ -511,15 +627,39 @@ void testXY() {
 
   xy->print();
   delete xy;
+
+  for(XYObject** it = program2; it != program2 + (sizeof(program2)/sizeof(XYObject*)); ++it)
+    (*it)->decRef();
 }
 
 void runTests() {
   testXY();
+  XY* xy = new XY();
+
+  xy->mY.push_front(new XYUnquote());
+  XYList* list = new XYList();
+  list->mList.push_back(new XYNumber(1));
+  xy->mY.push_front(list);
+  xy->mY.push_front(new XYAddition());
+  xy->mY.push_front(new XYNumber(1));
+  xy->mY.push_front(new XYNumber(1));
+
+  while(xy->mY.size() > 0) {
+    xy->print();
+    xy->eval1();
+  }
+
+  xy->print();
+ 
+  delete xy;
 }
 
 int main() {
   runTests();
 
+#if defined(RC_DEBUG)
+  assert(XYObject::mTotalCount == 0);
+#endif
   return 0;
 }
 
