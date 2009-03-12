@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <deque>
+#include <iterator>
 #include <string>
 
 class XY;
@@ -259,6 +260,171 @@ void XYUnquote::eval1(XY* xy) {
   }
 }
 
+enum XYState {
+  XYSTATE_INIT,
+  XYSTATE_STRING_START,
+  XYSTATE_STRING_MIDDLE,
+  XYSTATE_STRING_END,
+  XYSTATE_NUMBER_START,
+  XYSTATE_NUMBER_REST,
+  XYSTATE_SYMBOL_START,
+  XYSTATE_SYMBOL_REST
+};
+  
+template <class InputIterator, class OutputIterator>
+void parse(InputIterator first, InputIterator last, OutputIterator out) {
+  XYState state = XYSTATE_INIT;
+  string result;
+
+  while (first != last) {
+    cout << state << ": " << *first << endl;
+    switch (state) {
+      case XYSTATE_INIT: {
+        result = "";
+        char ch = *first;
+        switch (ch) {
+          case '[':
+          case ']':
+          case '{':
+          case '}':
+          case '(':
+          case ')':
+          case ';':
+          case '!':
+          case '\'':
+          case ',':
+          case '`':
+            state = XYSTATE_SYMBOL_REST;
+            break;
+
+          case '0':
+          case '1':
+          case '2':
+          case '3':
+          case '4':
+          case '5':
+          case '6':
+          case '7':
+          case '8':
+          case '9':
+            state = XYSTATE_NUMBER_START;
+            break;
+
+          case '\"':
+            state = XYSTATE_STRING_START;
+            break;
+
+          case ' ':
+          case '\r':
+          case '\n':
+            // Consume
+            ++first;
+            break;
+
+          default:
+            state = XYSTATE_SYMBOL_START;
+           break;
+        }
+      }
+      break;
+
+      case XYSTATE_NUMBER_START:
+      {
+       char ch = *first++;
+       result.push_back(ch);
+       state = XYSTATE_NUMBER_REST;
+      }
+      break;
+
+      case XYSTATE_NUMBER_REST:
+      {
+       char ch = *first;
+       if (ch >= '0' && ch <= '9') {
+         result.push_back(ch);
+         ++first;
+       }
+       else {
+         int number = 0;
+         istringstream s(result);
+         s >> number;
+         cout << "Outing " << number << " from " << result << endl;
+         *out++ = new XYNumber(number);
+         state = XYSTATE_INIT;
+       }
+      }
+      break;
+
+      case XYSTATE_SYMBOL_START:
+      {
+        char ch = *first++;
+        result.push_back(ch);
+        state = XYSTATE_SYMBOL_REST;
+      }
+      break;
+
+      case XYSTATE_SYMBOL_REST:
+      {
+        char ch = *first;
+        switch (ch) {
+          case '[':
+          case ']':
+          case '{':
+          case '}':
+          case '(':
+          case ')':
+          case ';':
+          case '!':
+          case '\'':
+          case ',':
+          case '`':
+            *out++ = new XYSymbol(result);
+            *out++ = new XYSymbol(string(1, ch));
+            ++first;
+            state = XYSTATE_INIT;
+            break;
+
+          default:
+            result.push_back(ch);
+            ++first;
+            break;
+        }
+      }
+      break;
+ 
+      default:
+        assert(1 == 0);
+        break;
+    }
+  }
+
+  switch (state) {
+    case XYSTATE_NUMBER_REST: {
+     int number = 0;
+     istringstream s(result);
+     s >> number;
+     cout << "Outing " << number << " from " << result << endl;
+     *out++ = new XYNumber(number);
+    }
+    break;
+
+    case XYSTATE_SYMBOL_REST:
+    {
+      *out++ = new XYSymbol(result);
+    }
+    break;
+
+    case XYSTATE_INIT:
+    {
+      // Ignore
+    }
+    break;
+
+    default:
+      cout << "State: " << state << " result " << result << endl;
+      assert(1 == 0);
+      break;
+  }
+}
 
 void testXY() {
   XY* xy = new XY();
@@ -286,7 +452,8 @@ void testXY() {
   };
 
   xy->mY.insert(xy->mY.begin(), program1, program1 + (sizeof(program1)/sizeof(XYObject*)));
-
+  string s("1 2 3 45 + abc;!");
+  parse(s.begin(), s.end(), back_inserter(xy->mY));
   while(xy->mY.size() > 0) {
     xy->print();
     xy->eval1();
