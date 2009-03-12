@@ -5,13 +5,17 @@
 #include <vector>
 #include <deque>
 #include <iterator>
+#include <algorithm>
 #include <string>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/lambda/lambda.hpp>
+#include <boost/lambda/bind.hpp>
 
 using namespace std;
 using namespace boost;
+using namespace boost::lambda;
 
 // XY is the object that contains the state of the running
 // system. For example, the stack (X), the queue (Y) and
@@ -39,8 +43,24 @@ class XYObject : public enable_shared_from_this<XYObject>
 
     // Convert the object into a string repesentation for
     // printing.
-    virtual string toString() = 0;
+    virtual string toString() const = 0;
 };
+
+// This lovely piece of code is to allow XY objects to be called within
+// Boost lambda expressions, even though they are actually shared_ptr
+// objects instead of XYObjects.
+namespace boost {
+  namespace lambda {
+    template <class R> struct function_adaptor< R (XYObject::*)() const >
+    {
+      template <class T> struct sig { typedef R type; };
+      template <class RET>
+       static string apply(R (XYObject::*func)() const, shared_ptr<XYObject>const & o) {
+          return (o.get()->*func)();
+        }
+    };
+  }
+}
 
 // All numbers are represented by this object, or a class
 // derived from it.
@@ -53,7 +73,7 @@ class XYNumber : public XYObject
 
   public:
     XYNumber(int v = 0);
-    virtual string toString();
+    virtual string toString() const;
     virtual void eval1(XY* xy);
 };
 
@@ -65,7 +85,7 @@ class XYSymbol : public XYObject
 
   public:
     XYSymbol(string v);
-    virtual string toString();
+    virtual string toString() const;
     virtual void eval1(XY* xy);
 };
 
@@ -76,13 +96,15 @@ class XYList : public XYObject
 {
   public:
     typedef vector< shared_ptr<XYObject> > List;
-    typedef List::iterator    iterator;
+    typedef List::iterator iterator;
+    typedef List::const_iterator const_iterator;
+
     List mList;
 
   public:
     XYList();
     template <class InputIterator> XYList(InputIterator first, InputIterator last);
-    virtual string toString();
+    virtual string toString() const;
     virtual void eval1(XY* xy);
 };
 
@@ -96,7 +118,7 @@ class XYPrimitive : public XYObject
 
   public:
     XYPrimitive(string name);
-    virtual string toString();
+    virtual string toString() const;
 };
 
 // [X^lhs^rhs] Y] -> [X^lhs+rhs Y]
@@ -164,16 +186,9 @@ class XY {
 
 // XY
 void XY::print() {
-  for(int i=0; i < mX.size(); ++i) {
-    cout << mX[i]->toString() << " ";
-  }
-
-  cout << "-> ";
-
-  for(int i=0; i < mY.size(); ++i) {
-    cout << mY[i]->toString() << " ";
-  }
-
+  for_each(mX.begin(), mX.end(), cout << bind(&XYObject::toString, _1) << " ");
+  cout << " -> ";
+  for_each(mY.begin(), mY.end(), cout << bind(&XYObject::toString, _1) << " ");
   cout << endl;
 }
 
@@ -196,7 +211,7 @@ void XY::eval() {
 // XYNumber
 XYNumber::XYNumber(int v) : mValue(v) { }
 
-string XYNumber::toString() {
+string XYNumber::toString() const {
   return lexical_cast<string>(mValue);
 }
 
@@ -207,7 +222,7 @@ void XYNumber::eval1(XY* xy) {
 // XYSymbol
 XYSymbol::XYSymbol(string v) : mValue(v) { }
 
-string XYSymbol::toString() {
+string XYSymbol::toString() const {
   return mValue;
 }
 
@@ -223,12 +238,10 @@ XYList::XYList(InputIterator first, InputIterator last) {
   mList.assign(first, last);
 }
 
-string XYList::toString() {
+string XYList::toString() const {
   ostringstream s;
   s << "[ ";
-  for(iterator it = mList.begin(); it != mList.end(); ++it) {
-    s << (*it)->toString() << " ";
-  }
+  for_each(mList.begin(), mList.end(), s << bind(&XYObject::toString, _1) << " ");
   s << "]";
   return s.str();
 }
@@ -241,7 +254,7 @@ void XYList::eval1(XY* xy) {
 // XYPrimitive
 XYPrimitive::XYPrimitive(string n) : mName(n) { }
 
-string XYPrimitive::toString() {
+string XYPrimitive::toString() const {
   return mName;
 }
 
