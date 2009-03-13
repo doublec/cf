@@ -12,6 +12,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/bind.hpp>
+#include <gmpxx.h>
 
 using namespace std;
 using namespace boost;
@@ -64,15 +65,16 @@ namespace boost {
 
 // All numbers are represented by this object, or a class
 // derived from it.
-// TODO: Do something better than signed integers for numbers.
 class XYNumber : public XYObject
 {
   public:
     // Numbers are signed integers for now.
-    int mValue;
+    mpz_class mValue;
 
   public:
     XYNumber(int v = 0);
+    XYNumber(string v);
+    XYNumber(mpz_class const& v);
     virtual string toString() const;
     virtual void eval1(XY* xy);
 };
@@ -210,6 +212,8 @@ void XY::eval() {
 
 // XYNumber
 XYNumber::XYNumber(int v) : mValue(v) { }
+XYNumber::XYNumber(string v) : mValue(v) { }
+XYNumber::XYNumber(mpz_class const& v) : mValue(v) { }
 
 string XYNumber::toString() const {
   return lexical_cast<string>(mValue);
@@ -416,11 +420,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
           ++first;
         }
         else {
-          int number = 0;
-          istringstream s(result);
-          s >> number;
-          cout << "Outing " << number << " from " << result << endl;
-          *out++ = shared_ptr<XYNumber>(new XYNumber(number));
+          *out++ = shared_ptr<XYNumber>(new XYNumber(result));
           state = XYSTATE_INIT;
         }
       }
@@ -467,11 +467,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
 
   switch (state) {
     case XYSTATE_NUMBER_REST: {
-     int number = 0;
-     istringstream s(result);
-     s >> number;
-     cout << "Outing " << number << " from " << result << endl;
-     *out++ = shared_ptr<XYNumber>(new XYNumber(number));
+     *out++ = shared_ptr<XYNumber>(new XYNumber(result));
     }
     break;
 
