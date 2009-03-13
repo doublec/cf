@@ -15,6 +15,12 @@
 #include <boost/algorithm/string.hpp>
 #include <gmpxx.h>
 
+// If defined, compiles as a test applicatation that tests
+// that things are working.
+#if defined(TEST)
+#include <boost/test/minimal.hpp>
+#endif
+
 using namespace std;
 using namespace boost;
 using namespace boost::lambda;
@@ -23,6 +29,14 @@ using namespace boost::lambda;
 // system. For example, the stack (X), the queue (Y) and
 // the environment.
 class XY;
+
+// Helper function for creating a shared pointer of a type.
+// Replace: shared_ptr<T> x = new shared_ptr<T>(new T());
+// With:    shared_ptr<T> x = msp(new T());   
+template <class T> shared_ptr<T> msp(T* o)
+{
+  return shared_ptr<T>(o);
+}
 
 // Base class for all objects in the XY system. Anything
 // stored on the stack, in the queue, in the the environment
@@ -180,6 +194,12 @@ class XY {
     // to objects.
     XYEnv mEnv;
 
+    // Mapping of primitives to their primtive
+    // object. These are symbols that are executed
+    // implicitly and don't need their value looked up
+    // by the user.
+    XYEnv mP;
+
     // The Stack
     XYStack mX;
 
@@ -187,6 +207,10 @@ class XY {
     XYQueue mY;
 
   public:
+    // Constructor installs any primitives into the
+    // environment.
+    XY();
+
     // Print a representation of the state of the
     // interpter.
     void print();
@@ -215,6 +239,14 @@ class XY {
 };
 
 // XY
+XY::XY() {
+  mP["+"]   = msp(new XYAddition());
+  mP["set"] = msp(new XYSet());
+  mP[";"]   = msp(new XYGet());
+  mP["!"]   = msp(new XYUnquote());
+  mP[")"]   = msp(new XYPatternStackToStack());
+}
+
 void XY::print() {
   for_each(mX.begin(), mX.end(), cout << bind(&XYObject::toString, _1) << " ");
   cout << " -> ";
@@ -271,7 +303,6 @@ void XY::getPatternValues(shared_ptr<XYObject> pattern, OutputIterator out)
 {
   shared_ptr<XYList> list = dynamic_pointer_cast<XYList>(pattern);
   if (list) {
-    cout << mX.size() << " " << list->mList.size() << endl;
     assert(mX.size() >= list->mList.size());
     shared_ptr<XYList> stack(new XYList(mX.end() - list->mList.size(), mX.end()));
     match(out, stack, pattern, stack, stack->mList.begin());
@@ -306,7 +337,12 @@ string XYSymbol::toString() const {
 }
 
 void XYSymbol::eval1(XY* xy) {
-  xy->mX.push_back(shared_from_this());
+  XYEnv::iterator it = xy->mP.find(mValue);
+  if (it != xy->mP.end())
+    // Primitive symbol, execute immediately
+    (*it).second->eval1(xy);
+  else
+    xy->mX.push_back(shared_from_this());
 }
 
 // XYList
@@ -414,11 +450,6 @@ void XYPatternStackToStack::eval1(XY* xy) {
 
   XYEnv env;
   xy->getPatternValues(*(pattern->mList.begin()), inserter(env, env.begin()));
-  for(XYEnv::iterator it = env.begin(); it != env.end(); ++it) {
-    string key = (*it).first;
-    shared_ptr<XYObject> value = (*it).second;
-    cout << "Key: " << key << " value: " << value->toString() << endl;
-  }
 }
 
 
@@ -466,13 +497,14 @@ bool is_numeric_digit(char ch) {
   return (ch >= '0' && ch <='9');
 }
 
+// Parse a sequence of characters storing the result using the
+// given output iterator.
 template <class InputIterator, class OutputIterator>
 InputIterator parse(InputIterator first, InputIterator last, OutputIterator out) {
   XYState state = XYSTATE_INIT;
   string result;
 
   while (first != last) {
-    cout << state << ": " << *first << endl;
     switch (state) {
       case XYSTATE_INIT: {
         result = "";
@@ -482,20 +514,10 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
         else if (ch == '[')
           state = XYSTATE_LIST_START;
         else if (ch == ']') {
-          cout << "List ended" << endl;
           return ++first;
         }
         else if (is_symbol_break(ch)) {
-          if (ch == '!') {
-            ++first;
-            *out++ = shared_ptr<XYUnquote>(new XYUnquote());
-          }
-          else if (ch == ')' ) {
-            ++first;
-            *out++ = shared_ptr<XYPatternStackToStack>(new XYPatternStackToStack());
-          }
-          else
-            *out++ = shared_ptr<XYSymbol>(new XYSymbol(string(1, *first++)));
+          *out++ = shared_ptr<XYSymbol>(new XYSymbol(string(1, *first++)));
         }
         else if (is_numeric_digit(ch))
           state = XYSTATE_NUMBER_START;
@@ -521,9 +543,13 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
           result.push_back(ch);
           ++first;
         }
-        else {
+        else if(is_symbol_break(ch)) {
           *out++ = shared_ptr<XYNumber>(new XYNumber(result));
           state = XYSTATE_INIT;
+        }
+        else {
+          // Actually a symbol which is prefixed by a number
+          state = XYSTATE_SYMBOL_REST;
         }
       }
       break;
@@ -540,11 +566,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
       {
         char ch = *first;
         if (is_symbol_break(ch)) {
-          cout << "Symbol(" << result << ")" << endl;
-          if (result == ")")
-            *out++ = shared_ptr<XYPatternStackToStack>(new XYPatternStackToStack());
-          else
-            *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
+          *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
           state = XYSTATE_INIT;
         }
         else {
@@ -557,9 +579,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
       case XYSTATE_LIST_START:
       {
         shared_ptr<XYList> list(new XYList());
-        cout << "Recursing for list" << endl;
         first = parse(++first, last, back_inserter(list->mList));
-        cout << "Recursion for list ended" << endl;
         *out++ = list;
         state = XYSTATE_INIT;
       }
@@ -579,12 +599,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
 
     case XYSTATE_SYMBOL_REST:
     {
-      if (result == ")") {
-        cout << "here" << endl;
-        *out++ = shared_ptr<XYPatternStackToStack>(new XYPatternStackToStack());
-      }
-      else
-        *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
+      *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
     }
     break;
 
@@ -595,7 +610,6 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
     break;
 
     default:
-      cout << "State: " << state << " result " << result << endl;
       assert(1 == 0);
       break;
   }
@@ -603,9 +617,11 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
   return last;
 }
 
-template <class T> shared_ptr<T> msp(T* o)
-{
-  return shared_ptr<T>(o);
+// Parse a string into XY objects, storing the result in the
+// container pointer to by the output iterator.
+template <class OutputIterator>
+void parse(string s, OutputIterator out) {
+  parse(s.begin(), s.end(), out);
 }
 
 void testXY() {
@@ -659,9 +675,180 @@ void runTests() {
 
 }
 
+#if !defined(TEST)
 int main() {
   runTests();
 
   return 0;
 }
+#else
+void testParse() {
+  {
+    // Simple number parsing
+    XYStack x;
+    parse("1 20 300 -400", back_inserter(x));
+    BOOST_CHECK(x.size() == 4);
+    shared_ptr<XYNumber> n1(dynamic_pointer_cast<XYNumber>(x[0]));
+    shared_ptr<XYNumber> n2(dynamic_pointer_cast<XYNumber>(x[1]));
+    shared_ptr<XYNumber> n3(dynamic_pointer_cast<XYNumber>(x[2]));
+    shared_ptr<XYNumber> n4(dynamic_pointer_cast<XYNumber>(x[3]));
 
+    BOOST_CHECK(n1 && n1->mValue == 1);
+    BOOST_CHECK(n2 && n2->mValue == 20);
+    BOOST_CHECK(n3 && n3->mValue == 300);
+    BOOST_CHECK(n4 && n4->mValue == -400);
+  }
+
+  {
+    // Simple Symbol parsing
+    XYStack x;
+    parse("a abc 2ab ab2 ab34cd", back_inserter(x));
+    BOOST_CHECK(x.size() == 5);
+    shared_ptr<XYSymbol> s1(dynamic_pointer_cast<XYSymbol>(x[0]));
+    shared_ptr<XYSymbol> s2(dynamic_pointer_cast<XYSymbol>(x[1]));
+    shared_ptr<XYSymbol> s3(dynamic_pointer_cast<XYSymbol>(x[2]));
+    shared_ptr<XYSymbol> s4(dynamic_pointer_cast<XYSymbol>(x[3]));
+    shared_ptr<XYSymbol> s5(dynamic_pointer_cast<XYSymbol>(x[4]));
+
+    BOOST_CHECK(s1 && s1->mValue == "a");
+    BOOST_CHECK(s2 && s2->mValue == "abc");
+    BOOST_CHECK(s3 && s3->mValue == "2ab");
+    BOOST_CHECK(s4 && s4->mValue == "ab2");
+    BOOST_CHECK(s5 && s5->mValue == "ab34cd");
+  }
+
+  {
+    // Simple List parsing
+    XYStack x;
+    parse("[ 1 2 [ 3 4 ] [ 5 6 [ 7 ] ] ]", back_inserter(x));
+    BOOST_CHECK(x.size() == 1);
+
+    shared_ptr<XYList> l1(dynamic_pointer_cast<XYList>(x[0]));
+    BOOST_CHECK(l1 && l1->mList.size() == 4);
+    
+    shared_ptr<XYList> l2(dynamic_pointer_cast<XYList>(l1->mList[2]));
+    BOOST_CHECK(l2 && l2->mList.size() == 2);
+
+    shared_ptr<XYList> l3(dynamic_pointer_cast<XYList>(l1->mList[3]));
+    BOOST_CHECK(l3 && l3->mList.size() == 3);
+
+    shared_ptr<XYList> l4(dynamic_pointer_cast<XYList>(l3->mList[2]));
+    BOOST_CHECK(l4 && l4->mList.size() == 1);
+  }
+
+  {
+    // Simple List parsing 2
+    XYStack x;
+    parse("[1 2[3 4] [5 6[7]]]", back_inserter(x));
+    BOOST_CHECK(x.size() == 1);
+
+    shared_ptr<XYList> l1(dynamic_pointer_cast<XYList>(x[0]));
+    BOOST_CHECK(l1 && l1->mList.size() == 4);
+    
+    shared_ptr<XYList> l2(dynamic_pointer_cast<XYList>(l1->mList[2]));
+    BOOST_CHECK(l2 && l2->mList.size() == 2);
+
+    shared_ptr<XYList> l3(dynamic_pointer_cast<XYList>(l1->mList[3]));
+    BOOST_CHECK(l3 && l3->mList.size() == 3);
+
+    shared_ptr<XYList> l4(dynamic_pointer_cast<XYList>(l3->mList[2]));
+    BOOST_CHECK(l4 && l4->mList.size() == 1);
+  }
+
+  {
+    // Addition
+    shared_ptr<XY> xy(new XY());
+    parse("1 2 +", back_inserter(xy->mY));
+    BOOST_CHECK(xy->mY.size() == 3);
+
+    while(xy->mY.size() > 0) {
+      xy->eval1();
+    }
+    shared_ptr<XYNumber> n1(dynamic_pointer_cast<XYNumber>(xy->mX[0]));
+
+    BOOST_CHECK(n1 && n1->mValue == 3);
+  }
+
+  {
+    // Set/Get
+    shared_ptr<XY> xy(new XY());
+    parse("[5 +] add5 set", back_inserter(xy->mY));
+    BOOST_CHECK(xy->mY.size() == 3);
+
+    while(xy->mY.size() > 0) {
+      xy->eval1();
+    }
+
+    XYEnv::iterator it = xy->mEnv.find("add5");
+    BOOST_CHECK(it != xy->mEnv.end());
+    shared_ptr<XYList> o1(dynamic_pointer_cast<XYList>((*it).second));
+    BOOST_CHECK(o1 && o1->mList.size() == 2);
+
+    parse("2 add5;!", back_inserter(xy->mY));
+    while(xy->mY.size() > 0) {
+      xy->eval1();
+    }
+    
+    BOOST_CHECK(xy->mX.size() == 1);
+    shared_ptr<XYNumber> o2(dynamic_pointer_cast<XYNumber>(xy->mX.back()));
+    BOOST_CHECK(o2 && o2->mValue == 7);
+  }
+
+  {
+    // Pattern deconstruction
+    shared_ptr<XY> xy(new XY());
+    parse("1 2 3 [[a b c] c b a]", back_inserter(xy->mX));
+    BOOST_CHECK(xy->mX.size() == 4);
+
+    shared_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
+    BOOST_CHECK(pattern && pattern->mList.size() == 4);
+    xy->mX.pop_back();
+
+    XYEnv env;
+    xy->getPatternValues(*(pattern->mList.begin()), inserter(env, env.begin()));
+    BOOST_CHECK(env.size() == 3);
+    BOOST_CHECK(env["a"]->toString() == "1");
+    BOOST_CHECK(env["b"]->toString() == "2");
+    BOOST_CHECK(env["c"]->toString() == "3");
+  }
+
+  {
+    // Pattern deconstruction 2
+    shared_ptr<XY> xy(new XY());
+    parse("1 [2 [3]] [[a [b [c]]] c b a]", back_inserter(xy->mX));
+    BOOST_CHECK(xy->mX.size() == 3);
+
+    shared_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
+    BOOST_CHECK(pattern && pattern->mList.size() == 4);
+    xy->mX.pop_back();
+
+    XYEnv env;
+    xy->getPatternValues(*(pattern->mList.begin()), inserter(env, env.begin()));
+    BOOST_CHECK(env.size() == 3);
+    BOOST_CHECK(env["a"]->toString() == "1");
+    BOOST_CHECK(env["b"]->toString() == "2");
+    BOOST_CHECK(env["c"]->toString() == "3");
+  }
+  {
+    // Pattern deconstruction 2
+    shared_ptr<XY> xy(new XY());
+    parse("foo [a a]", back_inserter(xy->mX));
+    BOOST_CHECK(xy->mX.size() == 2);
+
+    shared_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
+    BOOST_CHECK(pattern && pattern->mList.size() == 2);
+    xy->mX.pop_back();
+
+    XYEnv env;
+    xy->getPatternValues(*(pattern->mList.begin()), inserter(env, env.begin()));
+    BOOST_CHECK(env.size() == 1);
+    BOOST_CHECK(env["a"]->toString() == "foo");
+  }
+}
+
+int test_main(int argc, char* argv[]) {
+  testParse();
+
+  return 0;
+}
+#endif
