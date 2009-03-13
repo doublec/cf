@@ -14,7 +14,6 @@
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/bind.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/xpressive/xpressive.hpp>
 #include <gmpxx.h>
 
 // If defined, compiles as a test applicatation that tests
@@ -631,10 +630,29 @@ bool is_numeric_digit(char ch) {
 
 // Returns true if the string is a shuffle pattern
 bool is_shuffle_pattern(string s) {
-  using namespace boost::xpressive;
-  sregex rex = sregex::compile("[a-zA-Z]+-[a-zA-Z]*");
-  smatch what;
-  return regex_match(s, what, rex);
+  // A string is a shuffle pattern if it is of the form:
+  //   abcd-dbca
+  // No letters may be duplicated on the lhs.
+  // The rhs must not contain letters that are not in the lhs.
+  // The lhs may be empty but the rhs may not be.
+  vector<string> result;
+  split(result, s, is_any_of("-"));
+  if (result.size() != 2)
+    return false;
+
+  string before = result[0];
+  string after = result[1];
+ 
+  sort(before.begin(), before.end());
+  string::iterator bsend = before.end();
+  string::iterator bnend = unique(before.begin(), before.end());
+  if(bsend != bnend)
+    return false; // Duplicates on the lhs of the pattern are invalid
+  sort(after.begin(), after.end());
+  string::iterator anend = unique(after.begin(), after.end());
+  vector<char> diff;
+  set_difference(after.begin(), anend, before.begin(), bnend, back_inserter(diff));
+  return diff.size() == 0;
 }
 
 // Parse a sequence of characters storing the result using the
@@ -1061,12 +1079,15 @@ void testParse() {
   }
   {
     // Shuffle pattern test 1
-    BOOST_CHECK(is_shuffle_pattern("ab-cd"));
+    BOOST_CHECK(is_shuffle_pattern("ab-ab"));
+    BOOST_CHECK(!is_shuffle_pattern("ab-cd"));
     BOOST_CHECK(!is_shuffle_pattern("-cd"));
     BOOST_CHECK(is_shuffle_pattern("ab-"));
-    BOOST_CHECK(is_shuffle_pattern("b-d"));
+    BOOST_CHECK(is_shuffle_pattern("b-b"));
     BOOST_CHECK(!is_shuffle_pattern("abcd"));
     BOOST_CHECK(!is_shuffle_pattern("ab1-2cd"));
+    BOOST_CHECK(!is_shuffle_pattern("aba-aba"));
+    BOOST_CHECK(is_shuffle_pattern("a-aa"));
   }
   {
     // Shuffle pattern test 2
@@ -1107,6 +1128,20 @@ void testParse() {
 
     BOOST_CHECK(n1->toString() == "[ 1 2 1 ]");
   }
+  {
+    // Shuffle pattern test 5
+    shared_ptr<XY> xy(new XY());
+    parse("1 2 foo-bar", back_inserter(xy->mY));
+
+    while(xy->mY.size() > 0) {
+      xy->eval1();
+    }
+
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+
+    BOOST_CHECK(n1->toString() == "[ 1 2 foo-bar ]");
+  }
+
 }
 
 int test_main(int argc, char* argv[]) {
