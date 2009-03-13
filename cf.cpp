@@ -14,6 +14,7 @@
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/bind.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/xpressive/xpressive.hpp>
 #include <gmpxx.h>
 
 // If defined, compiles as a test applicatation that tests
@@ -106,6 +107,20 @@ class XYSymbol : public XYObject
     virtual string toString() const;
     virtual void eval1(XY* xy);
 };
+
+// A shuffle symbol describes pattern to rearrange the stack.
+class XYShuffle : public XYObject
+{
+  public:
+    string mBefore;
+    string mAfter;
+
+  public:
+    XYShuffle(string v);
+    virtual string toString() const;
+    virtual void eval1(XY* xy);
+};
+
 
 // A list of objects. Can include other nested
 // lists. All items in the list are derived from
@@ -233,6 +248,34 @@ void XYSymbol::eval1(XY* xy) {
     (*it).second->eval1(xy);
   else
     xy->mX.push_back(shared_from_this());
+}
+
+// XYShuffle
+XYShuffle::XYShuffle(string v) { 
+  vector<string> result;
+  split(result, v, is_any_of("-"));
+  assert(result.size() == 2);
+  mBefore = result[0];
+  mAfter  = result[1];
+}
+
+string XYShuffle::toString() const {
+  ostringstream out;
+  out << mBefore << "-" << mAfter;
+  return out.str();
+}
+
+void XYShuffle::eval1(XY* xy) {
+  map<char, shared_ptr<XYObject> > env;
+  for(string::reverse_iterator it = mBefore.rbegin(); it != mBefore.rend(); ++it) {
+    env[*it] = xy->mX.back();
+    xy->mX.pop_back();
+  }
+
+  for(string::iterator it = mAfter.begin(); it != mAfter.end(); ++it) {
+    assert(env.find(*it) != env.end());
+    xy->mX.push_back(env[*it]);
+  }
 }
 
 // XYList
@@ -586,6 +629,14 @@ bool is_numeric_digit(char ch) {
   return (ch >= '0' && ch <='9');
 }
 
+// Returns true if the string is a shuffle pattern
+bool is_shuffle_pattern(string s) {
+  using namespace boost::xpressive;
+  sregex rex = sregex::compile("[a-zA-Z]+-[a-zA-Z]*");
+  smatch what;
+  return regex_match(s, what, rex);
+}
+
 // Parse a sequence of characters storing the result using the
 // given output iterator.
 template <class InputIterator, class OutputIterator>
@@ -665,8 +716,11 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
       case XYSTATE_SYMBOL_REST:
       {
         char ch = *first;
-        if (is_symbol_break(ch)) {
-          *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
+        if (is_symbol_break(ch) && ch != '-') {
+          if (is_shuffle_pattern(result))
+            *out++ = shared_ptr<XYShuffle>(new XYShuffle(result));
+          else
+            *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
           state = XYSTATE_INIT;
         }
         else {
@@ -704,7 +758,10 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
 
     case XYSTATE_SYMBOL_REST:
     {
-      *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
+      if (is_shuffle_pattern(result))
+        *out++ = shared_ptr<XYShuffle>(new XYShuffle(result));
+      else
+        *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
     }
     break;
 
@@ -1002,10 +1059,54 @@ void testParse() {
 
     BOOST_CHECK(n1->toString() == "[ 1 [ 2 3 ] ]");
   }
+  {
+    // Shuffle pattern test 1
+    BOOST_CHECK(is_shuffle_pattern("ab-cd"));
+    BOOST_CHECK(!is_shuffle_pattern("-cd"));
+    BOOST_CHECK(is_shuffle_pattern("ab-"));
+    BOOST_CHECK(is_shuffle_pattern("b-d"));
+    BOOST_CHECK(!is_shuffle_pattern("abcd"));
+    BOOST_CHECK(!is_shuffle_pattern("ab1-2cd"));
+  }
+  {
+    // Shuffle pattern test 2
+    shared_ptr<XY> xy(new XY());
+    parse("1 2 a-", back_inserter(xy->mY));
 
+    while(xy->mY.size() > 0) {
+      xy->eval1();
+    }
 
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
+    BOOST_CHECK(n1->toString() == "[ 1 ]");
+  }
+  {
+    // Shuffle pattern test 3
+    shared_ptr<XY> xy(new XY());
+    parse("1 2 a-aa", back_inserter(xy->mY));
 
+    while(xy->mY.size() > 0) {
+      xy->eval1();
+    }
+
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+
+    BOOST_CHECK(n1->toString() == "[ 1 2 2 ]");
+  }
+  {
+    // Shuffle pattern test 4
+    shared_ptr<XY> xy(new XY());
+    parse("1 2 ab-aba", back_inserter(xy->mY));
+
+    while(xy->mY.size() > 0) {
+      xy->eval1();
+    }
+
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+
+    BOOST_CHECK(n1->toString() == "[ 1 2 1 ]");
+  }
 }
 
 int test_main(int argc, char* argv[]) {
