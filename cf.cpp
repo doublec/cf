@@ -720,57 +720,6 @@ void parse(string s, OutputIterator out) {
   parse(s.begin(), s.end(), out);
 }
 
-void testXY() {
-  shared_ptr<XY> xy(new XY());
-  shared_ptr<XYObject> program2[] = {
-    msp(new XYNumber(100)),
-    msp(new XYNumber(200)),
-    msp(new XYAddition())
-  };
-
-  shared_ptr<XYObject> program1[] = {
-    msp(new XYNumber(1)),
-    msp(new XYNumber(2)),
-    msp(new XYNumber(3)),
-    msp(new XYAddition()),
-    msp(new XYAddition()),
-    msp( new XYNumber(42)),
-    msp(new XYSymbol("a")),
-    msp(new XYSet()),
-    msp(new XYSymbol("a")),
-    msp(new XYGet()),
-    msp(new XYAddition()),
-    msp(new XYList(program2, program2+sizeof(program2)/sizeof(shared_ptr<XYObject>))),
-    msp(new XYUnquote()),
-    msp(new XYUnquote())
-  };
-
-  xy->mY.insert(xy->mY.begin(), program1, program1 + (sizeof(program1)/sizeof(shared_ptr<XYObject>)));
-  string s("1 2 3 45 + a;! [1 2 3] !");
-  parse(s.begin(), s.end(), back_inserter(xy->mY));
-  while(xy->mY.size() > 0) {
-    xy->print();
-    xy->eval1();
-  }
-
-  xy->print();
-}
-
-void runTests() {
-  testXY();
-
-  shared_ptr<XY> xy(new XY());
-  string s("1 [ 2 3 ] [ [a [b c]] c b a]) 1");
-  parse(s.begin(), s.end(), back_inserter(xy->mY));
-  while(xy->mY.size() > 0) {
-    xy->print();
-    xy->eval1();
-  }
-
-  xy->print();
-
-}
-
 #if !defined(TEST)
 int main() {
   shared_ptr<XY> xy(new XY());
