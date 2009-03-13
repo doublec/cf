@@ -516,6 +516,10 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
         else if (ch == ']') {
           return ++first;
         }
+        else if (ch == '-') {
+          // Leading sign for number or a symbol
+          state = XYSTATE_NUMBER_START;
+        }
         else if (is_symbol_break(ch)) {
           *out++ = shared_ptr<XYSymbol>(new XYSymbol(string(1, *first++)));
         }
@@ -544,8 +548,15 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
           ++first;
         }
         else if(is_symbol_break(ch)) {
-          *out++ = shared_ptr<XYNumber>(new XYNumber(result));
-          state = XYSTATE_INIT;
+          if (result == "-") {
+            // '-' was a symbol, not a sign
+            *out++ = msp(new XYSymbol("-"));
+            state = XYSTATE_INIT;
+          }
+          else {
+            *out++ = shared_ptr<XYNumber>(new XYNumber(result));
+            state = XYSTATE_INIT;
+          }
         }
         else {
           // Actually a symbol which is prefixed by a number
@@ -592,9 +603,14 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
   }
 
   switch (state) {
-    case XYSTATE_NUMBER_REST: {
-     *out++ = shared_ptr<XYNumber>(new XYNumber(result));
+    case XYSTATE_NUMBER_REST: 
+    {
+      if (result == "-") 
+        *out++ = msp(new XYSymbol("-"));
+      else
+        *out++ = shared_ptr<XYNumber>(new XYNumber(result));
     }
+
     break;
 
     case XYSTATE_SYMBOL_REST:
