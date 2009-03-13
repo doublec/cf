@@ -989,6 +989,20 @@ void testParse() {
     BOOST_CHECK(n1->toString() == "[ 4 0 ]");
   }
 
+  {
+    // Pattern 4 - Stack to Queue - with list deconstruction
+    shared_ptr<XY> xy(new XY());
+    parse("[1 2 3] [[[a A]] a A] (", back_inserter(xy->mY));
+
+    while(xy->mY.size() > 0) {
+      xy->eval1();
+    }
+
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+
+    BOOST_CHECK(n1->toString() == "[ 1 [ 2 3 ] ]");
+  }
+
 
 
 
