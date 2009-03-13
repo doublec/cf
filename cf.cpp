@@ -178,6 +178,14 @@ class XYPatternStackToStack : public XYPrimitive
     virtual void eval1(XY* xy);
 };
 
+// [X^{pattern} Y] [X result^Y]
+class XYPatternStackToQueue : public XYPrimitive
+{
+  public:
+    XYPatternStackToQueue();
+    virtual void eval1(XY* xy);
+};
+
 
 // The environment maps names to objects
 typedef map<string, shared_ptr<XYObject> > XYEnv;
@@ -236,6 +244,12 @@ class XY {
     // This operation destructures within lists on the stack.
     template <class OutputIterator>
     void getPatternValues(shared_ptr<XYObject> symbols, OutputIterator out);
+
+    // Given a mapping of names to values in 'env', replaces symbols in 'object'
+    // that have the name with the given value. Store the newly created list
+    // in 'out'.
+    template <class OutputIterator>
+    void replacePattern(XYEnv const& env, shared_ptr<XYObject> object, OutputIterator out);
 };
 
 // XY
@@ -245,6 +259,8 @@ XY::XY() {
   mP[";"]   = msp(new XYGet());
   mP["!"]   = msp(new XYUnquote());
   mP[")"]   = msp(new XYPatternStackToStack());
+  mP[")"]   = msp(new XYPatternStackToStack());
+  mP["("]   = msp(new XYPatternStackToQueue());
 }
 
 void XY::print() {
@@ -299,14 +315,13 @@ void XY::match(OutputIterator out,
 }
 
 template <class OutputIterator>
-void XY::getPatternValues(shared_ptr<XYObject> pattern, OutputIterator out)
-{
+void XY::getPatternValues(shared_ptr<XYObject> pattern, OutputIterator out) {
   shared_ptr<XYList> list = dynamic_pointer_cast<XYList>(pattern);
   if (list) {
     assert(mX.size() >= list->mList.size());
     shared_ptr<XYList> stack(new XYList(mX.end() - list->mList.size(), mX.end()));
     match(out, stack, pattern, stack, stack->mList.begin());
-    mX.resize(stack->mList.size());
+    mX.resize(mX.size() - list->mList.size());
   }
   else {
     shared_ptr<XYObject> o = mX.back();
@@ -315,7 +330,30 @@ void XY::getPatternValues(shared_ptr<XYObject> pattern, OutputIterator out)
     match(out, o, pattern, list, list->mList.end());
   }
 }
-                   
+ 
+template <class OutputIterator>
+void XY::replacePattern(XYEnv const& env, shared_ptr<XYObject> object, OutputIterator out) {
+  shared_ptr<XYList>   list   = dynamic_pointer_cast<XYList>(object);
+  shared_ptr<XYSymbol> symbol = dynamic_pointer_cast<XYSymbol>(object); 
+  if (list) {
+    // Recurse through the list replacing variables as needed
+    shared_ptr<XYList> new_list(new XYList());
+    for(XYList::iterator it = list->mList.begin(); it != list->mList.end(); ++it) 
+      replacePattern(env, *it, back_inserter(new_list->mList));
+    *out++ = new_list;
+  }
+  else if (symbol) {
+    XYEnv::const_iterator it = env.find(symbol->mValue);
+    if (it != env.end())
+      *out++ = (*it).second;
+    else
+      *out++ = object;
+  }
+  else
+    *out++ = object;
+}
+
+                  
 // XYNumber
 XYNumber::XYNumber(int v) : mValue(v) { }
 XYNumber::XYNumber(string v) : mValue(v) { }
@@ -443,15 +481,57 @@ XYPatternStackToStack::XYPatternStackToStack() : XYPrimitive(")") { }
 void XYPatternStackToStack::eval1(XY* xy) {
   assert(xy->mX.size() >= 1);
 
+  // Get the pattern from the stack
   shared_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
   assert(pattern);
   xy->mX.pop_back();
   assert(pattern->mList.size() > 0);
 
+  // Populate env with a mapping between the pattern variables to the
+  // values on the stack.
   XYEnv env;
   xy->getPatternValues(*(pattern->mList.begin()), inserter(env, env.begin()));
+  // Process pattern body using these mappings.
+  if (pattern->mList.size() > 1) {
+    XYList::iterator start = pattern->mList.begin();
+    XYList::iterator end   = pattern->mList.end();
+    shared_ptr<XYList> list(new XYList());
+    xy->replacePattern(env, msp(new XYList(++start, end)), back_inserter(list->mList));
+    assert(list->mList.size() > 0);
+    xy->mX.push_back(list->mList[0]);
+  }
 }
 
+// XYPatternStackToQueue
+XYPatternStackToQueue::XYPatternStackToQueue() : XYPrimitive("(") { }
+
+void XYPatternStackToQueue::eval1(XY* xy) {
+  assert(xy->mX.size() >= 1);
+
+  // Get the pattern from the stack
+  shared_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
+  assert(pattern);
+  xy->mX.pop_back();
+  assert(pattern->mList.size() > 0);
+
+  // Populate env with a mapping between the pattern variables to the
+  // values on the stack.
+  XYEnv env;
+  xy->getPatternValues(*(pattern->mList.begin()), inserter(env, env.begin()));
+  // Process pattern body using these mappings.
+  if (pattern->mList.size() > 1) {
+    XYList::iterator start = pattern->mList.begin();
+    XYList::iterator end   = pattern->mList.end();
+    shared_ptr<XYList> list(new XYList());
+    xy->replacePattern(env, msp(new XYList(++start, end)), back_inserter(list->mList));
+    assert(list->mList.size() > 0);
+
+    // Prepend to queue
+    list = dynamic_pointer_cast<XYList>(list->mList[0]);
+    assert(list);
+    xy->mY.insert(xy->mY.begin(), list->mList.begin(), list->mList.end());
+  }
+}
 
 enum XYState {
   XYSTATE_INIT,
@@ -860,6 +940,91 @@ void testParse() {
     BOOST_CHECK(env.size() == 1);
     BOOST_CHECK(env["a"]->toString() == "foo");
   }
+  {
+    // Pattern replace 1
+    XYEnv env;
+    env["a"] = msp(new XYNumber(1));
+    env["b"] = msp(new XYNumber(2));
+
+    shared_ptr<XYList> list(new XYList());
+    list->mList.push_back(msp(new XYNumber(42)));
+    list->mList.push_back(msp(new XYSymbol("b")));
+    list->mList.push_back(msp(new XYSymbol("a")));
+
+    shared_ptr<XYList> out(new XYList());
+    shared_ptr<XY> xy(new XY());
+    xy->replacePattern(env, list, back_inserter(out->mList));
+    BOOST_CHECK(out->mList.size() > 0);
+    shared_ptr<XYList> result(dynamic_pointer_cast<XYList>(out->mList[0]));
+    BOOST_CHECK(result);
+    BOOST_CHECK(result->mList.size() == 3);
+    BOOST_CHECK(result->mList[0]->toString() == "42");
+    BOOST_CHECK(result->mList[1]->toString() == "2");
+    BOOST_CHECK(result->mList[2]->toString() == "1");
+  }
+  {
+    // Pattern replace 2
+    XYEnv env;
+    env["a"] = msp(new XYNumber(1));
+    env["b"] = msp(new XYNumber(2));
+
+    shared_ptr<XYList> list(new XYList());
+    parse("[a [ b a ] a c]", back_inserter(list->mList));
+
+    shared_ptr<XYList> out(new XYList());
+    shared_ptr<XY> xy(new XY());
+    xy->replacePattern(env, list, back_inserter(out->mList));
+    BOOST_CHECK(out->mList.size() > 0);
+    shared_ptr<XYList> result(dynamic_pointer_cast<XYList>(out->mList[0]));
+    BOOST_CHECK(result);
+    BOOST_CHECK(result->mList.size() == 1);
+    BOOST_CHECK(result->toString() == "[ [ 1 [ 2 1 ] 1 c ] ]");
+  }
+  {
+    // Pattern 1 - Stack to Stack
+    shared_ptr<XY> xy(new XY());
+    parse("1 2 [[a b] b a])", back_inserter(xy->mY));
+
+    while(xy->mY.size() > 0) {
+      xy->eval1();
+    }
+
+    BOOST_CHECK(xy->mX.size() == 1);
+    shared_ptr<XYList> n1(dynamic_pointer_cast<XYList>(xy->mX.back()));
+
+    BOOST_CHECK(n1->toString() == "[ 2 1 ]");
+  }
+  {
+    // Pattern 2 - Stack to Stack
+    shared_ptr<XY> xy(new XY());
+    parse("1 2 [[a b] a b [ c [ b ] ]])", back_inserter(xy->mY));
+
+    while(xy->mY.size() > 0) {
+      xy->eval1();
+    }
+
+    BOOST_CHECK(xy->mX.size() == 1);
+    shared_ptr<XYList> n1(dynamic_pointer_cast<XYList>(xy->mX.back()));
+
+    BOOST_CHECK(n1->toString() == "[ 1 2 [ c [ 2 ] ] ]");
+  }
+  {
+    // Pattern 3 - Stack to Queue
+    shared_ptr<XY> xy(new XY());
+    parse("[ [a a a +] ] double set 2 double;!( 0", back_inserter(xy->mY));
+
+    while(xy->mY.size() > 0) {
+      xy->eval1();
+    }
+
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+
+    BOOST_CHECK(n1->toString() == "[ 4 0 ]");
+  }
+
+
+
+
 }
 
 int test_main(int argc, char* argv[]) {
