@@ -12,6 +12,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/bind.hpp>
+#include <boost/algorithm/string.hpp>
 #include <gmpxx.h>
 
 using namespace std;
@@ -155,8 +156,19 @@ class XYUnquote : public XYPrimitive
     virtual void eval1(XY* xy);
 };
 
+// [X^{pattern} Y] [X^result Y]
+class XYPatternStackToStack : public XYPrimitive
+{
+  public:
+    XYPatternStackToStack();
+    virtual void eval1(XY* xy);
+};
+
+
 // The environment maps names to objects
 typedef map<string, shared_ptr<XYObject> > XYEnv;
+typedef vector<shared_ptr<XYObject> > XYStack;
+typedef deque<shared_ptr<XYObject> > XYQueue;
 
 // The state of the runtime interpreter.
 // Holds the environment, stack and queue
@@ -169,10 +181,10 @@ class XY {
     XYEnv mEnv;
 
     // The Stack
-    vector<shared_ptr<XYObject> > mX;
+    XYStack mX;
 
     // The Queue
-    deque<shared_ptr<XYObject> > mY;
+    XYQueue mY;
 
   public:
     // Print a representation of the state of the
@@ -184,6 +196,22 @@ class XY {
 
     // Evaluate all items in the queue.
     void eval();
+
+    // Perform a recursive match of pattern values to items
+    // in the given stack.
+    template <class OutputIterator>
+    void match(OutputIterator out, 
+               shared_ptr<XYObject> object,
+               shared_ptr<XYObject> pattern,
+               shared_ptr<XYList> sequence,
+               XYList::iterator it);
+
+    // Given a pattern list of symbols (which can contain
+    // nested lists of symbols), store in the environment
+    // a mapping of symbol name to value from the stack.
+    // This operation destructures within lists on the stack.
+    template <class OutputIterator>
+    void getPatternValues(shared_ptr<XYObject> symbols, OutputIterator out);
 };
 
 // XY
@@ -210,6 +238,53 @@ void XY::eval() {
   }
 }
 
+template <class OutputIterator>
+void XY::match(OutputIterator out, 
+               shared_ptr<XYObject> object,
+               shared_ptr<XYObject> pattern,
+               shared_ptr<XYList> sequence,
+               XYList::iterator it) {
+  shared_ptr<XYList> object_list = dynamic_pointer_cast<XYList>(object);
+  shared_ptr<XYList> pattern_list = dynamic_pointer_cast<XYList>(pattern);
+  shared_ptr<XYSymbol> pattern_symbol = dynamic_pointer_cast<XYSymbol>(pattern);
+  if (object_list && pattern_list) {
+    for(XYList::iterator pit = pattern_list->mList.begin(),
+                         oit = object_list->mList.begin(); 
+        pit != pattern_list->mList.end(); 
+        ++pit, ++oit) {
+      match(out, (*oit), (*pit), object_list, oit);
+    }
+  }
+  else if(pattern_symbol) {
+    string uppercase = pattern_symbol->mValue;
+    to_upper(uppercase);
+    if (uppercase == pattern_symbol->mValue) {
+      *out++ = make_pair(pattern_symbol->mValue, new XYList(it, sequence->mList.end()));
+    }
+    else
+      *out++ = make_pair(pattern_symbol->mValue, object);
+  }
+}
+
+template <class OutputIterator>
+void XY::getPatternValues(shared_ptr<XYObject> pattern, OutputIterator out)
+{
+  shared_ptr<XYList> list = dynamic_pointer_cast<XYList>(pattern);
+  if (list) {
+    cout << mX.size() << " " << list->mList.size() << endl;
+    assert(mX.size() >= list->mList.size());
+    shared_ptr<XYList> stack(new XYList(mX.end() - list->mList.size(), mX.end()));
+    match(out, stack, pattern, stack, stack->mList.begin());
+    mX.resize(stack->mList.size());
+  }
+  else {
+    shared_ptr<XYObject> o = mX.back();
+    mX.pop_back();
+    shared_ptr<XYList> list(new XYList());
+    match(out, o, pattern, list, list->mList.end());
+  }
+}
+                   
 // XYNumber
 XYNumber::XYNumber(int v) : mValue(v) { }
 XYNumber::XYNumber(string v) : mValue(v) { }
@@ -326,6 +401,27 @@ void XYUnquote::eval1(XY* xy) {
   }
 }
 
+// XYPatternStackToStack
+XYPatternStackToStack::XYPatternStackToStack() : XYPrimitive(")") { }
+
+void XYPatternStackToStack::eval1(XY* xy) {
+  assert(xy->mX.size() >= 1);
+
+  shared_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
+  assert(pattern);
+  xy->mX.pop_back();
+  assert(pattern->mList.size() > 0);
+
+  XYEnv env;
+  xy->getPatternValues(*(pattern->mList.begin()), inserter(env, env.begin()));
+  for(XYEnv::iterator it = env.begin(); it != env.end(); ++it) {
+    string key = (*it).first;
+    shared_ptr<XYObject> value = (*it).second;
+    cout << "Key: " << key << " value: " << value->toString() << endl;
+  }
+}
+
+
 enum XYState {
   XYSTATE_INIT,
   XYSTATE_STRING_START,
@@ -385,12 +481,18 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
           *first++;
         else if (ch == '[')
           state = XYSTATE_LIST_START;
-        else if (ch == ']')
+        else if (ch == ']') {
+          cout << "List ended" << endl;
           return ++first;
+        }
         else if (is_symbol_break(ch)) {
           if (ch == '!') {
             ++first;
             *out++ = shared_ptr<XYUnquote>(new XYUnquote());
+          }
+          else if (ch == ')' ) {
+            ++first;
+            *out++ = shared_ptr<XYPatternStackToStack>(new XYPatternStackToStack());
           }
           else
             *out++ = shared_ptr<XYSymbol>(new XYSymbol(string(1, *first++)));
@@ -436,13 +538,17 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
 
       case XYSTATE_SYMBOL_REST:
       {
-        char ch = *first++;
+        char ch = *first;
         if (is_symbol_break(ch)) {
           cout << "Symbol(" << result << ")" << endl;
-          *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
+          if (result == ")")
+            *out++ = shared_ptr<XYPatternStackToStack>(new XYPatternStackToStack());
+          else
+            *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
           state = XYSTATE_INIT;
         }
         else {
+          first++;
           result.push_back(ch);
         }
       }
@@ -473,7 +579,12 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
 
     case XYSTATE_SYMBOL_REST:
     {
-      *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
+      if (result == ")") {
+        cout << "here" << endl;
+        *out++ = shared_ptr<XYPatternStackToStack>(new XYPatternStackToStack());
+      }
+      else
+        *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
     }
     break;
 
@@ -535,6 +646,17 @@ void testXY() {
 
 void runTests() {
   testXY();
+
+  shared_ptr<XY> xy(new XY());
+  string s("1 [ 2 3 ] [ [a [b c]] c b a]) 1");
+  parse(s.begin(), s.end(), back_inserter(xy->mY));
+  while(xy->mY.size() > 0) {
+    xy->print();
+    xy->eval1();
+  }
+
+  xy->print();
+
 }
 
 int main() {
