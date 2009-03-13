@@ -7,6 +7,7 @@
 #include <iterator>
 #include <algorithm>
 #include <string>
+#include <functional>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/lexical_cast.hpp>
@@ -267,6 +268,7 @@ void XYPrimitive::eval1(XY* xy) {
 }
 
 // Primitive Implementations
+
 // + [X^lhs^rhs] Y] -> [X^lhs+rhs Y]
 static void primitive_addition(XY* xy) {
   assert(xy->mX.size() >= 2);
@@ -279,6 +281,64 @@ static void primitive_addition(XY* xy) {
   xy->mX.pop_back();
 
   xy->mX.push_back(shared_ptr<XYNumber>(new XYNumber(lhs->mValue + rhs->mValue)));
+}
+
+// + [X^lhs^rhs] Y] -> [X^lhs-rhs Y]
+static void primitive_subtraction(XY* xy) {
+  assert(xy->mX.size() >= 2);
+  shared_ptr<XYNumber> rhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  assert(rhs);
+  xy->mX.pop_back();
+
+  shared_ptr<XYNumber> lhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  assert(lhs);
+  xy->mX.pop_back();
+
+  xy->mX.push_back(shared_ptr<XYNumber>(new XYNumber(lhs->mValue - rhs->mValue)));
+}
+
+// + [X^lhs^rhs] Y] -> [X^lhs*rhs Y]
+static void primitive_multiplication(XY* xy) {
+  assert(xy->mX.size() >= 2);
+  shared_ptr<XYNumber> rhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  assert(rhs);
+  xy->mX.pop_back();
+
+  shared_ptr<XYNumber> lhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  assert(lhs);
+  xy->mX.pop_back();
+
+  xy->mX.push_back(shared_ptr<XYNumber>(new XYNumber(lhs->mValue * rhs->mValue)));
+}
+
+// + [X^lhs^rhs] Y] -> [X^lhs/rhs Y]
+static void primitive_division(XY* xy) {
+  assert(xy->mX.size() >= 2);
+  shared_ptr<XYNumber> rhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  assert(rhs);
+  xy->mX.pop_back();
+
+  shared_ptr<XYNumber> lhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  assert(lhs);
+  xy->mX.pop_back();
+
+  xy->mX.push_back(shared_ptr<XYNumber>(new XYNumber(lhs->mValue / rhs->mValue)));
+}
+
+// + [X^lhs^rhs] Y] -> [X^lhs**rhs Y]
+static void primitive_power(XY* xy) {
+  assert(xy->mX.size() >= 2);
+  shared_ptr<XYNumber> rhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  assert(rhs);
+  xy->mX.pop_back();
+
+  shared_ptr<XYNumber> lhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  assert(lhs);
+  xy->mX.pop_back();
+
+  shared_ptr<XYNumber> result(new XYNumber(mpz_class(lhs->mValue)));
+  mpz_pow_ui(result->mValue.get_mpz_t(), lhs->mValue.get_mpz_t(), rhs->mValue.get_ui());
+  xy->mX.push_back(result);
 }
 
 // set [X^value^name Y] -> [X Y] 
@@ -380,6 +440,10 @@ static void primitive_pattern_sq(XY* xy) {
 // XY
 XY::XY() {
   mP["+"]   = msp(new XYPrimitive("+", primitive_addition));
+  mP["-"]   = msp(new XYPrimitive("-", primitive_subtraction));
+  mP["*"]   = msp(new XYPrimitive("*", primitive_multiplication));
+  mP["%"]   = msp(new XYPrimitive("%", primitive_division));
+  mP["^"]   = msp(new XYPrimitive("^", primitive_power));
   mP["set"] = msp(new XYPrimitive("set", primitive_set));
   mP[";"]   = msp(new XYPrimitive(";", primitive_get));
   mP["!"]   = msp(new XYPrimitive("!", primitive_unquote));
