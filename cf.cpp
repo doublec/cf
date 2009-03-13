@@ -773,7 +773,16 @@ void runTests() {
 
 #if !defined(TEST)
 int main() {
-  runTests();
+  shared_ptr<XY> xy(new XY());
+  while (1) {
+    string input;
+    xy->print();
+    cout << "ok ";
+    getline(cin, input);
+    parse(input.begin(), input.end(), back_inserter(xy->mY));
+    xy->eval(); 
+  }
+
 
   return 0;
 }
