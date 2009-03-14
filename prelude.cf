@@ -31,3 +31,6 @@
 
 [[[dup;'unit;',]`]$] stack set
 [[[last;']`]$] unstack set
+
+** Control Flow **
+[pair;'[dupd;']`['not]`nth'] cond set

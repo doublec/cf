@@ -718,6 +718,24 @@ static void primitive_not(XY* xy) {
   }
 }
 
+// nth nth [X^n^{...} Y] [X^o Y] 
+static void primitive_nth(XY* xy) {
+  assert(xy->mX.size() >= 2);
+
+  shared_ptr<XYList> list = dynamic_pointer_cast<XYList>(xy->mX.back());
+  assert(list);
+  xy->mX.pop_back();
+
+  shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  assert(n);
+  xy->mX.pop_back();
+
+  if (n->mValue.get_ui() >= list->mList.size()) 
+    xy->mX.push_back(msp(new XYNumber(list->mList.size())));
+  else
+    xy->mX.push_back(list->mList[n->mValue.get_ui()]);
+}
+
 
 // XY
 XY::XY() {
@@ -740,6 +758,8 @@ XY::XY() {
   mP["$$"]  = msp(new XYPrimitive("$$", primitive_stackqueue));
   mP["="]   = msp(new XYPrimitive("=", primitive_equals));
   mP["not"] = msp(new XYPrimitive("not", primitive_not));
+  mP["nth"] = msp(new XYPrimitive("nth", primitive_nth));
+
 }
 
 void XY::print() {
@@ -899,8 +919,11 @@ bool is_shuffle_pattern(string s) {
   if (result.size() != 2)
     return false;
 
-  string before = result[0];
-  string after = result[1];
+  string before = trim_copy(result[0]);
+  string after = trim_copy(result[1]);
+
+  if(before.size() == 0 && after.size() == 0)
+    return false;
  
   sort(before.begin(), before.end());
   string::iterator bsend = before.end();
@@ -1001,145 +1024,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
 
   return first;
 }
-#if 0
-  XYState state = XYSTATE_INIT;
-  string result;
 
-  while (first != last) {
-    switch (state) {
-      case XYSTATE_INIT: {
-        result = "";
-        char ch = *first;
-        if (is_whitespace(ch))
-          *first++;
-        else if (ch == '[')
-          state = XYSTATE_LIST_START;
-        else if (ch == ']') {
-          return ++first;
-        }
-        else if (ch == '-') {
-          // Leading sign for number or a symbol
-          state = XYSTATE_NUMBER_START;
-        }
-        else if (is_symbol_break(ch)) {
-          *out++ = shared_ptr<XYSymbol>(new XYSymbol(string(1, *first++)));
-        }
-        else if (is_numeric_digit(ch) || ch == '.')
-          state = XYSTATE_NUMBER_START;
-        else if (ch == '\"') 
-          state = XYSTATE_STRING_START;
-        else
-          state = XYSTATE_SYMBOL_START;
-      }
-      break;
-
-      case XYSTATE_NUMBER_START:
-      {
-       char ch = *first++;
-       result.push_back(ch);
-       state = XYSTATE_NUMBER_REST;
-      }
-      break;
-
-      case XYSTATE_NUMBER_REST:
-      {
-        char ch = *first;
-        if (is_numeric_digit(ch)) {
-          result.push_back(ch);
-          ++first;
-        }
-        else if(is_symbol_break(ch)) {
-          if (result == "-") {
-            // '-' was a symbol, not a sign
-            *out++ = msp(new XYSymbol("-"));
-            state = XYSTATE_INIT;
-          }
-          else {
-            *out++ = shared_ptr<XYNumber>(new XYNumber(result));
-            state = XYSTATE_INIT;
-          }
-        }
-        else {
-          // Actually a symbol which is prefixed by a number
-          state = XYSTATE_SYMBOL_REST;
-        }
-      }
-      break;
-
-      case XYSTATE_SYMBOL_START:
-      {
-        char ch = *first++;
-        result.push_back(ch);
-        state = XYSTATE_SYMBOL_REST;
-      }
-      break;
-
-      case XYSTATE_SYMBOL_REST:
-      {
-        char ch = *first;
-        if (is_symbol_break(ch) && ch != '-') {
-          if (is_shuffle_pattern(result))
-            *out++ = shared_ptr<XYShuffle>(new XYShuffle(result));
-          else
-            *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
-          state = XYSTATE_INIT;
-        }
-        else {
-          first++;
-          result.push_back(ch);
-        }
-      }
-      break;
-
-      case XYSTATE_LIST_START:
-      {
-        shared_ptr<XYList> list(new X00vYList());
-        first = parse(++first, last, back_inserter(list->mList));
-        *out++ = list;
-        state = XYSTATE_INIT;
-      }
-      break;
-
-      default:
-        assert(1 == 0);
-        break;
-    }
-  }
-
-  switch (state) {
-    case XYSTATE_NUMBER_REST: 
-    {
-      if (result == "-") 
-        *out++ = msp(new XYSymbol("-"));
-      else
-        *out++ = shared_ptr<XYNumber>(new XYNumber(result));
-    }
-
-    break;
-
-    case XYSTATE_SYMBOL_REST:
-    {
-      if (is_shuffle_pattern(result))
-        *out++ = shared_ptr<XYShuffle>(new XYShuffle(result));
-      else
-        *out++ = shared_ptr<XYSymbol>(new XYSymbol(result));
-    }
-    break;
-
-    case XYSTATE_INIT:
-    {
-      // Ignore
-    }
-    break;
-
-    default:
-      assert(1 == 0);
-      break;
-  }
-
-  return last;
-}
-#endif
 // Parse a string into XY objects, storing the result in the
 // container pointer to by the output iterator.
 template <class OutputIterator>
