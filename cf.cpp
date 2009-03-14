@@ -63,6 +63,9 @@ class XYObject : public enable_shared_from_this<XYObject>
     // Convert the object into a string repesentation for
     // printing.
     virtual string toString() const = 0;
+
+    // Return true if this object is equal to the other object.
+    virtual bool equals(shared_ptr<XYObject> rhs) const = 0;
 };
 
 // This lovely piece of code is to allow XY objects to be called within
@@ -81,15 +84,6 @@ namespace boost {
   }
 }
 
-// The null value
-class XYNull : public XYObject
-{
-  public:
-    XYNull();
-    virtual string toString() const;
-    virtual void eval1(XY* xy);
-};
-
 // All numbers are represented by this object, or a class
 // derived from it.
 class XYNumber : public XYObject
@@ -104,6 +98,7 @@ class XYNumber : public XYObject
     XYNumber(mpf_class const& v);
     virtual string toString() const;
     virtual void eval1(XY* xy);
+    virtual bool equals(shared_ptr<XYObject> rhs) const;
 };
 
 // A symbol is an unquoted string.
@@ -116,6 +111,7 @@ class XYSymbol : public XYObject
     XYSymbol(string v);
     virtual string toString() const;
     virtual void eval1(XY* xy);
+    virtual bool equals(shared_ptr<XYObject> rhs) const;
 };
 
 // A string
@@ -128,6 +124,7 @@ class XYString : public XYObject
     XYString(string v);
     virtual string toString() const;
     virtual void eval1(XY* xy);
+    virtual bool equals(shared_ptr<XYObject> rhs) const;
 };
 
 // A shuffle symbol describes pattern to rearrange the stack.
@@ -141,6 +138,7 @@ class XYShuffle : public XYObject
     XYShuffle(string v);
     virtual string toString() const;
     virtual void eval1(XY* xy);
+    virtual bool equals(shared_ptr<XYObject> rhs) const;
 };
 
 
@@ -161,6 +159,7 @@ class XYList : public XYObject
     template <class InputIterator> XYList(InputIterator first, InputIterator last);
     virtual string toString() const;
     virtual void eval1(XY* xy);
+    virtual bool equals(shared_ptr<XYObject> rhs) const;
 };
 
 // A primitive is the implementation of a core function.
@@ -176,6 +175,7 @@ class XYPrimitive : public XYObject
     XYPrimitive(string name, void (*func)(XY*));
     virtual string toString() const;
     virtual void eval1(XY* xy);
+    virtual bool equals(shared_ptr<XYObject> rhs) const;
 };
 
 // The environment maps names to objects
@@ -243,17 +243,6 @@ class XY {
     void replacePattern(XYEnv const& env, shared_ptr<XYObject> object, OutputIterator out);
 };
 
-// XYNull
-XYNull::XYNull() {}
-
-string XYNull::toString() const {
-  return "null";
-}
-
-void XYNull::eval1(XY* xy) {
-  xy->mX.push_back(shared_from_this());
-}
-
 // XYNumber
 XYNumber::XYNumber(int v) : mValue(v) { }
 XYNumber::XYNumber(string v) : mValue(v) { }
@@ -265,6 +254,11 @@ string XYNumber::toString() const {
 
 void XYNumber::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
+}
+
+bool XYNumber::equals(shared_ptr<XYObject> rhs) const {
+  shared_ptr<XYNumber> o = dynamic_pointer_cast<XYNumber>(rhs);
+  return o && o->mValue == mValue;
 }
 
 // XYSymbol
@@ -283,6 +277,11 @@ void XYSymbol::eval1(XY* xy) {
     xy->mX.push_back(shared_from_this());
 }
 
+bool XYSymbol::equals(shared_ptr<XYObject> rhs) const {
+  shared_ptr<XYSymbol> o = dynamic_pointer_cast<XYSymbol>(rhs);
+  return o && o->mValue == mValue;
+}
+
 // XYString
 XYString::XYString(string v) : mValue(v) { }
 
@@ -294,6 +293,11 @@ string XYString::toString() const {
 
 void XYString::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
+}
+
+bool XYString::equals(shared_ptr<XYObject> rhs) const {
+  shared_ptr<XYString> o = dynamic_pointer_cast<XYString>(rhs);
+  return o && o->mValue == mValue;
 }
 
 // XYShuffle
@@ -324,6 +328,12 @@ void XYShuffle::eval1(XY* xy) {
   }
 }
 
+bool XYShuffle::equals(shared_ptr<XYObject> rhs) const {
+  shared_ptr<XYShuffle> o = dynamic_pointer_cast<XYShuffle>(rhs);
+  return o && o->mBefore == mBefore && o->mAfter == mAfter;
+}
+
+
 // XYList
 XYList::XYList() { }
 
@@ -344,6 +354,24 @@ void XYList::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
 }
 
+bool XYList::equals(shared_ptr<XYObject> rhs) const {
+  shared_ptr<XYList> o = dynamic_pointer_cast<XYList>(rhs);
+  if (!o)
+    return false;
+
+  if(o->mList.size() != mList.size())
+    return false;
+
+  for(const_iterator lit = mList.begin(),
+                     rit = o->mList.begin();
+      lit != mList.end();
+      ++lit, ++rit) 
+    if (!(*lit)->equals(*rit))
+      return false;
+
+  return true;
+}
+
 
 // XYPrimitive
 XYPrimitive::XYPrimitive(string n, void (*func)(XY*)) : mName(n), mFunc(func) { }
@@ -356,6 +384,11 @@ void XYPrimitive::eval1(XY* xy) {
   mFunc(xy);
 }
 
+bool XYPrimitive::equals(shared_ptr<XYObject> rhs) const {
+  shared_ptr<XYPrimitive> o = dynamic_pointer_cast<XYPrimitive>(rhs);
+  return o && mName == o->mName && mFunc == o->mFunc;
+}
+ 
 // Primitive Implementations
 
 // + [X^lhs^rhs] Y] -> [X^lhs+rhs Y]
@@ -646,6 +679,23 @@ static void primitive_stackqueue(XY* xy) {
   xy->mY.assign(queue->mList.begin(), queue->mList.end());
 }
 
+// = equals [X^a^b Y] [X^? Y] 
+static void primitive_equals(XY* xy) {
+  assert(xy->mX.size() >= 2);
+
+  shared_ptr<XYObject> rhs = xy->mX.back();
+  assert(rhs);
+  xy->mX.pop_back();
+
+  shared_ptr<XYObject> lhs = xy->mX.back();
+  assert(lhs);
+  xy->mX.pop_back();
+
+  if (lhs->equals(rhs))
+    xy->mX.push_back(msp(new XYNumber(1)));
+  else
+    xy->mX.push_back(msp(new XYNumber(0)));
+}
 
 // XY
 XY::XY() {
@@ -666,6 +716,7 @@ XY::XY() {
   mP[","]   = msp(new XYPrimitive(",", primitive_join));
   mP["$"]   = msp(new XYPrimitive("$", primitive_stack));
   mP["$$"]  = msp(new XYPrimitive("$$", primitive_stackqueue));
+  mP["="]   = msp(new XYPrimitive("=", primitive_equals));
 }
 
 void XY::print() {
@@ -1105,13 +1156,15 @@ int main(int argc, char* argv[]) {
     eval_files(xy, argv + 1, argv + argc);
   }
 
-  while (1) {
+  while (cin.good()) {
     string input;
     xy->print();
     cout << "ok ";
     getline(cin, input);
-    parse(input, back_inserter(xy->mY));
-    xy->eval(); 
+    if (cin.good()) {
+      parse(input, back_inserter(xy->mY));
+      xy->eval(); 
+    }
   }
 
 

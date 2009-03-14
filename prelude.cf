@@ -23,3 +23,11 @@
 
 ** Continuations **
 [[[drop;'[]]`]$] clearstack set
+[[drop;'[]]$] clearqueue set
+[[ab- [][]]$] clear set
+
+[[[|uncons;'|swap;']`swap;'unit;',]$] queue set
+[[|uncons;'|[unit;',]`]$] unqueue set
+
+[[[dup;'unit;',]`]$] stack set
+[[[last;']`]$] unstack set
