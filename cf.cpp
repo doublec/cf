@@ -720,7 +720,7 @@ boost::xpressive::sregex re_string() {
 // Return regex for comments
 boost::xpressive::sregex re_comment() {
   using namespace boost::xpressive;
-  return as_xpr('*') >> '*' >> *_ >> '*' >> '*';
+  return as_xpr('*') >> '*' >> -*_ >> '*' >> '*';
 }
 
  
