@@ -81,6 +81,15 @@ namespace boost {
   }
 }
 
+// The null value
+class XYNull : public XYObject
+{
+  public:
+    XYNull();
+    virtual string toString() const;
+    virtual void eval1(XY* xy);
+};
+
 // All numbers are represented by this object, or a class
 // derived from it.
 class XYNumber : public XYObject
@@ -233,6 +242,17 @@ class XY {
     template <class OutputIterator>
     void replacePattern(XYEnv const& env, shared_ptr<XYObject> object, OutputIterator out);
 };
+
+// XYNull
+XYNull::XYNull() {}
+
+string XYNull::toString() const {
+  return "null";
+}
+
+void XYNull::eval1(XY* xy) {
+  xy->mX.push_back(shared_from_this());
+}
 
 // XYNumber
 XYNumber::XYNumber(int v) : mValue(v) { }
@@ -600,11 +620,21 @@ void XY::match(OutputIterator out,
   shared_ptr<XYList> pattern_list = dynamic_pointer_cast<XYList>(pattern);
   shared_ptr<XYSymbol> pattern_symbol = dynamic_pointer_cast<XYSymbol>(pattern);
   if (object_list && pattern_list) {
-    for(XYList::iterator pit = pattern_list->mList.begin(),
-                         oit = object_list->mList.begin(); 
-        pit != pattern_list->mList.end(); 
+    XYList::iterator pit = pattern_list->mList.begin(),
+                     oit = object_list->mList.begin(); 
+    for(;
+        pit != pattern_list->mList.end() && oit != object_list->mList.end(); 
         ++pit, ++oit) {
       match(out, (*oit), (*pit), object_list, oit);
+    }
+    // If there are more pattern items than there are list items,
+    // set the pattern value to null.
+    while(pit != pattern_list->mList.end()) {
+      shared_ptr<XYSymbol> s = dynamic_pointer_cast<XYSymbol>(*pit);
+      if (s) {
+        *out++ = make_pair(s->mValue, msp(new XYNull()));
+      }
+      ++pit;
     }
   }
   else if(pattern_symbol) {
@@ -1248,7 +1278,6 @@ void testParse() {
 
     BOOST_CHECK(n1->toString() == "[ 4 0 ]");
   }
-
   {
     // Pattern 4 - Stack to Queue - with list deconstruction
     shared_ptr<XY> xy(new XY());
@@ -1262,6 +1291,15 @@ void testParse() {
 
     BOOST_CHECK(n1->toString() == "[ 1 [ 2 3 ] ]");
   }
+  {
+    // Pattern 5 - Stack to Queue - with list to short
+    shared_ptr<XY> xy(new XY());
+    parse("[1] [[[a A]] a A] (", back_inserter(xy->mY));
+    xy->eval();
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    BOOST_CHECK(n1->toString() == "[ 1 null ]");
+  }
+
   {
     // Shuffle pattern test 1
     BOOST_CHECK(is_shuffle_pattern("ab-ab"));
