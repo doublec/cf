@@ -85,13 +85,13 @@ namespace boost {
 class XYNumber : public XYObject
 {
   public:
-    // Numbers are signed integers for now.
-    mpz_class mValue;
+    // Numbers are libgmp floats for now.
+    mpf_class mValue;
 
   public:
     XYNumber(int v = 0);
     XYNumber(string v);
-    XYNumber(mpz_class const& v);
+    XYNumber(mpf_class const& v);
     virtual string toString() const;
     virtual void eval1(XY* xy);
 };
@@ -224,7 +224,7 @@ class XY {
 // XYNumber
 XYNumber::XYNumber(int v) : mValue(v) { }
 XYNumber::XYNumber(string v) : mValue(v) { }
-XYNumber::XYNumber(mpz_class const& v) : mValue(v) { }
+XYNumber::XYNumber(mpf_class const& v) : mValue(v) { }
 
 string XYNumber::toString() const {
   return lexical_cast<string>(mValue);
@@ -379,8 +379,8 @@ static void primitive_power(XY* xy) {
   assert(lhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYNumber> result(new XYNumber(mpz_class(lhs->mValue)));
-  mpz_pow_ui(result->mValue.get_mpz_t(), lhs->mValue.get_mpz_t(), rhs->mValue.get_ui());
+  shared_ptr<XYNumber> result(new XYNumber(mpf_class(lhs->mValue)));
+  mpf_pow_ui(result->mValue.get_mpf_t(), lhs->mValue.get_mpf_t(), rhs->mValue.get_ui());
   xy->mX.push_back(result);
 }
 
