@@ -525,6 +525,29 @@ static void primitive_dip(XY* xy) {
   xy->mY.insert(xy->mY.begin(), list->mList.begin(), list->mList.end());
 }
 
+// | reverse [X^{a0..an} Y] [X^{an..a0} Y]
+static void primitive_reverse(XY* xy) {
+  assert(xy->mX.size() >= 1);
+  shared_ptr<XYList> list = dynamic_pointer_cast<XYList>(xy->mX.back());
+  assert(list);
+  xy->mX.pop_back();
+
+  shared_ptr<XYList> reversed = msp(new XYList(list->mList.rbegin(), list->mList.rend()));
+  xy->mX.push_back(reversed);
+}
+
+// \ quote [X^o Y] [X^{o} Y]
+static void primitive_quote(XY* xy) {
+  assert(xy->mY.size() >= 1);
+  shared_ptr<XYObject> o = xy->mY.front();
+  assert(o);
+  xy->mY.pop_front();
+
+  shared_ptr<XYList> list = msp(new XYList());
+  list->mList.push_back(o);
+  xy->mX.push_back(list);
+}
+
 
 // XY
 XY::XY() {
@@ -540,6 +563,8 @@ XY::XY() {
   mP[")"]   = msp(new XYPrimitive(")", primitive_pattern_ss));
   mP["("]   = msp(new XYPrimitive("(", primitive_pattern_sq));
   mP["`"]   = msp(new XYPrimitive("`", primitive_dip));
+  mP["|"]   = msp(new XYPrimitive("|", primitive_reverse));
+  mP["\\"]  = msp(new XYPrimitive("\\", primitive_quote));
 }
 
 void XY::print() {
@@ -713,14 +738,14 @@ boost::xpressive::sregex re_number() {
 // Return regex for tokenizing specials
 boost::xpressive::sregex re_special() {
   using namespace boost::xpressive;
-  return as_xpr('\\') | '[' | ']' | '{' | '}' | '(' | ')' | ';' | '!' | ',' | '`' | '\'';
+  return as_xpr('\\') | '[' | ']' | '{' | '}' | '(' | ')' | ';' | '!' | ',' | '`' | '\'' | '|';
 }
 
 // Return regex for non-specials
 boost::xpressive::sregex re_non_special() {
   using namespace boost::xpressive;
   using boost::xpressive::set;
-  return ~(set[(set= '\\','[',']','{','}','(',')',';','!',',','`','\'') | _s]);
+  return ~(set[(set= '\\','[',']','{','}','(',')',';','!',',','`','\'','|') | _s]);
 }
 
 // Return regex for symbols
