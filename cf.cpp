@@ -447,7 +447,11 @@ static void primitive_pattern_ss(XY* xy) {
     shared_ptr<XYList> list(new XYList());
     xy->replacePattern(env, msp(new XYList(++start, end)), back_inserter(list->mList));
     assert(list->mList.size() > 0);
-    xy->mX.push_back(list->mList[0]);
+
+    // Append to stack
+    list = dynamic_pointer_cast<XYList>(list->mList[0]);
+    assert(list);
+    xy->mX.insert(xy->mX.end(), list->mList.begin(), list->mList.end());
   }
 }
 
@@ -514,7 +518,6 @@ void XY::eval1() {
 void XY::eval() {
   while (mY.size() > 0) {
     eval1();
-    print();
   }
 }
 
@@ -1060,8 +1063,7 @@ void testParse() {
       xy->eval1();
     }
 
-    BOOST_CHECK(xy->mX.size() == 1);
-    shared_ptr<XYList> n1(dynamic_pointer_cast<XYList>(xy->mX.back()));
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
     BOOST_CHECK(n1->toString() == "[ 2 1 ]");
   }
@@ -1074,8 +1076,7 @@ void testParse() {
       xy->eval1();
     }
 
-    BOOST_CHECK(xy->mX.size() == 1);
-    shared_ptr<XYList> n1(dynamic_pointer_cast<XYList>(xy->mX.back()));
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
     BOOST_CHECK(n1->toString() == "[ 1 2 [ c [ 2 ] ] ]");
   }
