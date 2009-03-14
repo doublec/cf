@@ -84,21 +84,85 @@ namespace boost {
   }
 }
 
-// All numbers are represented by this object, or a class
-// derived from it.
+// Forward declare other number types to allow defining
+// conversion functions in XYNumber.
+class XYInteger;
+class XYFloat;
+
+// All number objects are derived from this class.
 class XYNumber : public XYObject
 {
   public:
-    // Numbers are libgmp floats for now.
+    // Keep track of the type of the object to allow
+    // switching in the math methods.
+    enum Type {
+      FLOAT,
+      INTEGER
+    } mType ;
+
+  public:
+    XYNumber(Type type);
+
+    // Returns true if the number is zero
+    virtual bool is_zero() const = 0;
+    virtual unsigned int as_uint() const = 0;
+    virtual shared_ptr<XYInteger> as_integer() = 0;
+    virtual shared_ptr<XYFloat> as_float() = 0;
+
+    // Math Operators
+    virtual shared_ptr<XYNumber> add(shared_ptr<XYNumber> rhs) = 0;
+    virtual shared_ptr<XYNumber> subtract(shared_ptr<XYNumber> rhs) = 0;
+    virtual shared_ptr<XYNumber> multiply(shared_ptr<XYNumber> rhs) = 0;
+    virtual shared_ptr<XYNumber> divide(shared_ptr<XYNumber> rhs) = 0;
+    virtual shared_ptr<XYNumber> power(shared_ptr<XYNumber> rhs) = 0;
+};
+
+// Floating point numbers
+class XYFloat : public XYNumber
+{
+  public:
     mpf_class mValue;
 
   public:
-    XYNumber(int v = 0);
-    XYNumber(string v);
-    XYNumber(mpf_class const& v);
+    XYFloat(int v = 0);
+    XYFloat(string v);
+    XYFloat(mpf_class const& v);
     virtual string toString() const;
     virtual void eval1(XY* xy);
     virtual bool equals(shared_ptr<XYObject> rhs) const;
+    virtual bool is_zero() const;
+    virtual unsigned int as_uint() const;
+    virtual shared_ptr<XYInteger> as_integer();
+    virtual shared_ptr<XYFloat> as_float();
+    virtual shared_ptr<XYNumber> add(shared_ptr<XYNumber> rhs);
+    virtual shared_ptr<XYNumber> subtract(shared_ptr<XYNumber> rhs);
+    virtual shared_ptr<XYNumber> multiply(shared_ptr<XYNumber> rhs);
+    virtual shared_ptr<XYNumber> divide(shared_ptr<XYNumber> rhs);
+    virtual shared_ptr<XYNumber> power(shared_ptr<XYNumber> rhs);
+};
+
+// Integer numbers
+class XYInteger : public XYNumber
+{
+  public:
+    mpz_class mValue;
+
+  public:
+    XYInteger(int v = 0);
+    XYInteger(string v);
+    XYInteger(mpz_class const& v);
+    virtual string toString() const;
+    virtual void eval1(XY* xy);
+    virtual bool equals(shared_ptr<XYObject> rhs) const;
+    virtual bool is_zero() const;
+    virtual unsigned int as_uint() const;
+    virtual shared_ptr<XYInteger> as_integer();
+    virtual shared_ptr<XYFloat> as_float();
+    virtual shared_ptr<XYNumber> add(shared_ptr<XYNumber> rhs);
+    virtual shared_ptr<XYNumber> subtract(shared_ptr<XYNumber> rhs);
+    virtual shared_ptr<XYNumber> multiply(shared_ptr<XYNumber> rhs);
+    virtual shared_ptr<XYNumber> divide(shared_ptr<XYNumber> rhs);
+    virtual shared_ptr<XYNumber> power(shared_ptr<XYNumber> rhs);
 };
 
 // A symbol is an unquoted string.
@@ -244,21 +308,146 @@ class XY {
 };
 
 // XYNumber
-XYNumber::XYNumber(int v) : mValue(v) { }
-XYNumber::XYNumber(string v) : mValue(v) { }
-XYNumber::XYNumber(mpf_class const& v) : mValue(v) { }
+XYNumber::XYNumber(Type type) : mType(type) { }
 
-string XYNumber::toString() const {
+// XYFloat
+XYFloat::XYFloat(int v) : XYNumber(FLOAT), mValue(v) { }
+XYFloat::XYFloat(string v) : XYNumber(FLOAT), mValue(v) { }
+XYFloat::XYFloat(mpf_class const& v) : XYNumber(FLOAT), mValue(v) { }
+
+string XYFloat::toString() const {
   return lexical_cast<string>(mValue);
 }
 
-void XYNumber::eval1(XY* xy) {
+void XYFloat::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
 }
 
-bool XYNumber::equals(shared_ptr<XYObject> rhs) const {
-  shared_ptr<XYNumber> o = dynamic_pointer_cast<XYNumber>(rhs);
+bool XYFloat::equals(shared_ptr<XYObject> rhs) const {
+  shared_ptr<XYFloat> o = dynamic_pointer_cast<XYFloat>(rhs);
   return o && o->mValue == mValue;
+}
+
+bool XYFloat::is_zero() const {
+  return mValue == 0;
+}
+
+unsigned int XYFloat::as_uint() const {
+  return mValue.get_ui();
+}
+
+shared_ptr<XYInteger> XYFloat::as_integer() {
+  return msp(new XYInteger(mValue));
+}
+
+shared_ptr<XYFloat> XYFloat::as_float() {
+  return dynamic_pointer_cast<XYFloat>(shared_from_this());
+}
+
+shared_ptr<XYNumber> XYFloat::add(shared_ptr<XYNumber> rhs) {
+  return msp(new XYFloat(mValue + rhs->as_float()->mValue));
+}
+
+shared_ptr<XYNumber> XYFloat::subtract(shared_ptr<XYNumber> rhs) {
+  return msp(new XYFloat(mValue - rhs->as_float()->mValue));
+}
+
+shared_ptr<XYNumber> XYFloat::multiply(shared_ptr<XYNumber> rhs) {
+  return msp(new XYFloat(mValue * rhs->as_float()->mValue));
+}
+
+shared_ptr<XYNumber> XYFloat::divide(shared_ptr<XYNumber> rhs) {
+  return msp(new XYFloat(mValue / rhs->as_float()->mValue));
+}
+
+shared_ptr<XYNumber> XYFloat::power(shared_ptr<XYNumber> rhs) {
+  shared_ptr<XYFloat> result(new XYFloat(mValue));
+  mpf_pow_ui(result->mValue.get_mpf_t(), mValue.get_mpf_t(), rhs->as_uint());
+  return result;
+}
+
+// XYInteger
+XYInteger::XYInteger(int v) : XYNumber(INTEGER), mValue(v) { }
+XYInteger::XYInteger(string v) : XYNumber(INTEGER), mValue(v) { }
+XYInteger::XYInteger(mpz_class const& v) : XYNumber(INTEGER), mValue(v) { }
+
+string XYInteger::toString() const {
+  return lexical_cast<string>(mValue);
+}
+
+void XYInteger::eval1(XY* xy) {
+  xy->mX.push_back(shared_from_this());
+}
+
+bool XYInteger::equals(shared_ptr<XYObject> rhs) const {
+  shared_ptr<XYInteger> o = dynamic_pointer_cast<XYInteger>(rhs);
+  return o && o->mValue == mValue;
+}
+
+bool XYInteger::is_zero() const {
+  return mValue == 0;
+}
+
+unsigned int XYInteger::as_uint() const {
+  return mValue.get_ui();
+}
+
+shared_ptr<XYInteger> XYInteger::as_integer() {
+  return dynamic_pointer_cast<XYInteger>(shared_from_this());
+}
+
+shared_ptr<XYFloat> XYInteger::as_float() {
+  return msp(new XYFloat(mValue));
+}
+
+shared_ptr<XYNumber> XYInteger::add(shared_ptr<XYNumber> rhs) {
+  switch(rhs->mType) {
+    case INTEGER:
+      return msp(new XYInteger(mValue + rhs->as_integer()->mValue));
+    case FLOAT:
+      return msp(new XYFloat(as_float()->mValue + rhs->as_float()->mValue));
+    default:
+      assert(1==0);
+  }
+}
+
+shared_ptr<XYNumber> XYInteger::subtract(shared_ptr<XYNumber> rhs) {
+  switch(rhs->mType) {
+    case INTEGER:
+      return msp(new XYInteger(mValue - rhs->as_integer()->mValue));
+    case FLOAT:
+      return msp(new XYFloat(as_float()->mValue - rhs->as_float()->mValue));
+    default:
+      assert(1==0);
+  }
+}
+
+shared_ptr<XYNumber> XYInteger::multiply(shared_ptr<XYNumber> rhs) {
+  switch(rhs->mType) {
+    case INTEGER:
+      return msp(new XYInteger(mValue * rhs->as_integer()->mValue));
+    case FLOAT:
+      return msp(new XYFloat(as_float()->mValue * rhs->as_float()->mValue));
+    default:
+      assert(1==0);
+  }
+}
+
+shared_ptr<XYNumber> XYInteger::divide(shared_ptr<XYNumber> rhs) {
+  switch(rhs->mType) {
+    case INTEGER:
+      return msp(new XYFloat(as_float()->mValue / rhs->as_float()->mValue));
+    case FLOAT:
+      return msp(new XYFloat(as_float()->mValue / rhs->as_float()->mValue));
+    default:
+      assert(1==0);
+  }
+}
+
+shared_ptr<XYNumber> XYInteger::power(shared_ptr<XYNumber> rhs) {
+  shared_ptr<XYInteger> result(new XYInteger(mValue));
+  mpz_pow_ui(result->mValue.get_mpz_t(), mValue.get_mpz_t(), rhs->as_uint());
+  return result;
 }
 
 // XYSymbol
@@ -402,7 +591,7 @@ static void primitive_addition(XY* xy) {
   assert(lhs);
   xy->mX.pop_back();
 
-  xy->mX.push_back(shared_ptr<XYNumber>(new XYNumber(lhs->mValue + rhs->mValue)));
+  xy->mX.push_back(lhs->add(rhs));
 }
 
 // + [X^lhs^rhs] Y] -> [X^lhs-rhs Y]
@@ -416,7 +605,7 @@ static void primitive_subtraction(XY* xy) {
   assert(lhs);
   xy->mX.pop_back();
 
-  xy->mX.push_back(shared_ptr<XYNumber>(new XYNumber(lhs->mValue - rhs->mValue)));
+  xy->mX.push_back(lhs->subtract(rhs));
 }
 
 // + [X^lhs^rhs] Y] -> [X^lhs*rhs Y]
@@ -430,7 +619,7 @@ static void primitive_multiplication(XY* xy) {
   assert(lhs);
   xy->mX.pop_back();
 
-  xy->mX.push_back(shared_ptr<XYNumber>(new XYNumber(lhs->mValue * rhs->mValue)));
+  xy->mX.push_back(lhs->multiply(rhs));
 }
 
 // + [X^lhs^rhs] Y] -> [X^lhs/rhs Y]
@@ -444,7 +633,7 @@ static void primitive_division(XY* xy) {
   assert(lhs);
   xy->mX.pop_back();
 
-  xy->mX.push_back(shared_ptr<XYNumber>(new XYNumber(lhs->mValue / rhs->mValue)));
+  xy->mX.push_back(lhs->divide(rhs));
 }
 
 // + [X^lhs^rhs] Y] -> [X^lhs**rhs Y]
@@ -458,9 +647,7 @@ static void primitive_power(XY* xy) {
   assert(lhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYNumber> result(new XYNumber(mpf_class(lhs->mValue)));
-  mpf_pow_ui(result->mValue.get_mpf_t(), lhs->mValue.get_mpf_t(), rhs->mValue.get_ui());
-  xy->mX.push_back(result);
+  xy->mX.push_back(lhs->power(rhs));
 }
 
 // set [X^value^name Y] -> [X Y] 
@@ -692,9 +879,9 @@ static void primitive_equals(XY* xy) {
   xy->mX.pop_back();
 
   if (lhs->equals(rhs))
-    xy->mX.push_back(msp(new XYNumber(1)));
+    xy->mX.push_back(msp(new XYInteger(1)));
   else
-    xy->mX.push_back(msp(new XYNumber(0)));
+    xy->mX.push_back(msp(new XYInteger(0)));
 }
 
 // not not [X^a Y] [X^? Y] 
@@ -706,15 +893,15 @@ static void primitive_not(XY* xy) {
   xy->mX.pop_back();
 
   shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(o);
-  if (n && n->mValue == 0) {
-    xy->mX.push_back(msp(new XYNumber(1)));
+  if (n && n->is_zero()) {
+    xy->mX.push_back(msp(new XYInteger(1)));
   }
   else {
     shared_ptr<XYList> l = dynamic_pointer_cast<XYList>(o);
     if(l && l->mList.size() == 0)
-      xy->mX.push_back(msp(new XYNumber(1)));
+      xy->mX.push_back(msp(new XYInteger(1)));
     else
-      xy->mX.push_back(msp(new XYNumber(0)));
+      xy->mX.push_back(msp(new XYInteger(0)));
   }
 }
 
@@ -730,10 +917,10 @@ static void primitive_nth(XY* xy) {
   assert(n);
   xy->mX.pop_back();
 
-  if (n->mValue.get_ui() >= list->mList.size()) 
-    xy->mX.push_back(msp(new XYNumber(list->mList.size())));
+  if (n->as_uint() >= list->mList.size()) 
+    xy->mX.push_back(msp(new XYInteger(list->mList.size())));
   else
-    xy->mX.push_back(list->mList[n->mValue.get_ui()]);
+    xy->mX.push_back(list->mList[n->as_uint()]);
 }
 
 
@@ -937,10 +1124,22 @@ bool is_shuffle_pattern(string s) {
   return diff.size() == 0;
 }
 
+// Return regex for tokenizing integers
+boost::xpressive::sregex re_integer() {
+  using namespace boost::xpressive;
+  return optional('-') >> +_d;
+}
+
+// Return regex for tokenizing floats
+boost::xpressive::sregex re_float() {
+  using namespace boost::xpressive;
+  return optional('-') >> +_d >> '.' >> *_d;
+}
+
 // Return regex for tokenizing numbers
 boost::xpressive::sregex re_number() {
   using namespace boost::xpressive;
-  return optional('-') >> +_d >> optional('.' >> *_d);
+  return re_float() | re_integer();
 }
 
 // Return regex for tokenizing specials
@@ -974,8 +1173,6 @@ boost::xpressive::sregex re_comment() {
   return as_xpr('*') >> '*' >> -*_ >> '*' >> '*';
 }
 
- 
-
 // Given a string, store a sequence of XY tokens using the 'out' iterator
 // to put them in a container.
 template <class InputIterator, class OutputIterator>
@@ -1003,8 +1200,10 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
     else if (regex_match(token, what, re_string())) {
       *out++ = msp(new XYString(token.substr(1, token.size()-2)));
     }
-    else if(regex_match(token, re_number())) {
-      *out++ = msp(new XYNumber(token));
+    else if(regex_match(token, re_float()))
+      *out++ = msp(new XYFloat(token));
+    else if(regex_match(token, re_integer())) {
+      *out++ = msp(new XYInteger(token));
     }
     else if(token == "[") {
       shared_ptr<XYList> list(new XYList());
@@ -1085,10 +1284,10 @@ void testParse() {
     XYStack x;
     parse("1 20 300 -400", back_inserter(x));
     BOOST_CHECK(x.size() == 4);
-    shared_ptr<XYNumber> n1(dynamic_pointer_cast<XYNumber>(x[0]));
-    shared_ptr<XYNumber> n2(dynamic_pointer_cast<XYNumber>(x[1]));
-    shared_ptr<XYNumber> n3(dynamic_pointer_cast<XYNumber>(x[2]));
-    shared_ptr<XYNumber> n4(dynamic_pointer_cast<XYNumber>(x[3]));
+    shared_ptr<XYInteger> n1(dynamic_pointer_cast<XYInteger>(x[0]));
+    shared_ptr<XYInteger> n2(dynamic_pointer_cast<XYInteger>(x[1]));
+    shared_ptr<XYInteger> n3(dynamic_pointer_cast<XYInteger>(x[2]));
+    shared_ptr<XYInteger> n4(dynamic_pointer_cast<XYInteger>(x[3]));
 
     BOOST_CHECK(n1 && n1->mValue == 1);
     BOOST_CHECK(n2 && n2->mValue == 20);
@@ -1161,7 +1360,7 @@ void testParse() {
     while(xy->mY.size() > 0) {
       xy->eval1();
     }
-    shared_ptr<XYNumber> n1(dynamic_pointer_cast<XYNumber>(xy->mX[0]));
+    shared_ptr<XYInteger> n1(dynamic_pointer_cast<XYInteger>(xy->mX[0]));
 
     BOOST_CHECK(n1 && n1->mValue == 3);
   }
@@ -1187,7 +1386,7 @@ void testParse() {
     }
     
     BOOST_CHECK(xy->mX.size() == 1);
-    shared_ptr<XYNumber> o2(dynamic_pointer_cast<XYNumber>(xy->mX.back()));
+    shared_ptr<XYInteger> o2(dynamic_pointer_cast<XYInteger>(xy->mX.back()));
     BOOST_CHECK(o2 && o2->mValue == 7);
   }
 
@@ -1244,11 +1443,11 @@ void testParse() {
   {
     // Pattern replace 1
     XYEnv env;
-    env["a"] = msp(new XYNumber(1));
-    env["b"] = msp(new XYNumber(2));
+    env["a"] = msp(new XYInteger(1));
+    env["b"] = msp(new XYInteger(2));
 
     shared_ptr<XYList> list(new XYList());
-    list->mList.push_back(msp(new XYNumber(42)));
+    list->mList.push_back(msp(new XYInteger(42)));
     list->mList.push_back(msp(new XYSymbol("b")));
     list->mList.push_back(msp(new XYSymbol("a")));
 
@@ -1266,8 +1465,8 @@ void testParse() {
   {
     // Pattern replace 2
     XYEnv env;
-    env["a"] = msp(new XYNumber(1));
-    env["b"] = msp(new XYNumber(2));
+    env["a"] = msp(new XYInteger(1));
+    env["b"] = msp(new XYInteger(2));
 
     shared_ptr<XYList> list(new XYList());
     parse("[a [ b a ] a c]", back_inserter(list->mList));

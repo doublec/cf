@@ -34,3 +34,6 @@
 
 ** Control Flow **
 [pair;'[dupd;']`['not]`nth'] cond set
+
+** Examples **
+[[1 =][][dup;'1 - fac;'*]cond;'] fac set
