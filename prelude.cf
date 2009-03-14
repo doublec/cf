@@ -7,11 +7,16 @@
 
 ** Lists **
 [ [[[a A]] a A] )] uncons set
-[ [[a b] [a b]] (] cons set
+[ [[a b] [a]b,] (] cons set
 
 ** Operators **
 [] id set
 [uncons;'drop;'] first set
 [uncons;'[drop;']`] rest set
 [|first;'] last set
-[[] cons] unit set
+[\\`] unit set
+[unit;'cons;'] pair set
+[uncons;'first;'] unpair set
+[[drop;']`] dropd set
+[[dup;']`] dupd set
+[[swap;']`] swapd set
