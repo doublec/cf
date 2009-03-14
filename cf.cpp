@@ -15,6 +15,7 @@
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/bind.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/xpressive/xpressive.hpp>
 #include <gmpxx.h>
 
 // If defined, compiles as a test applicatation that tests
@@ -660,6 +661,32 @@ bool is_shuffle_pattern(string s) {
   return diff.size() == 0;
 }
 
+// Given a string, store a sequence of XY tokens using the 'out' iterator
+// to put them in a container.
+template <class InputIterator, class OutputIterator>
+void tokenize(InputIterator first, InputIterator last, OutputIterator out)
+{
+  using namespace boost::xpressive;
+
+  sregex special;
+  sregex not_special;
+  sregex number;
+  sregex string;
+  sregex xy;
+  sregex symbol;
+
+  number = optional('-') >> +_d >> optional('.' >> *_d);
+  special= as_xpr('\\') | '[' | ']' | '{' | '}' | '(' | ')' | ';' | '!' | ',' | '`' | '\'';
+  not_special= ~(boost::xpressive::set[(boost::xpressive::set= '\\','[',']','{','}','(',')',';','!',',','`','\'') | _s]);
+  string = as_xpr('\"') >> *(~(as_xpr('\"'))) >> '\"';
+  symbol = (range('a', 'z') |  range('A', 'Z')) >> *not_special;
+  xy = special | symbol | number | string;
+
+  sregex_token_iterator begin(first, last, xy), end;
+  copy(begin, end, out);
+//  sregex rex = sregex::compile("([\\\[\]\{\}\(;\)!',`])|([a-zA-Z][^\[\]\{\}\(;\)!',`\s]*)|(\-?[0-9]+(\.[0-9]*)?)[\s$]|(\"[^\"]*\")|([^\\\[\]\{\}\(;\)\s]+)");
+}
+
 // Parse a sequence of characters storing the result using the
 // given output iterator.
 template <class InputIterator, class OutputIterator>
@@ -686,7 +713,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
         else if (is_symbol_break(ch)) {
           *out++ = shared_ptr<XYSymbol>(new XYSymbol(string(1, *first++)));
         }
-        else if (is_numeric_digit(ch))
+        else if (is_numeric_digit(ch) || ch == '.')
           state = XYSTATE_NUMBER_START;
         else if (ch == '\"') 
           state = XYSTATE_STRING_START;
@@ -833,6 +860,13 @@ void eval_files(shared_ptr<XY> xy, InputIterator first, InputIterator last) {
 
 int main(int argc, char* argv[]) {
   shared_ptr<XY> xy(new XY());
+
+  vector<string> zzz;
+  string input("123 -123 [123.45 -123.45] \"hello, [foo]there\" abc 999");
+  tokenize(input.begin(), input.end(), back_inserter(zzz));
+  for_each(zzz.begin(), zzz.end(), cout << _1 << "\n");
+  cout << endl;
+  return 0;
 
   if (argc > 1) {
     // Load all files given on the command line in order
