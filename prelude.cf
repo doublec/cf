@@ -20,3 +20,6 @@
 [[drop;']`] dropd set
 [[dup;']`] dupd set
 [[swap;']`] swapd set
+
+** Continuations **
+[[[drop;'[]]`]$] clearstack set

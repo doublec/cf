@@ -610,6 +610,43 @@ static void primitive_join(XY* xy) {
   }
 }
 
+// $ stack - Expects a program on the X stack. That program
+// has stack effect ( stack queue -- stack queue ). $ will
+// call this program with X and Y on the stack, and replace
+// X and Y with the results.
+static void primitive_stack(XY* xy) {
+  assert(xy->mX.size() >= 1);
+  shared_ptr<XYList> list  = dynamic_pointer_cast<XYList>(xy->mX.back());
+  assert(list);
+  xy->mX.pop_back();
+
+  shared_ptr<XYList> stack(new XYList(xy->mX.begin(), xy->mX.end()));
+  shared_ptr<XYList> queue(new XYList(xy->mY.begin(), xy->mY.end()));
+
+  xy->mX.push_back(stack);
+  xy->mX.push_back(queue);
+  xy->mY.push_front(msp(new XYSymbol("$$")));
+  xy->mY.insert(xy->mY.begin(), list->mList.begin(), list->mList.end()); 
+}
+
+// $$ stackqueue - Helper word for '$'. Given a stack and queue on the
+// stack, replaces the existing stack and queue with them.
+static void primitive_stackqueue(XY* xy) {
+  assert(xy->mX.size() >= 2);
+
+  shared_ptr<XYList> queue = dynamic_pointer_cast<XYList>(xy->mX.back());
+  assert(queue);
+  xy->mX.pop_back();
+
+  shared_ptr<XYList> stack = dynamic_pointer_cast<XYList>(xy->mX.back());
+  assert(stack);
+  xy->mX.pop_back();
+
+  xy->mX.assign(stack->mList.begin(), stack->mList.end());
+  xy->mY.assign(queue->mList.begin(), queue->mList.end());
+}
+
+
 // XY
 XY::XY() {
   mP["+"]   = msp(new XYPrimitive("+", primitive_addition));
@@ -627,6 +664,8 @@ XY::XY() {
   mP["|"]   = msp(new XYPrimitive("|", primitive_reverse));
   mP["\\"]  = msp(new XYPrimitive("\\", primitive_quote));
   mP[","]   = msp(new XYPrimitive(",", primitive_join));
+  mP["$"]   = msp(new XYPrimitive("$", primitive_stack));
+  mP["$$"]  = msp(new XYPrimitive("$$", primitive_stackqueue));
 }
 
 void XY::print() {
@@ -1422,9 +1461,22 @@ void testParse() {
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
     BOOST_CHECK(n1->toString() == "[ [ 1 2 ] [ 1 2 2 ] [ 2 1 2 ] [ 1 2 3 4 ] ]");
   }
-
-
-
+  {
+    // stackqueue test 1
+    shared_ptr<XY> xy(new XY());
+    parse("1 2 [4 5] [ 6 7 ] $$ 9 10 11", back_inserter(xy->mY));
+    xy->eval();
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    BOOST_CHECK(n1->toString() == "[ 4 5 6 7 ]");
+  }
+  {
+    // stack test 1
+    shared_ptr<XY> xy(new XY());
+    parse("1 2 [ [3,]`12, ] $ 9 10 11", back_inserter(xy->mY));
+    xy->eval();
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    BOOST_CHECK(n1->toString() == "[ 1 2 3 9 10 11 12 ]");
+  }
 }
 
 int test_main(int argc, char* argv[]) {
