@@ -109,6 +109,18 @@ class XYSymbol : public XYObject
     virtual void eval1(XY* xy);
 };
 
+// A string
+class XYString : public XYObject
+{
+  public:
+    string mValue;
+
+  public:
+    XYString(string v);
+    virtual string toString() const;
+    virtual void eval1(XY* xy);
+};
+
 // A shuffle symbol describes pattern to rearrange the stack.
 class XYShuffle : public XYObject
 {
@@ -249,6 +261,19 @@ void XYSymbol::eval1(XY* xy) {
     (*it).second->eval1(xy);
   else
     xy->mX.push_back(shared_from_this());
+}
+
+// XYString
+XYString::XYString(string v) : mValue(v) { }
+
+string XYString::toString() const {
+  ostringstream s;
+  s << '\"' << mValue << '\"';
+  return s.str();
+}
+
+void XYString::eval1(XY* xy) {
+  xy->mX.push_back(shared_from_this());
 }
 
 // XYShuffle
@@ -714,7 +739,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
     string token = *first++;
     smatch what;
     if (regex_match(token, what, re_string())) {
-      *out++ = msp(new XYSymbol(token));
+      *out++ = msp(new XYString(token.substr(1, token.size()-2)));
     }
     else if(regex_match(token, re_number())) {
       *out++ = msp(new XYNumber(token));
