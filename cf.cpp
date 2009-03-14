@@ -661,6 +661,37 @@ bool is_shuffle_pattern(string s) {
   return diff.size() == 0;
 }
 
+// Return regex for tokenizing numbers
+boost::xpressive::sregex re_number() {
+  using namespace boost::xpressive;
+  return optional('-') >> +_d >> optional('.' >> *_d);
+}
+
+// Return regex for tokenizing specials
+boost::xpressive::sregex re_special() {
+  using namespace boost::xpressive;
+  return as_xpr('\\') | '[' | ']' | '{' | '}' | '(' | ')' | ';' | '!' | ',' | '`' | '\'';
+}
+
+// Return regex for non-specials
+boost::xpressive::sregex re_non_special() {
+  using namespace boost::xpressive;
+  using boost::xpressive::set;
+  return ~(set[(set= '\\','[',']','{','}','(',')',';','!',',','`','\'') | _s]);
+}
+
+// Return regex for symbols
+boost::xpressive::sregex re_symbol() {
+  using namespace boost::xpressive;
+  return !range('0', '9') >> +(re_non_special());
+}
+
+// Return regex for strings
+boost::xpressive::sregex re_string() {
+  using namespace boost::xpressive;
+  return as_xpr('\"') >> *(~(as_xpr('\"'))) >> '\"';
+}
+
 // Given a string, store a sequence of XY tokens using the 'out' iterator
 // to put them in a container.
 template <class InputIterator, class OutputIterator>
@@ -668,29 +699,45 @@ void tokenize(InputIterator first, InputIterator last, OutputIterator out)
 {
   using namespace boost::xpressive;
 
-  sregex special;
-  sregex not_special;
-  sregex number;
-  sregex string;
-  sregex xy;
-  sregex symbol;
-
-  number = optional('-') >> +_d >> optional('.' >> *_d);
-  special= as_xpr('\\') | '[' | ']' | '{' | '}' | '(' | ')' | ';' | '!' | ',' | '`' | '\'';
-  not_special= ~(boost::xpressive::set[(boost::xpressive::set= '\\','[',']','{','}','(',')',';','!',',','`','\'') | _s]);
-  string = as_xpr('\"') >> *(~(as_xpr('\"'))) >> '\"';
-  symbol = (range('a', 'z') |  range('A', 'Z')) >> *not_special;
-  xy = special | symbol | number | string;
-
+  sregex xy = re_special() | re_string() | re_symbol() | re_number();
   sregex_token_iterator begin(first, last, xy), end;
   copy(begin, end, out);
-//  sregex rex = sregex::compile("([\\\[\]\{\}\(;\)!',`])|([a-zA-Z][^\[\]\{\}\(;\)!',`\s]*)|(\-?[0-9]+(\.[0-9]*)?)[\s$]|(\"[^\"]*\")|([^\\\[\]\{\}\(;\)\s]+)");
 }
 
-// Parse a sequence of characters storing the result using the
+// Parse a sequence of tokens storing the result using the
 // given output iterator.
 template <class InputIterator, class OutputIterator>
 InputIterator parse(InputIterator first, InputIterator last, OutputIterator out) {
+  using namespace boost::xpressive;
+
+  while (first != last) {
+    string token = *first++;
+    smatch what;
+    if (regex_match(token, what, re_string())) {
+      *out++ = msp(new XYSymbol(token));
+    }
+    else if(regex_match(token, re_number())) {
+      *out++ = msp(new XYNumber(token));
+    }
+    else if(token == "[") {
+      shared_ptr<XYList> list(new XYList());
+      first = parse(first, last, back_inserter(list->mList));
+      *out++ = list;
+    }
+    else if( token == "]") {
+      return first;
+    }
+    else if(is_shuffle_pattern(token)) {
+      *out++ = msp(new XYShuffle(token));
+    }
+    else {
+      *out++ = msp(new XYSymbol(token));
+    }
+  }
+
+  return first;
+}
+#if 0
   XYState state = XYSTATE_INIT;
   string result;
 
@@ -782,7 +829,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
 
       case XYSTATE_LIST_START:
       {
-        shared_ptr<XYList> list(new XYList());
+        shared_ptr<XYList> list(new X00vYList());
         first = parse(++first, last, back_inserter(list->mList));
         *out++ = list;
         state = XYSTATE_INIT;
@@ -828,12 +875,14 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
 
   return last;
 }
-
+#endif
 // Parse a string into XY objects, storing the result in the
 // container pointer to by the output iterator.
 template <class OutputIterator>
 void parse(string s, OutputIterator out) {
-  parse(s.begin(), s.end(), out);
+  vector<string> tokens;
+  tokenize(s.begin(), s.end(), back_inserter(tokens));
+  parse(tokens.begin(), tokens.end(), out);
 }
 
 #if !defined(TEST)
@@ -861,13 +910,6 @@ void eval_files(shared_ptr<XY> xy, InputIterator first, InputIterator last) {
 int main(int argc, char* argv[]) {
   shared_ptr<XY> xy(new XY());
 
-  vector<string> zzz;
-  string input("123 -123 [123.45 -123.45] \"hello, [foo]there\" abc 999");
-  tokenize(input.begin(), input.end(), back_inserter(zzz));
-  for_each(zzz.begin(), zzz.end(), cout << _1 << "\n");
-  cout << endl;
-  return 0;
-
   if (argc > 1) {
     // Load all files given on the command line in order
     eval_files(xy, argv + 1, argv + argc);
@@ -878,7 +920,7 @@ int main(int argc, char* argv[]) {
     xy->print();
     cout << "ok ";
     getline(cin, input);
-    parse(input.begin(), input.end(), back_inserter(xy->mY));
+    parse(input, back_inserter(xy->mY));
     xy->eval(); 
   }
 
