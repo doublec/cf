@@ -697,6 +697,28 @@ static void primitive_equals(XY* xy) {
     xy->mX.push_back(msp(new XYNumber(0)));
 }
 
+// not not [X^a Y] [X^? Y] 
+static void primitive_not(XY* xy) {
+  assert(xy->mX.size() >= 1);
+
+  shared_ptr<XYObject> o = xy->mX.back();
+  assert(o);
+  xy->mX.pop_back();
+
+  shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(o);
+  if (n && n->mValue == 0) {
+    xy->mX.push_back(msp(new XYNumber(1)));
+  }
+  else {
+    shared_ptr<XYList> l = dynamic_pointer_cast<XYList>(o);
+    if(l && l->mList.size() == 0)
+      xy->mX.push_back(msp(new XYNumber(1)));
+    else
+      xy->mX.push_back(msp(new XYNumber(0)));
+  }
+}
+
+
 // XY
 XY::XY() {
   mP["+"]   = msp(new XYPrimitive("+", primitive_addition));
@@ -717,6 +739,7 @@ XY::XY() {
   mP["$"]   = msp(new XYPrimitive("$", primitive_stack));
   mP["$$"]  = msp(new XYPrimitive("$$", primitive_stackqueue));
   mP["="]   = msp(new XYPrimitive("=", primitive_equals));
+  mP["not"] = msp(new XYPrimitive("not", primitive_not));
 }
 
 void XY::print() {
