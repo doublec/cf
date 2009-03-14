@@ -1,6 +1,7 @@
 #include <cassert>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <map>
 #include <vector>
 #include <deque>
@@ -513,6 +514,7 @@ void XY::eval1() {
 void XY::eval() {
   while (mY.size() > 0) {
     eval1();
+    print();
   }
 }
 
@@ -805,8 +807,35 @@ void parse(string s, OutputIterator out) {
 }
 
 #if !defined(TEST)
-int main() {
+void eval_file(shared_ptr<XY> xy, char* filename) {
+  cout << "Loading " << filename << endl;
+  ifstream file(filename);
+  ostringstream out;
+  while (file.good()) {
+    string line;
+    getline(file, line);
+    out << line << endl;
+  }
+  file.close();
+
+  parse(out.str(), back_inserter(xy->mY));
+
+  xy->eval();
+}
+
+template <class InputIterator>
+void eval_files(shared_ptr<XY> xy, InputIterator first, InputIterator last) {
+  for_each(first, last, bind(eval_file, xy, _1));
+}
+
+int main(int argc, char* argv[]) {
   shared_ptr<XY> xy(new XY());
+
+  if (argc > 1) {
+    // Load all files given on the command line in order
+    eval_files(xy, argv + 1, argv + argc);
+  }
+
   while (1) {
     string input;
     xy->print();

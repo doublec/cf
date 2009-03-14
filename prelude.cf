@@ -1,0 +1,7 @@
+[a-] drop set
+[ab-ba] swap set
+[a-aa] dup set
+
+[ [[[a A]] a A] )] uncons set
+[ [[a b] [a b]] (] cons set
+
