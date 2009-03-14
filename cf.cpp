@@ -510,6 +510,22 @@ static void primitive_pattern_sq(XY* xy) {
   }
 }
 
+// ` dip [X^b^{a0..an} Y] [X a0..an^b^Y]
+static void primitive_dip(XY* xy) {
+  assert(xy->mX.size() >= 2);
+  shared_ptr<XYList> list = dynamic_pointer_cast<XYList>(xy->mX.back());
+  assert(list);
+  xy->mX.pop_back();
+
+  shared_ptr<XYObject> o = xy->mX.back();
+  assert(o);
+  xy->mX.pop_back();
+
+  xy->mY.push_front(o);
+  xy->mY.insert(xy->mY.begin(), list->mList.begin(), list->mList.end());
+}
+
+
 // XY
 XY::XY() {
   mP["+"]   = msp(new XYPrimitive("+", primitive_addition));
@@ -520,8 +536,10 @@ XY::XY() {
   mP["set"] = msp(new XYPrimitive("set", primitive_set));
   mP[";"]   = msp(new XYPrimitive(";", primitive_get));
   mP["!"]   = msp(new XYPrimitive("!", primitive_unquote));
+  mP["'"]   = msp(new XYPrimitive("'", primitive_unquote));
   mP[")"]   = msp(new XYPrimitive(")", primitive_pattern_ss));
   mP["("]   = msp(new XYPrimitive("(", primitive_pattern_sq));
+  mP["`"]   = msp(new XYPrimitive("`", primitive_dip));
 }
 
 void XY::print() {
@@ -1283,6 +1301,15 @@ void testParse() {
 
     BOOST_CHECK(n1->toString() == "[ 1 2 foo-bar ]");
   }
+  {
+    // Dip test 1
+    shared_ptr<XY> xy(new XY());
+    parse("1 2 hello [ + ] ` 4", back_inserter(xy->mY));
+    xy->eval();
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    BOOST_CHECK(n1->toString() == "[ 3 hello 4 ]");
+  }
+
 
 }
 
