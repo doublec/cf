@@ -717,6 +717,14 @@ boost::xpressive::sregex re_string() {
   return as_xpr('\"') >> *(~(as_xpr('\"'))) >> '\"';
 }
 
+// Return regex for comments
+boost::xpressive::sregex re_comment() {
+  using namespace boost::xpressive;
+  return as_xpr('*') >> '*' >> *_ >> '*' >> '*';
+}
+
+ 
+
 // Given a string, store a sequence of XY tokens using the 'out' iterator
 // to put them in a container.
 template <class InputIterator, class OutputIterator>
@@ -724,7 +732,7 @@ void tokenize(InputIterator first, InputIterator last, OutputIterator out)
 {
   using namespace boost::xpressive;
 
-  sregex xy = re_special() | re_string() | re_symbol() | re_number();
+  sregex xy = re_comment() | re_special() | re_string() | re_symbol() | re_number();
   sregex_token_iterator begin(first, last, xy), end;
   copy(begin, end, out);
 }
@@ -738,7 +746,10 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
   while (first != last) {
     string token = *first++;
     smatch what;
-    if (regex_match(token, what, re_string())) {
+    if (regex_match(token, what, re_comment())) {
+      // Ignore comments
+    }
+    else if (regex_match(token, what, re_string())) {
       *out++ = msp(new XYString(token.substr(1, token.size()-2)));
     }
     else if(regex_match(token, re_number())) {
