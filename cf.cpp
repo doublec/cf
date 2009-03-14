@@ -568,6 +568,47 @@ static void primitive_quote(XY* xy) {
   xy->mX.push_back(list);
 }
 
+// , join [X^a^b Y] [X^{...} Y]
+static void primitive_join(XY* xy) {
+  assert(xy->mX.size() >= 2);
+  shared_ptr<XYObject> rhs = xy->mX.back();
+  assert(rhs);
+  xy->mX.pop_back();
+
+  shared_ptr<XYObject> lhs = xy->mX.back();
+  assert(lhs);
+  xy->mX.pop_back();
+
+  shared_ptr<XYList> list_lhs = dynamic_pointer_cast<XYList>(lhs);
+  shared_ptr<XYList> list_rhs = dynamic_pointer_cast<XYList>(rhs);
+
+  if (list_lhs && list_rhs) {
+    // Two lists are concatenated
+    shared_ptr<XYList> list(new XYList(list_lhs->mList.begin(), list_lhs->mList.end()));
+    list->mList.insert(list->mList.end(), list_rhs->mList.begin(), list_rhs->mList.end()); 
+    xy->mX.push_back(list);
+  }
+  else if(list_lhs) {
+    // If rhs is not a list, then it is added to the end of the list
+    shared_ptr<XYList> list(new XYList(list_lhs->mList.begin(), list_lhs->mList.end()));
+    list->mList.push_back(rhs);
+    xy->mX.push_back(list);
+  }
+  else if(list_rhs) {
+    // If lhs is not a list, it is added to the front of the list
+    shared_ptr<XYList> list(new XYList());
+    list->mList.push_back(lhs);
+    list->mList.insert(list->mList.end(), list_rhs->mList.begin(), list_rhs->mList.end());
+    xy->mX.push_back(list);
+  }
+  else {
+    // If neither are lists, a list is made containing the two items
+    shared_ptr<XYList> list(new XYList());
+    list->mList.push_back(lhs);
+    list->mList.push_back(rhs);
+    xy->mX.push_back(list);
+  }
+}
 
 // XY
 XY::XY() {
@@ -585,6 +626,7 @@ XY::XY() {
   mP["`"]   = msp(new XYPrimitive("`", primitive_dip));
   mP["|"]   = msp(new XYPrimitive("|", primitive_reverse));
   mP["\\"]  = msp(new XYPrimitive("\\", primitive_quote));
+  mP[","]   = msp(new XYPrimitive(",", primitive_join));
 }
 
 void XY::print() {
@@ -632,7 +674,7 @@ void XY::match(OutputIterator out,
     while(pit != pattern_list->mList.end()) {
       shared_ptr<XYSymbol> s = dynamic_pointer_cast<XYSymbol>(*pit);
       if (s) {
-        *out++ = make_pair(s->mValue, msp(new XYNull()));
+        *out++ = make_pair(s->mValue, msp(new XYList()));
       }
       ++pit;
     }
@@ -1297,7 +1339,7 @@ void testParse() {
     parse("[1] [[[a A]] a A] (", back_inserter(xy->mY));
     xy->eval();
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
-    BOOST_CHECK(n1->toString() == "[ 1 null ]");
+    BOOST_CHECK(n1->toString() == "[ 1 [ ] ]");
   }
 
   {
@@ -1372,6 +1414,15 @@ void testParse() {
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
     BOOST_CHECK(n1->toString() == "[ 3 hello 4 ]");
   }
+  {
+    // Join test 1
+    shared_ptr<XY> xy(new XY());
+    parse("1 2, [ 1 2 ] 2, 2 [1 2], [1 2] [3 4],", back_inserter(xy->mY));
+    xy->eval();
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    BOOST_CHECK(n1->toString() == "[ [ 1 2 ] [ 1 2 2 ] [ 2 1 2 ] [ 1 2 3 4 ] ]");
+  }
+
 
 
 }
