@@ -64,8 +64,10 @@ class XYObject : public enable_shared_from_this<XYObject>
     // printing.
     virtual string toString() const = 0;
 
-    // Return true if this object is equal to the other object.
-    virtual bool equals(shared_ptr<XYObject> rhs) const = 0;
+    // Return a negative number if this object is less than
+    // the rhs object. Return 0 if they are equal. Returns
+    // a positive number if it is greater.
+    virtual int compare(shared_ptr<XYObject> rhs) const = 0;
 };
 
 // This lovely piece of code is to allow XY objects to be called within
@@ -129,7 +131,7 @@ class XYFloat : public XYNumber
     XYFloat(mpf_class const& v);
     virtual string toString() const;
     virtual void eval1(XY* xy);
-    virtual bool equals(shared_ptr<XYObject> rhs) const;
+    virtual int compare(shared_ptr<XYObject> rhs) const;
     virtual bool is_zero() const;
     virtual unsigned int as_uint() const;
     virtual shared_ptr<XYInteger> as_integer();
@@ -153,7 +155,7 @@ class XYInteger : public XYNumber
     XYInteger(mpz_class const& v);
     virtual string toString() const;
     virtual void eval1(XY* xy);
-    virtual bool equals(shared_ptr<XYObject> rhs) const;
+    virtual int compare(shared_ptr<XYObject> rhs) const;
     virtual bool is_zero() const;
     virtual unsigned int as_uint() const;
     virtual shared_ptr<XYInteger> as_integer();
@@ -175,7 +177,7 @@ class XYSymbol : public XYObject
     XYSymbol(string v);
     virtual string toString() const;
     virtual void eval1(XY* xy);
-    virtual bool equals(shared_ptr<XYObject> rhs) const;
+    virtual int compare(shared_ptr<XYObject> rhs) const;
 };
 
 // A string
@@ -188,7 +190,7 @@ class XYString : public XYObject
     XYString(string v);
     virtual string toString() const;
     virtual void eval1(XY* xy);
-    virtual bool equals(shared_ptr<XYObject> rhs) const;
+    virtual int compare(shared_ptr<XYObject> rhs) const;
 };
 
 // A shuffle symbol describes pattern to rearrange the stack.
@@ -202,7 +204,7 @@ class XYShuffle : public XYObject
     XYShuffle(string v);
     virtual string toString() const;
     virtual void eval1(XY* xy);
-    virtual bool equals(shared_ptr<XYObject> rhs) const;
+    virtual int compare(shared_ptr<XYObject> rhs) const;
 };
 
 
@@ -223,7 +225,7 @@ class XYList : public XYObject
     template <class InputIterator> XYList(InputIterator first, InputIterator last);
     virtual string toString() const;
     virtual void eval1(XY* xy);
-    virtual bool equals(shared_ptr<XYObject> rhs) const;
+    virtual int compare(shared_ptr<XYObject> rhs) const;
 };
 
 // A primitive is the implementation of a core function.
@@ -239,7 +241,7 @@ class XYPrimitive : public XYObject
     XYPrimitive(string name, void (*func)(XY*));
     virtual string toString() const;
     virtual void eval1(XY* xy);
-    virtual bool equals(shared_ptr<XYObject> rhs) const;
+    virtual int compare(shared_ptr<XYObject> rhs) const;
 };
 
 // The environment maps names to objects
@@ -323,9 +325,17 @@ void XYFloat::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
 }
 
-bool XYFloat::equals(shared_ptr<XYObject> rhs) const {
+int XYFloat::compare(shared_ptr<XYObject> rhs) const {
   shared_ptr<XYFloat> o = dynamic_pointer_cast<XYFloat>(rhs);
-  return o && o->mValue == mValue;
+  if (!o) {
+    shared_ptr<XYInteger> i = dynamic_pointer_cast<XYInteger>(rhs);
+    if (i)
+      return cmp(mValue, i->mValue);
+    else
+      return toString().compare(rhs->toString());
+  }
+
+  return cmp(mValue, o->mValue);
 }
 
 bool XYFloat::is_zero() const {
@@ -379,9 +389,17 @@ void XYInteger::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
 }
 
-bool XYInteger::equals(shared_ptr<XYObject> rhs) const {
+int XYInteger::compare(shared_ptr<XYObject> rhs) const {
   shared_ptr<XYInteger> o = dynamic_pointer_cast<XYInteger>(rhs);
-  return o && o->mValue == mValue;
+  if (!o) {
+    shared_ptr<XYFloat> f = dynamic_pointer_cast<XYFloat>(rhs);
+    if (f)
+      return cmp(mValue, f->mValue);
+    else
+      return toString().compare(rhs->toString());
+  }
+
+  return cmp(mValue, o->mValue);
 }
 
 bool XYInteger::is_zero() const {
@@ -466,9 +484,12 @@ void XYSymbol::eval1(XY* xy) {
     xy->mX.push_back(shared_from_this());
 }
 
-bool XYSymbol::equals(shared_ptr<XYObject> rhs) const {
+int XYSymbol::compare(shared_ptr<XYObject> rhs) const {
   shared_ptr<XYSymbol> o = dynamic_pointer_cast<XYSymbol>(rhs);
-  return o && o->mValue == mValue;
+  if (!o)
+    return toString().compare(rhs->toString());
+
+  return mValue.compare(o->mValue);
 }
 
 // XYString
@@ -484,9 +505,12 @@ void XYString::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
 }
 
-bool XYString::equals(shared_ptr<XYObject> rhs) const {
+int XYString::compare(shared_ptr<XYObject> rhs) const {
   shared_ptr<XYString> o = dynamic_pointer_cast<XYString>(rhs);
-  return o && o->mValue == mValue;
+  if (!o)
+    return toString().compare(rhs->toString());
+
+  return mValue.compare(o->mValue);
 }
 
 // XYShuffle
@@ -517,9 +541,12 @@ void XYShuffle::eval1(XY* xy) {
   }
 }
 
-bool XYShuffle::equals(shared_ptr<XYObject> rhs) const {
+int XYShuffle::compare(shared_ptr<XYObject> rhs) const {
   shared_ptr<XYShuffle> o = dynamic_pointer_cast<XYShuffle>(rhs);
-  return o && o->mBefore == mBefore && o->mAfter == mAfter;
+  if (!o)
+    return toString().compare(rhs->toString());
+
+  return (mBefore + mAfter).compare(o->mBefore + o->mAfter);
 }
 
 
@@ -543,24 +570,29 @@ void XYList::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
 }
 
-bool XYList::equals(shared_ptr<XYObject> rhs) const {
+int XYList::compare(shared_ptr<XYObject> rhs) const {
   shared_ptr<XYList> o = dynamic_pointer_cast<XYList>(rhs);
   if (!o)
-    return false;
+    return toString().compare(rhs->toString());
 
-  if(o->mList.size() != mList.size())
-    return false;
+  const_iterator lit = mList.begin(),
+                 rit = o->mList.begin();
 
-  for(const_iterator lit = mList.begin(),
-                     rit = o->mList.begin();
+  for(;
       lit != mList.end();
-      ++lit, ++rit) 
-    if (!(*lit)->equals(*rit))
-      return false;
+      ++lit, ++rit) {
+    int c = (*lit)->compare(*rit);
+    if (c != 0)
+      return c;
+  }
 
-  return true;
+  if(lit != mList.end())
+    return -1;
+
+  if(rit != o->mList.end())
+    return 1;
+  return 0;
 }
-
 
 // XYPrimitive
 XYPrimitive::XYPrimitive(string n, void (*func)(XY*)) : mName(n), mFunc(func) { }
@@ -573,9 +605,12 @@ void XYPrimitive::eval1(XY* xy) {
   mFunc(xy);
 }
 
-bool XYPrimitive::equals(shared_ptr<XYObject> rhs) const {
+int XYPrimitive::compare(shared_ptr<XYObject> rhs) const {
   shared_ptr<XYPrimitive> o = dynamic_pointer_cast<XYPrimitive>(rhs);
-  return o && mName == o->mName && mFunc == o->mFunc;
+  if (!o)
+    return toString().compare(rhs->toString());
+
+  return mName.compare(o->mName);
 }
  
 // Primitive Implementations
@@ -878,11 +913,84 @@ static void primitive_equals(XY* xy) {
   assert(lhs);
   xy->mX.pop_back();
 
-  if (lhs->equals(rhs))
+  if (lhs->compare(rhs) == 0)
     xy->mX.push_back(msp(new XYInteger(1)));
   else
     xy->mX.push_back(msp(new XYInteger(0)));
 }
+
+// <  [X^a^b Y] [X^? Y] 
+static void primitive_lessThan(XY* xy) {
+  assert(xy->mX.size() >= 2);
+
+  shared_ptr<XYObject> rhs = xy->mX.back();
+  assert(rhs);
+  xy->mX.pop_back();
+
+  shared_ptr<XYObject> lhs = xy->mX.back();
+  assert(lhs);
+  xy->mX.pop_back();
+
+  if (lhs->compare(rhs) < 0)
+    xy->mX.push_back(msp(new XYInteger(1)));
+  else
+    xy->mX.push_back(msp(new XYInteger(0)));
+}
+
+// >  [X^a^b Y] [X^? Y] 
+static void primitive_greaterThan(XY* xy) {
+  assert(xy->mX.size() >= 2);
+
+  shared_ptr<XYObject> rhs = xy->mX.back();
+  assert(rhs);
+  xy->mX.pop_back();
+
+  shared_ptr<XYObject> lhs = xy->mX.back();
+  assert(lhs);
+  xy->mX.pop_back();
+
+  if (lhs->compare(rhs) > 0)
+    xy->mX.push_back(msp(new XYInteger(1)));
+  else
+    xy->mX.push_back(msp(new XYInteger(0)));
+}
+
+// <=  [X^a^b Y] [X^? Y] 
+static void primitive_lessThanEqual(XY* xy) {
+  assert(xy->mX.size() >= 2);
+
+  shared_ptr<XYObject> rhs = xy->mX.back();
+  assert(rhs);
+  xy->mX.pop_back();
+
+  shared_ptr<XYObject> lhs = xy->mX.back();
+  assert(lhs);
+  xy->mX.pop_back();
+
+  if (lhs->compare(rhs) <= 0)
+    xy->mX.push_back(msp(new XYInteger(1)));
+  else
+    xy->mX.push_back(msp(new XYInteger(0)));
+}
+
+// >=  [X^a^b Y] [X^? Y] 
+static void primitive_greaterThanEqual(XY* xy) {
+  assert(xy->mX.size() >= 2);
+
+  shared_ptr<XYObject> rhs = xy->mX.back();
+  assert(rhs);
+  xy->mX.pop_back();
+
+  shared_ptr<XYObject> lhs = xy->mX.back();
+  assert(lhs);
+  xy->mX.pop_back();
+
+  if (lhs->compare(rhs) >= 0)
+    xy->mX.push_back(msp(new XYInteger(1)));
+  else
+    xy->mX.push_back(msp(new XYInteger(0)));
+}
+
 
 // not not [X^a Y] [X^? Y] 
 static void primitive_not(XY* xy) {
@@ -976,6 +1084,10 @@ XY::XY() {
   mP["$"]   = msp(new XYPrimitive("$", primitive_stack));
   mP["$$"]  = msp(new XYPrimitive("$$", primitive_stackqueue));
   mP["="]   = msp(new XYPrimitive("=", primitive_equals));
+  mP["<"]   = msp(new XYPrimitive("<", primitive_lessThan));
+  mP["<="]  = msp(new XYPrimitive("<=", primitive_lessThanEqual));
+  mP[">"]   = msp(new XYPrimitive(">", primitive_greaterThan));
+  mP[">="]  = msp(new XYPrimitive(">=", primitive_greaterThanEqual));
   mP["not"] = msp(new XYPrimitive("not", primitive_not));
   mP["nth"] = msp(new XYPrimitive("nth", primitive_nth));
   mP["."]   = msp(new XYPrimitive(".", primitive_print));
@@ -1033,6 +1145,9 @@ void XY::match(OutputIterator out,
     }
   }
   else if(pattern_list && !object_list) {
+    // If the pattern is a list, but the object is not, 
+    // pretend the object is a one element list. This enables:
+    // 42 [ [[a A]] a A ] -> 42 []
     shared_ptr<XYList> list(new XYList());
     list->mList.push_back(object);
     match(out, list, pattern, sequence, it);
