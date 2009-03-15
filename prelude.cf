@@ -60,6 +60,8 @@
 ** => [ 1 10 = [ [] ] [ 1 []! 1 [1 +]! [ 10 > ] [ ] [ 1 + ] unfold cons ] if ] **
 [ [ [s p q t] s p [ drop;! [] ] [ q! s t! p q t unfold;! cons;! ] cond;! ] (] unfold set
 
+[ abc-abac \!dipd;! !] cleave set
+
 ** Examples **
 [[1 =][][dup;'1 - fac;'*]cond;'] fac set
 [[1 =][][1 -] unfold;! 1 [*] fold;! ] fac2 set

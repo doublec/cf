@@ -1064,6 +1064,55 @@ static void primitive_count(XY* xy) {
   }
 }
 
+// Forward declare tokenize function for tokenize primitive
+template <class InputIterator, class OutputIterator>
+void tokenize(InputIterator first, InputIterator last, OutputIterator out);
+
+// tokenize [X^s Y] [X^{tokens} Y] 
+// Given a string, returns a list of cf tokens
+static void primitive_tokenize(XY* xy) {
+  assert(xy->mX.size() >= 1);
+
+  shared_ptr<XYString> s(dynamic_pointer_cast<XYString>(xy->mX.back()));
+  assert(s);
+  xy->mX.pop_back();
+
+  vector<string> tokens;
+  tokenize(s->mValue.begin(), s->mValue.end(), back_inserter(tokens));
+
+  shared_ptr<XYList> result(new XYList());
+  for(vector<string>::iterator it=tokens.begin(); it != tokens.end(); ++it)
+    result->mList.push_back(msp(new XYString(*it)));
+
+  xy->mX.push_back(result);
+}
+
+// Forward declare parse function for parse primitive
+template <class InputIterator, class OutputIterator>
+InputIterator parse(InputIterator first, InputIterator last, OutputIterator out);
+
+// parse [X^{tokens} Y] [X^{...} Y] 
+// Given a list of tokens, parses it and returns the program
+static void primitive_parse(XY* xy) {
+  assert(xy->mX.size() >= 1);
+
+  shared_ptr<XYList> tokens(dynamic_pointer_cast<XYList>(xy->mX.back()));
+  assert(tokens);
+  xy->mX.pop_back();
+
+  vector<string> strings;
+  for(XYList::iterator it = tokens->mList.begin(); it!=tokens->mList.end(); ++it) {
+    shared_ptr<XYString> s = dynamic_pointer_cast<XYString>(*it);
+    assert(s);
+    strings.push_back(s->mValue);
+  }
+
+  shared_ptr<XYList> result(new XYList());
+  parse(strings.begin(), strings.end(), back_inserter(result->mList));
+  xy->mX.push_back(result);
+}
+
+
 // XY
 XY::XY() {
   mP["+"]   = msp(new XYPrimitive("+", primitive_addition));
@@ -1092,6 +1141,8 @@ XY::XY() {
   mP["nth"] = msp(new XYPrimitive("nth", primitive_nth));
   mP["."]   = msp(new XYPrimitive(".", primitive_print));
   mP["count"] = msp(new XYPrimitive("count", primitive_count));
+  mP["tokenize"] = msp(new XYPrimitive("tokenize", primitive_tokenize));
+  mP["parse"] = msp(new XYPrimitive("parse", primitive_parse));
 }
 
 void XY::print() {
