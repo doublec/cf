@@ -28,6 +28,20 @@ using namespace std;
 using namespace boost;
 using namespace boost::lambda;
 
+// Given an input string, unescape any special characters
+string unescape(string s) {
+  string r1 = replace_all_copy(s, "\\\"", "\"");
+  string r2 = replace_all_copy(r1, "\\n", "\n");
+  return r2;
+}
+ 
+// Given an input string, escape any special characters
+string escape(string s) {
+  string r1 = replace_all_copy(s, "\"", "\\\"");
+  string r2 = replace_all_copy(r1, "\n", "\\n");
+  return r2;
+}
+ 
 // XY is the object that contains the state of the running
 // system. For example, the stack (X), the queue (Y) and
 // the environment.
@@ -507,7 +521,7 @@ XYString::XYString(string v) : mValue(v) { }
 string XYString::toString(bool parse) const {
   if (parse) {
     ostringstream s;
-    s << '\"' << mValue << '\"';
+    s << '\"' << escape(mValue) << '\"';
     return s.str();
   }
   
@@ -1403,10 +1417,17 @@ boost::xpressive::sregex re_symbol() {
   return !range('0', '9') >> +(re_non_special());
 }
 
+// Return regex for a character in a string
+boost::xpressive::sregex re_stringchar() {
+  using namespace boost::xpressive;
+  using boost::xpressive::set;
+  return ~(set= '\"','\\') | ('\\' >> _);
+}
+
 // Return regex for strings
 boost::xpressive::sregex re_string() {
   using namespace boost::xpressive;
-  return as_xpr('\"') >> *(~(as_xpr('\"'))) >> '\"';
+  return as_xpr('\"') >> *(re_stringchar()) >> '\"';
 }
 
 // Return regex for comments
@@ -1440,7 +1461,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
       // Ignore comments
     }
     else if (regex_match(token, what, re_string())) {
-      *out++ = msp(new XYString(token.substr(1, token.size()-2)));
+      *out++ = msp(new XYString(unescape(token.substr(1, token.size()-2))));
     }
     else if(regex_match(token, re_float()))
       *out++ = msp(new XYFloat(token));
