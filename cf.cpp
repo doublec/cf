@@ -61,8 +61,9 @@ class XYObject : public enable_shared_from_this<XYObject>
     virtual void eval1(XY* xy) = 0;
 
     // Convert the object into a string repesentation for
-    // printing.
-    virtual string toString() const = 0;
+    // printing. if 'parse' is true then the output
+    // should be able to be read back in by the cf parser.
+    virtual string toString(bool parse) const = 0;
 
     // Return a negative number if this object is less than
     // the rhs object. Return 0 if they are equal. Returns
@@ -81,6 +82,14 @@ namespace boost {
       template <class RET>
        static string apply(R (XYObject::*func)() const, shared_ptr<XYObject>const & o) {
           return (o.get()->*func)();
+        }
+    };
+    template <class R, class D> struct function_adaptor< R (XYObject::*)(D) const >
+    {
+      template <class T> struct sig { typedef R type; };
+      template <class RET>
+       static string apply(R (XYObject::*func)(D) const, shared_ptr<XYObject>const & o,D d) {
+          return (o.get()->*func)(d);
         }
     };
   }
@@ -129,7 +138,7 @@ class XYFloat : public XYNumber
     XYFloat(int v = 0);
     XYFloat(string v);
     XYFloat(mpf_class const& v);
-    virtual string toString() const;
+    virtual string toString(bool parse) const;
     virtual void eval1(XY* xy);
     virtual int compare(shared_ptr<XYObject> rhs) const;
     virtual bool is_zero() const;
@@ -153,7 +162,7 @@ class XYInteger : public XYNumber
     XYInteger(int v = 0);
     XYInteger(string v);
     XYInteger(mpz_class const& v);
-    virtual string toString() const;
+    virtual string toString(bool parse) const;
     virtual void eval1(XY* xy);
     virtual int compare(shared_ptr<XYObject> rhs) const;
     virtual bool is_zero() const;
@@ -175,7 +184,7 @@ class XYSymbol : public XYObject
 
   public:
     XYSymbol(string v);
-    virtual string toString() const;
+    virtual string toString(bool parse) const;
     virtual void eval1(XY* xy);
     virtual int compare(shared_ptr<XYObject> rhs) const;
 };
@@ -188,7 +197,7 @@ class XYString : public XYObject
 
   public:
     XYString(string v);
-    virtual string toString() const;
+    virtual string toString(bool parse) const;
     virtual void eval1(XY* xy);
     virtual int compare(shared_ptr<XYObject> rhs) const;
 };
@@ -202,7 +211,7 @@ class XYShuffle : public XYObject
 
   public:
     XYShuffle(string v);
-    virtual string toString() const;
+    virtual string toString(bool parse) const;
     virtual void eval1(XY* xy);
     virtual int compare(shared_ptr<XYObject> rhs) const;
 };
@@ -223,7 +232,7 @@ class XYList : public XYObject
   public:
     XYList();
     template <class InputIterator> XYList(InputIterator first, InputIterator last);
-    virtual string toString() const;
+    virtual string toString(bool parse) const;
     virtual void eval1(XY* xy);
     virtual int compare(shared_ptr<XYObject> rhs) const;
 };
@@ -239,7 +248,7 @@ class XYPrimitive : public XYObject
 
   public:
     XYPrimitive(string name, void (*func)(XY*));
-    virtual string toString() const;
+    virtual string toString(bool parse) const;
     virtual void eval1(XY* xy);
     virtual int compare(shared_ptr<XYObject> rhs) const;
 };
@@ -317,7 +326,7 @@ XYFloat::XYFloat(int v) : XYNumber(FLOAT), mValue(v) { }
 XYFloat::XYFloat(string v) : XYNumber(FLOAT), mValue(v) { }
 XYFloat::XYFloat(mpf_class const& v) : XYNumber(FLOAT), mValue(v) { }
 
-string XYFloat::toString() const {
+string XYFloat::toString(bool) const {
   return lexical_cast<string>(mValue);
 }
 
@@ -332,7 +341,7 @@ int XYFloat::compare(shared_ptr<XYObject> rhs) const {
     if (i)
       return cmp(mValue, i->mValue);
     else
-      return toString().compare(rhs->toString());
+      return toString(true).compare(rhs->toString(true));
   }
 
   return cmp(mValue, o->mValue);
@@ -381,7 +390,7 @@ XYInteger::XYInteger(int v) : XYNumber(INTEGER), mValue(v) { }
 XYInteger::XYInteger(string v) : XYNumber(INTEGER), mValue(v) { }
 XYInteger::XYInteger(mpz_class const& v) : XYNumber(INTEGER), mValue(v) { }
 
-string XYInteger::toString() const {
+string XYInteger::toString(bool) const {
   return lexical_cast<string>(mValue);
 }
 
@@ -396,7 +405,7 @@ int XYInteger::compare(shared_ptr<XYObject> rhs) const {
     if (f)
       return cmp(mValue, f->mValue);
     else
-      return toString().compare(rhs->toString());
+      return toString(true).compare(rhs->toString(true));
   }
 
   return cmp(mValue, o->mValue);
@@ -471,7 +480,7 @@ shared_ptr<XYNumber> XYInteger::power(shared_ptr<XYNumber> rhs) {
 // XYSymbol
 XYSymbol::XYSymbol(string v) : mValue(v) { }
 
-string XYSymbol::toString() const {
+string XYSymbol::toString(bool) const {
   return mValue;
 }
 
@@ -487,7 +496,7 @@ void XYSymbol::eval1(XY* xy) {
 int XYSymbol::compare(shared_ptr<XYObject> rhs) const {
   shared_ptr<XYSymbol> o = dynamic_pointer_cast<XYSymbol>(rhs);
   if (!o)
-    return toString().compare(rhs->toString());
+    return toString(true).compare(rhs->toString(true));
 
   return mValue.compare(o->mValue);
 }
@@ -495,10 +504,14 @@ int XYSymbol::compare(shared_ptr<XYObject> rhs) const {
 // XYString
 XYString::XYString(string v) : mValue(v) { }
 
-string XYString::toString() const {
-  ostringstream s;
-  s << '\"' << mValue << '\"';
-  return s.str();
+string XYString::toString(bool parse) const {
+  if (parse) {
+    ostringstream s;
+    s << '\"' << mValue << '\"';
+    return s.str();
+  }
+  
+  return mValue;
 }
 
 void XYString::eval1(XY* xy) {
@@ -508,7 +521,7 @@ void XYString::eval1(XY* xy) {
 int XYString::compare(shared_ptr<XYObject> rhs) const {
   shared_ptr<XYString> o = dynamic_pointer_cast<XYString>(rhs);
   if (!o)
-    return toString().compare(rhs->toString());
+    return toString(true).compare(rhs->toString(true));
 
   return mValue.compare(o->mValue);
 }
@@ -522,7 +535,7 @@ XYShuffle::XYShuffle(string v) {
   mAfter  = result[1];
 }
 
-string XYShuffle::toString() const {
+string XYShuffle::toString(bool) const {
   ostringstream out;
   out << mBefore << "-" << mAfter;
   return out.str();
@@ -544,7 +557,7 @@ void XYShuffle::eval1(XY* xy) {
 int XYShuffle::compare(shared_ptr<XYObject> rhs) const {
   shared_ptr<XYShuffle> o = dynamic_pointer_cast<XYShuffle>(rhs);
   if (!o)
-    return toString().compare(rhs->toString());
+    return toString(true).compare(rhs->toString(true));
 
   return (mBefore + mAfter).compare(o->mBefore + o->mAfter);
 }
@@ -558,10 +571,10 @@ XYList::XYList(InputIterator first, InputIterator last) {
   mList.assign(first, last);
 }
 
-string XYList::toString() const {
+string XYList::toString(bool parse) const {
   ostringstream s;
   s << "[ ";
-  for_each(mList.begin(), mList.end(), s << bind(&XYObject::toString, _1) << " ");
+  for_each(mList.begin(), mList.end(), s << bind(&XYObject::toString, _1, parse) << " ");
   s << "]";
   return s.str();
 }
@@ -573,7 +586,7 @@ void XYList::eval1(XY* xy) {
 int XYList::compare(shared_ptr<XYObject> rhs) const {
   shared_ptr<XYList> o = dynamic_pointer_cast<XYList>(rhs);
   if (!o)
-    return toString().compare(rhs->toString());
+    return toString(true).compare(rhs->toString(true));
 
   const_iterator lit = mList.begin(),
                  rit = o->mList.begin();
@@ -597,7 +610,7 @@ int XYList::compare(shared_ptr<XYObject> rhs) const {
 // XYPrimitive
 XYPrimitive::XYPrimitive(string n, void (*func)(XY*)) : mName(n), mFunc(func) { }
 
-string XYPrimitive::toString() const {
+string XYPrimitive::toString(bool) const {
   return mName;
 }
 
@@ -608,7 +621,7 @@ void XYPrimitive::eval1(XY* xy) {
 int XYPrimitive::compare(shared_ptr<XYObject> rhs) const {
   shared_ptr<XYPrimitive> o = dynamic_pointer_cast<XYPrimitive>(rhs);
   if (!o)
-    return toString().compare(rhs->toString());
+    return toString(true).compare(rhs->toString(true));
 
   return mName.compare(o->mName);
 }
@@ -1039,7 +1052,18 @@ static void primitive_print(XY* xy) {
   assert(o);
   xy->mX.pop_back();
 
-  cout << o->toString() << endl;
+  cout << o->toString(true) << endl;
+}
+
+// write [X^n Y] [X Y] 
+static void primitive_write(XY* xy) {
+  assert(xy->mX.size() >= 1);
+
+  shared_ptr<XYObject> o(xy->mX.back());
+  assert(o);
+  xy->mX.pop_back();
+
+  cout << o->toString(false);
 }
 
 // count [X^{...} Y] [X^n Y] 
@@ -1112,6 +1136,17 @@ static void primitive_parse(XY* xy) {
   xy->mX.push_back(result);
 }
 
+// getline [X Y] [X^".." Y] 
+// Get a line of input from the user
+static void primitive_getline(XY* xy) {
+  assert(cin.good());
+
+  string line;
+  getline(cin, line);
+  assert(cin.good());
+
+  xy->mX.push_back(msp(new XYString(line)));
+}
 
 // XY
 XY::XY() {
@@ -1140,15 +1175,18 @@ XY::XY() {
   mP["not"] = msp(new XYPrimitive("not", primitive_not));
   mP["nth"] = msp(new XYPrimitive("nth", primitive_nth));
   mP["."]   = msp(new XYPrimitive(".", primitive_print));
+  mP["write"] = msp(new XYPrimitive("write", primitive_write));
   mP["count"] = msp(new XYPrimitive("count", primitive_count));
   mP["tokenize"] = msp(new XYPrimitive("tokenize", primitive_tokenize));
   mP["parse"] = msp(new XYPrimitive("parse", primitive_parse));
+  mP["getline"] = msp(new XYPrimitive("getline", primitive_getline));
+
 }
 
 void XY::print() {
-  for_each(mX.begin(), mX.end(), cout << bind(&XYObject::toString, _1) << " ");
+  for_each(mX.begin(), mX.end(), cout << bind(&XYObject::toString, _1, true) << " ");
   cout << " -> ";
-  for_each(mY.begin(), mY.end(), cout << bind(&XYObject::toString, _1) << " ");
+  for_each(mY.begin(), mY.end(), cout << bind(&XYObject::toString, _1, true) << " ");
   cout << endl;
 }
 
@@ -1607,9 +1645,9 @@ void testParse() {
     XYEnv env;
     xy->getPatternValues(*(pattern->mList.begin()), inserter(env, env.begin()));
     BOOST_CHECK(env.size() == 3);
-    BOOST_CHECK(env["a"]->toString() == "1");
-    BOOST_CHECK(env["b"]->toString() == "2");
-    BOOST_CHECK(env["c"]->toString() == "3");
+    BOOST_CHECK(env["a"]->toString(true) == "1");
+    BOOST_CHECK(env["b"]->toString(true) == "2");
+    BOOST_CHECK(env["c"]->toString(true) == "3");
   }
 
   {
@@ -1625,9 +1663,9 @@ void testParse() {
     XYEnv env;
     xy->getPatternValues(*(pattern->mList.begin()), inserter(env, env.begin()));
     BOOST_CHECK(env.size() == 3);
-    BOOST_CHECK(env["a"]->toString() == "1");
-    BOOST_CHECK(env["b"]->toString() == "2");
-    BOOST_CHECK(env["c"]->toString() == "3");
+    BOOST_CHECK(env["a"]->toString(true) == "1");
+    BOOST_CHECK(env["b"]->toString(true) == "2");
+    BOOST_CHECK(env["c"]->toString(true) == "3");
   }
   {
     // Pattern deconstruction 2
@@ -1642,7 +1680,7 @@ void testParse() {
     XYEnv env;
     xy->getPatternValues(*(pattern->mList.begin()), inserter(env, env.begin()));
     BOOST_CHECK(env.size() == 1);
-    BOOST_CHECK(env["a"]->toString() == "foo");
+    BOOST_CHECK(env["a"]->toString(true) == "foo");
   }
   {
     // Pattern replace 1
@@ -1662,9 +1700,9 @@ void testParse() {
     shared_ptr<XYList> result(dynamic_pointer_cast<XYList>(out->mList[0]));
     BOOST_CHECK(result);
     BOOST_CHECK(result->mList.size() == 3);
-    BOOST_CHECK(result->mList[0]->toString() == "42");
-    BOOST_CHECK(result->mList[1]->toString() == "2");
-    BOOST_CHECK(result->mList[2]->toString() == "1");
+    BOOST_CHECK(result->mList[0]->toString(true) == "42");
+    BOOST_CHECK(result->mList[1]->toString(true) == "2");
+    BOOST_CHECK(result->mList[2]->toString(true) == "1");
   }
   {
     // Pattern replace 2
@@ -1682,7 +1720,7 @@ void testParse() {
     shared_ptr<XYList> result(dynamic_pointer_cast<XYList>(out->mList[0]));
     BOOST_CHECK(result);
     BOOST_CHECK(result->mList.size() == 1);
-    BOOST_CHECK(result->toString() == "[ [ 1 [ 2 1 ] 1 c ] ]");
+    BOOST_CHECK(result->toString(true) == "[ [ 1 [ 2 1 ] 1 c ] ]");
   }
   {
     // Pattern 1 - Stack to Stack
@@ -1695,7 +1733,7 @@ void testParse() {
 
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
-    BOOST_CHECK(n1->toString() == "[ 2 1 ]");
+    BOOST_CHECK(n1->toString(true) == "[ 2 1 ]");
   }
   {
     // Pattern 2 - Stack to Stack
@@ -1708,7 +1746,7 @@ void testParse() {
 
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
-    BOOST_CHECK(n1->toString() == "[ 1 2 [ c [ 2 ] ] ]");
+    BOOST_CHECK(n1->toString(true) == "[ 1 2 [ c [ 2 ] ] ]");
   }
   {
     // Pattern 3 - Stack to Queue
@@ -1721,7 +1759,7 @@ void testParse() {
 
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
-    BOOST_CHECK(n1->toString() == "[ 4 0 ]");
+    BOOST_CHECK(n1->toString(true) == "[ 4 0 ]");
   }
   {
     // Pattern 4 - Stack to Queue - with list deconstruction
@@ -1734,7 +1772,7 @@ void testParse() {
 
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
-    BOOST_CHECK(n1->toString() == "[ 1 [ 2 3 ] ]");
+    BOOST_CHECK(n1->toString(true) == "[ 1 [ 2 3 ] ]");
   }
   {
     // Pattern 5 - Stack to Queue - with list to short
@@ -1742,7 +1780,7 @@ void testParse() {
     parse("[1] [[[a A]] a A] (", back_inserter(xy->mY));
     xy->eval();
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
-    BOOST_CHECK(n1->toString() == "[ 1 [ ] ]");
+    BOOST_CHECK(n1->toString(true) == "[ 1 [ ] ]");
   }
 
   {
@@ -1768,7 +1806,7 @@ void testParse() {
 
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
-    BOOST_CHECK(n1->toString() == "[ 1 ]");
+    BOOST_CHECK(n1->toString(true) == "[ 1 ]");
   }
   {
     // Shuffle pattern test 3
@@ -1781,7 +1819,7 @@ void testParse() {
 
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
-    BOOST_CHECK(n1->toString() == "[ 1 2 2 ]");
+    BOOST_CHECK(n1->toString(true) == "[ 1 2 2 ]");
   }
   {
     // Shuffle pattern test 4
@@ -1794,7 +1832,7 @@ void testParse() {
 
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
-    BOOST_CHECK(n1->toString() == "[ 1 2 1 ]");
+    BOOST_CHECK(n1->toString(true) == "[ 1 2 1 ]");
   }
   {
     // Shuffle pattern test 5
@@ -1807,7 +1845,7 @@ void testParse() {
 
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
-    BOOST_CHECK(n1->toString() == "[ 1 2 foo-bar ]");
+    BOOST_CHECK(n1->toString(true) == "[ 1 2 foo-bar ]");
   }
   {
     // Dip test 1
@@ -1815,7 +1853,7 @@ void testParse() {
     parse("1 2 hello [ + ] ` 4", back_inserter(xy->mY));
     xy->eval();
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
-    BOOST_CHECK(n1->toString() == "[ 3 hello 4 ]");
+    BOOST_CHECK(n1->toString(true) == "[ 3 hello 4 ]");
   }
   {
     // Join test 1
@@ -1823,7 +1861,7 @@ void testParse() {
     parse("1 2, [ 1 2 ] 2, 2 [1 2], [1 2] [3 4],", back_inserter(xy->mY));
     xy->eval();
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
-    BOOST_CHECK(n1->toString() == "[ [ 1 2 ] [ 1 2 2 ] [ 2 1 2 ] [ 1 2 3 4 ] ]");
+    BOOST_CHECK(n1->toString(true) == "[ [ 1 2 ] [ 1 2 2 ] [ 2 1 2 ] [ 1 2 3 4 ] ]");
   }
   {
     // stackqueue test 1
@@ -1831,7 +1869,7 @@ void testParse() {
     parse("1 2 [4 5] [ 6 7 ] $$ 9 10 11", back_inserter(xy->mY));
     xy->eval();
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
-    BOOST_CHECK(n1->toString() == "[ 4 5 6 7 ]");
+    BOOST_CHECK(n1->toString(true) == "[ 4 5 6 7 ]");
   }
   {
     // stack test 1
@@ -1839,7 +1877,7 @@ void testParse() {
     parse("1 2 [ [3,]`12, ] $ 9 10 11", back_inserter(xy->mY));
     xy->eval();
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
-    BOOST_CHECK(n1->toString() == "[ 1 2 3 9 10 11 12 ]");
+    BOOST_CHECK(n1->toString(true) == "[ 1 2 3 9 10 11 12 ]");
   }
   {
     // count test 1
@@ -1847,7 +1885,7 @@ void testParse() {
     parse("[1 2 3] count [] count 1 count \"abc\" count \"\" count", back_inserter(xy->mY));
     xy->eval();
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
-    BOOST_CHECK(n1->toString() == "[ 3 0 1 3 0 ]");
+    BOOST_CHECK(n1->toString(true) == "[ 3 0 1 3 0 ]");
   }
 
 }
