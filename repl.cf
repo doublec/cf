@@ -1,0 +1,5 @@
+** A simple read-eval-print-loop written in cf **
+[ "ok " write ] prompt set
+[ [ [dup;!.]`dup;!.] $] print-stack set
+[ print-stack;! prompt;! getline [ "bye" = ] [drop;!][tokenize parse ! repl;!]cond;! ]  repl set
+
