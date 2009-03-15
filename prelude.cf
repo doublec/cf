@@ -20,6 +20,7 @@
 [[drop;']`] dropd set
 [[dup;']`] dupd set
 [[swap;']`] swapd set
+[\`cons;!`] dipd set
 
 ** Continuations **
 [[[drop;'[]]`]$] clearstack set
@@ -34,6 +35,13 @@
 
 ** Control Flow **
 [pair;'[dupd;']`['not]`nth'] cond set
+[unit;!cons;!dup;![uncons;!uncons;!drop;!]`[while;!],,[]cond;!] while set ** [c][t]while **
+[unit;![1 -]swap;!,\`,[]swap;!while;!drop;!] do set ** n[f]do **
+
+** Combinators **
+[[a-aa count[]abc-cab]` ab-ba
+ [[uncons;!]` a-aa abc-cab[cons;!!first;! ab-ba cons;!]dipd;!]
+ do;! ab- |] map set ** [..][f]map **
 
 ** Examples **
 [[1 =][][dup;'1 - fac;'*]cond;'] fac set

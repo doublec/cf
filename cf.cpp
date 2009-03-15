@@ -923,6 +923,38 @@ static void primitive_nth(XY* xy) {
     xy->mX.push_back(list->mList[n->as_uint()]);
 }
 
+// . print [X^n Y] [X Y] 
+static void primitive_print(XY* xy) {
+  assert(xy->mX.size() >= 1);
+
+  shared_ptr<XYObject> o(xy->mX.back());
+  assert(o);
+  xy->mX.pop_back();
+
+  cout << o->toString() << endl;
+}
+
+// count [X^{...} Y] [X^n Y] 
+// Returns the length of any list. If the item at the top of the
+// stack is an atom, returns 1.
+static void primitive_count(XY* xy) {
+  assert(xy->mX.size() >= 1);
+
+  shared_ptr<XYObject> o(xy->mX.back());
+  assert(o);
+  xy->mX.pop_back();
+
+  shared_ptr<XYList> list(dynamic_pointer_cast<XYList>(o));
+  if (list)
+    xy->mX.push_back(msp(new XYInteger(list->mList.size())));
+  else {
+    shared_ptr<XYString> s(dynamic_pointer_cast<XYString>(o));
+    if (s)
+      xy->mX.push_back(msp(new XYInteger(s->mValue.size())));
+    else
+      xy->mX.push_back(msp(new XYInteger(1)));
+  }
+}
 
 // XY
 XY::XY() {
@@ -946,7 +978,8 @@ XY::XY() {
   mP["="]   = msp(new XYPrimitive("=", primitive_equals));
   mP["not"] = msp(new XYPrimitive("not", primitive_not));
   mP["nth"] = msp(new XYPrimitive("nth", primitive_nth));
-
+  mP["."]   = msp(new XYPrimitive(".", primitive_print));
+  mP["count"] = msp(new XYPrimitive("count", primitive_count));
 }
 
 void XY::print() {
@@ -998,6 +1031,11 @@ void XY::match(OutputIterator out,
       }
       ++pit;
     }
+  }
+  else if(pattern_list && !object_list) {
+    shared_ptr<XYList> list(new XYList());
+    list->mList.push_back(object);
+    match(out, list, pattern, sequence, it);
   }
   else if(pattern_symbol) {
     string uppercase = pattern_symbol->mValue;
@@ -1637,6 +1675,15 @@ void testParse() {
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
     BOOST_CHECK(n1->toString() == "[ 1 2 3 9 10 11 12 ]");
   }
+  {
+    // count test 1
+    shared_ptr<XY> xy(new XY());
+    parse("[1 2 3] count [] count 1 count \"abc\" count \"\" count", back_inserter(xy->mY));
+    xy->eval();
+    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    BOOST_CHECK(n1->toString() == "[ 3 0 1 3 0 ]");
+  }
+
 }
 
 int test_main(int argc, char* argv[]) {
