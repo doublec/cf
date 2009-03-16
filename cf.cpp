@@ -1331,38 +1331,6 @@ enum XYState {
   XYSTATE_LIST_START
 };
 
-// Returns true if the character is whitespace
-bool is_whitespace(char ch) {
-  return ch == '\r' || ch == '\t' || ch == '\n' || ch == ' ';
-}
-
-// Returns true if the character is one that indicates a symbol has ended
-// in the token stream.
-bool is_symbol_break(char ch) {
-  switch(ch) {
-    case '[':
-    case ']':
-    case '{':
-    case '}':
-    case '(':
-    case ')':
-    case ';':
-    case '!':
-    case '\'':
-    case ',':
-    case '`':
-      return true;
-
-    default:
-      return is_whitespace(ch);
-  }
-}
-
-// Returns true if the character is a numeric digit
-bool is_numeric_digit(char ch) {
-  return (ch >= '0' && ch <='9');
-}
-
 // Returns true if the string is a shuffle pattern
 bool is_shuffle_pattern(string s) {
   // A string is a shuffle pattern if it is of the form:

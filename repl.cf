@@ -1,8 +1,8 @@
 ** A simple read-eval-print-loop written in cf **
-[ "repl> " write ]                                       prompt set
+[ "repl> " write ]                                    prompt set
 [ [ print " " write ] each;!]                         print-stack set
 [ [  dup;!"Y: " write print-stack;!"\n" write 
-    [dup;!"X: " write print-stack;!"\n" write]` ] $]    print-stacks set
+    [dup;!"X: " write print-stack;!"\n" write]` ] $]  print-stacks set
 [ print-stacks;!prompt;!getline 
   [ "bye" = ][drop;!][tokenize parse ! repl;!]cond;!] repl set
 
