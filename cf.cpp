@@ -1058,8 +1058,19 @@ static void primitive_nth(XY* xy) {
     xy->mX.push_back(list->mList[n->as_uint()]);
 }
 
-// . print [X^n Y] [X Y] 
+// print [X^n Y] [X Y] 
 static void primitive_print(XY* xy) {
+  assert(xy->mX.size() >= 1);
+
+  shared_ptr<XYObject> o(xy->mX.back());
+  assert(o);
+  xy->mX.pop_back();
+
+  cout << o->toString(true);
+}
+
+// . printnl [X^n Y] [X Y] 
+static void primitive_printnl(XY* xy) {
   assert(xy->mX.size() >= 1);
 
   shared_ptr<XYObject> o(xy->mX.back());
@@ -1068,6 +1079,7 @@ static void primitive_print(XY* xy) {
 
   cout << o->toString(true) << endl;
 }
+
 
 // write [X^n Y] [X Y] 
 static void primitive_write(XY* xy) {
@@ -1188,7 +1200,8 @@ XY::XY() {
   mP[">="]  = msp(new XYPrimitive(">=", primitive_greaterThanEqual));
   mP["not"] = msp(new XYPrimitive("not", primitive_not));
   mP["nth"] = msp(new XYPrimitive("nth", primitive_nth));
-  mP["."]   = msp(new XYPrimitive(".", primitive_print));
+  mP["."]   = msp(new XYPrimitive(".", primitive_printnl));
+  mP["print"] = msp(new XYPrimitive("print", primitive_print));
   mP["write"] = msp(new XYPrimitive("write", primitive_write));
   mP["count"] = msp(new XYPrimitive("count", primitive_count));
   mP["tokenize"] = msp(new XYPrimitive("tokenize", primitive_tokenize));
