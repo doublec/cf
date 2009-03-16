@@ -43,6 +43,9 @@
  [[uncons;!]` a-aa abc-cab[cons;!!first;! ab-ba cons;!]dipd;!]
  do;! ab- |] map set ** [..][f]map **
 
+** [..][f]each **
+[[[]]`swap;unit;!`,uncons;unit;!`,while;!drop;!] each set
+
 ** repeat [X^n^o Y] [X^{o1..on} Y] **
 [ [ [n o] o n 1 - [ 0 = ] [drop;!] [ o repeat;! , ] cond;! ] ( ] repeat set
  
