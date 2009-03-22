@@ -18,6 +18,8 @@
 #include <boost/lambda/bind.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/xpressive/xpressive.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/date_time/gregorian/gregorian.hpp>
 #include <gmpxx.h>
 
 // If defined, compiles as a test applicatation that tests
@@ -151,7 +153,7 @@ class XYFloat : public XYNumber
     mpf_class mValue;
 
   public:
-    XYFloat(int v = 0);
+    XYFloat(long v = 0);
     XYFloat(string v);
     XYFloat(mpf_class const& v);
     virtual string toString(bool parse) const;
@@ -175,7 +177,7 @@ class XYInteger : public XYNumber
     mpz_class mValue;
 
   public:
-    XYInteger(int v = 0);
+    XYInteger(long v = 0);
     XYInteger(string v);
     XYInteger(mpz_class const& v);
     virtual string toString(bool parse) const;
@@ -338,7 +340,7 @@ class XY {
 XYNumber::XYNumber(Type type) : mType(type) { }
 
 // XYFloat
-XYFloat::XYFloat(int v) : XYNumber(FLOAT), mValue(v) { }
+XYFloat::XYFloat(long v) : XYNumber(FLOAT), mValue(v) { }
 XYFloat::XYFloat(string v) : XYNumber(FLOAT), mValue(v) { }
 XYFloat::XYFloat(mpf_class const& v) : XYNumber(FLOAT), mValue(v) { }
 
@@ -402,7 +404,7 @@ shared_ptr<XYNumber> XYFloat::power(shared_ptr<XYNumber> rhs) {
 }
 
 // XYInteger
-XYInteger::XYInteger(int v) : XYNumber(INTEGER), mValue(v) { }
+XYInteger::XYInteger(long v) : XYNumber(INTEGER), mValue(v) { }
 XYInteger::XYInteger(string v) : XYNumber(INTEGER), mValue(v) { }
 XYInteger::XYInteger(mpz_class const& v) : XYNumber(INTEGER), mValue(v) { }
 
@@ -1176,6 +1178,21 @@ static void primitive_getline(XY* xy) {
   xy->mX.push_back(msp(new XYString(line)));
 }
 
+// millis [X Y] [X^m Y]
+// Runs the number of milliseconds on the stack since
+// 1 Janary 1970.
+static void primitive_millis(XY* xy) {
+  using namespace boost::posix_time;
+  using namespace boost::gregorian;
+
+  ptime e(microsec_clock::universal_time());
+  ptime s(date(1970,1,1));
+
+  time_duration d(e - s);
+
+  xy->mX.push_back(msp(new XYInteger(d.total_milliseconds())));
+}
+
 // XY
 XY::XY() {
   mP["+"]   = msp(new XYPrimitive("+", primitive_addition));
@@ -1209,6 +1226,7 @@ XY::XY() {
   mP["tokenize"] = msp(new XYPrimitive("tokenize", primitive_tokenize));
   mP["parse"] = msp(new XYPrimitive("parse", primitive_parse));
   mP["getline"] = msp(new XYPrimitive("getline", primitive_getline));
+  mP["millis"] = msp(new XYPrimitive("millis", primitive_millis));
 
 }
 

@@ -65,6 +65,9 @@
 
 [ abc-abac \!dipd;! !] cleave set
 
+** benchmarking **
+[millis\!`\millis`-] time set
+
 ** Examples **
 [[1 =][][dup;'1 - fac;'*]cond;'] fac set
 [[1 =][][1 -] unfold;! 1 [*] fold;! ] fac2 set
