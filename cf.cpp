@@ -1402,7 +1402,8 @@ boost::xpressive::sregex re_number() {
 // Return regex for tokenizing specials
 boost::xpressive::sregex re_special() {
   using namespace boost::xpressive;
-  return as_xpr('\\') | '[' | ']' | '{' | '}' | '(' | ')' | ';' | '!' | ',' | '`' | '\'' | '|';
+  using boost::xpressive::set;
+  return (set= '\\' , '[' , ']' , '{' , '}' , '(' , ')' , ';' , '!' , ',' , '`' , '\'' , '|');
 }
 
 // Return regex for non-specials
@@ -1444,7 +1445,9 @@ void tokenize(InputIterator first, InputIterator last, OutputIterator out)
 {
   using namespace boost::xpressive;
 
-  sregex xy = re_comment() | re_special() | re_string() | re_symbol() | re_number();
+  // inline string regular expression. Without this I get a 'pure virtual function'
+  // called inside the boost regular expression code when compiled with -O2 and -O3.
+  sregex xy = re_comment() | (as_xpr('\"') >> *(re_stringchar()) >> '\"') | re_special() | re_symbol() | re_number();
   sregex_token_iterator begin(first, last, xy), end;
   copy(begin, end, out);
 }
