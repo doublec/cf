@@ -926,7 +926,7 @@ XY::XY() {
   mP["set"] = msp(new XYPrimitive("set", primitive_set));
   mP[";"]   = msp(new XYPrimitive(";", primitive_get));
   mP["!"]   = msp(new XYPrimitive("!", primitive_unquote));
-  mP["'"]   = msp(new XYPrimitive("'", primitive_unquote));
+  //  mP["'"]   = msp(new XYPrimitive("'", primitive_unquote));
   mP[")"]   = msp(new XYPrimitive(")", primitive_pattern_ss));
   mP["("]   = msp(new XYPrimitive("(", primitive_pattern_sq));
   mP["`"]   = msp(new XYPrimitive("`", primitive_dip));

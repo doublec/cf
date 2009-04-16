@@ -11,30 +11,30 @@
 
 ** Operators **
 [] id set
-[uncons;'drop;'] first set
-[uncons;'[drop;']`] rest set
-[|first;'] last set
+[uncons;!drop;!] first set
+[uncons;![drop;!]`] rest set
+[|first;!] last set
 [\\`] unit set
-[unit;'cons;'] pair set
-[uncons;'first;'] unpair set
-[[drop;']`] dropd set
-[[dup;']`] dupd set
-[[swap;']`] swapd set
+[unit;!cons;!] pair set
+[uncons;!first;!] unpair set
+[[drop;!]`] dropd set
+[[dup;!]`] dupd set
+[[swap;!]`] swapd set
 [\`cons;!`] dipd set
 
 ** Continuations **
-[[[drop;'[]]`]$] clearstack set
-[[drop;'[]]$] clearqueue set
+[[[drop;![]]`]$] clearstack set
+[[drop;![]]$] clearqueue set
 [[ab- [][]]$] clear set
 
-[[[|uncons;'|swap;']`swap;'unit;',]$] queue set
-[[|uncons;'|[unit;',]`]$] unqueue set
+[[[|uncons;!|swap;!]`swap;!unit;!,]$] queue set
+[[|uncons;!|[unit;!,]`]$] unqueue set
 
-[[[dup;'unit;',]`]$] stack set
-[[[last;']`]$] unstack set
+[[[dup;!unit;!,]`]$] stack set
+[[[last;!]`]$] unstack set
 
 ** Control Flow **
-[pair;'[dupd;']`['not]`nth'] cond set
+[pair;![dupd;!]`[!not]`nth!] cond set
 [unit;!cons;!dup;![uncons;!uncons;!drop;!]`[while;!],,[]cond;!] while set ** [c][t]while **
 [unit;![1 -]swap;!,\`,[]swap;!while;!drop;!] do set ** n[f]do **
 
@@ -69,5 +69,5 @@
 [millis\!`\millis`-] time set
 
 ** Examples **
-[[1 =][][dup;'1 - fac;'*]cond;'] fac set
+[[1 =][][dup;!1 - fac;!*]cond;!] fac set
 [[1 =][][1 -] unfold;! 1 [*] fold;! ] fac2 set
