@@ -287,6 +287,7 @@ string XYShuffle::toString(bool) const {
 }
 
 void XYShuffle::eval1(XY* xy) {
+  assert(xy->mX.size() >= mBefore.size());
   map<char, shared_ptr<XYObject> > env;
   for(string::reverse_iterator it = mBefore.rbegin(); it != mBefore.rend(); ++it) {
     env[*it] = xy->mX.back();
