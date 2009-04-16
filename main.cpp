@@ -27,10 +27,12 @@ void eval_literate_file(shared_ptr<XY> xy, char* filename) {
       // Evaluate the Bird style of code
       while (file.good()) {
 	getline(file, line);
-	if (line.size() == 0 || line[0] != '>') 
-	  break;
+	if (line.size() > 0) {
+	  if (line[0] != '>') 
+	    break;
 
-	out << line.substr(1) << endl;
+	  out << line.substr(1) << endl;
+	}
       }
     }
 
