@@ -1,0 +1,89 @@
+Test Suite
+==========
+Some simple unit tests for cf. Mostly based on the examples given for
+Functional False at:
+
+http://nsl.com/k/f/f.htm
+
+Many of these will fail due to cf using different primitives,
+etc. These will be fixed over time, either by correcting the test for
+the different primitive, or implementing new primitives.
+
+Run with:
+
+$ ./cf prelude.cf test.lcf
+
+Code
+====
+
+First we need some words for doing simple unit tests:
+
+> [ 
+>   [[c]stack;![[]unstack;!c!stack;![[]unstack;!]`]`swap;!unit;!,unstack;!] (
+> ] infra set
+> [ 
+>   dup;![infra;!=]`swap;! [drop;!] 
+>   [ write " passed\n" write ] 
+>   [ write " failed\n" write ] 
+>   cond;! 
+> ] test set
+
+Now the tests themselves:
+
+> [123]      [123]               test;!
+> [123.45]   [123.45]            test;!
+> [name]     [name]              test;!
+> []         [["abcd"] abcd set] test;!
+> [["abcd"]] [abcd;]             test;!
+> ["abcd"]   [abcd;!]            test;!
+
+> [1 2] [2 1 ab-ba] test;!
+> [3] [1 2 +] test;!
+> [1] [3 2 -] test;!
+> [12] [3 4 *] test;!
+> [2] [4 2 %] test;!
+> [8] [2 3 ^] test;!
+> [3] [3.2 _] test;!
+
+> [1] [2 2 =] test;!
+> [0] [4 6 >] test;!
+> [3] [4 3 &] test;!
+
+> [1] [[1 2] [1 2] ~] test;!
+
+> [[3]] [[1 2 3] #] test;!
+
+> [[3 2 1]] [[1 2 3]|] test;!
+
+> [[1 2 4]] [[0 1 1 0 1] @] test;!
+> [[[1 4][2 5][3 6]]] [[[1 2 3][4 5 6]] @] test;!
+
+> [[1 2]] [[2 [1 2 3]] /] test;!
+> [[[1 2][3 1][2 3]]] [[3 2][1 2 3] /] test;!
+
+> [[3]] [2[1 2 3] \] test;!
+> [[[1 2][3]]] [[0 2][1 2 3] \] test;!
+> [[3 4 1 2]] [[1 2 3 4] 2 \] test;!
+
+> [1] [[10 20 30] 20 ?] test;!
+> [[1 0 1]] [2 [3 4 5] ?] test;!
+
+.> [[10 20 30]] [[10 20 10 10 30] ;] test;!
+
+> [[[0 2 3][1][4]]] [[10 20 10 10 30] :] test;!
+
+.> [[0 1 2]] [3 <] test;!
+.> [[0 2 1]] [[10 30 20] <] test;!
+
+.> [1 2 [5] 3 4] [1 2 [[2 3 +]] . 3 4] test;!
+.> [[2 1]] [[[1 2 3][[1 0]]] .] test;!
+.> [[-1 -2 3] [[[1 2 3][[1 0]][-1*]] .] test;!
+.> [[9 5 3]] [[[1 2 3][[1 0]]+[3 8]] .] test;!
+
+> [5] [2 [3 +] !] test;!
+> [5 4] [2 3 4 [+]`] test;!
+> [[+]] ['+] test;!
+
+> [[1 2 3]] [[1][2 3] ,] test;!
+
+.> [4 5 6 1 2 3] [1 2 3 '\ $ 4 5 6 ] test;!
