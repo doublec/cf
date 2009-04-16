@@ -9,6 +9,7 @@
 #include <deque>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include <boost/xpressive/xpressive.hpp>
 #include <gmpxx.h>
 
 // Helper function for creating a shared pointer of a type.
@@ -276,6 +277,92 @@ class XY {
     template <class OutputIterator>
     void replacePattern(XYEnv const& env, boost::shared_ptr<XYObject> object, OutputIterator out);
 };
+
+// Return regex for tokenizing
+boost::xpressive::sregex re_integer();
+boost::xpressive::sregex re_float();
+boost::xpressive::sregex re_number();
+boost::xpressive::sregex re_special();
+boost::xpressive::sregex re_non_special();
+boost::xpressive::sregex re_symbol();
+boost::xpressive::sregex re_stringchar();
+boost::xpressive::sregex re_string();
+boost::xpressive::sregex re_comment();
+
+// Given an input string, unescape any special characters
+std::string unescape(std::string s);
+std::string escape(std::string s);
+
+// Returns true if the string is a shuffle pattern
+bool is_shuffle_pattern(std::string s);
+
+// Given a string, store a sequence of XY tokens using the 'out' iterator
+// to put them in a container.
+template <class InputIterator, class OutputIterator>
+void tokenize(InputIterator first, InputIterator last, OutputIterator out)
+{
+  using namespace std;
+  using namespace boost::xpressive;
+
+  // inline string regular expression. Without this I get a 'pure virtual function'
+  // called inside the boost regular expression code when compiled with -O2 and -O3.
+  sregex xy = re_comment() | (as_xpr('\"') >> *(re_stringchar()) >> '\"') | re_special() | re_symbol() | re_number();
+  sregex_token_iterator begin(first, last, xy), end;
+  copy(begin, end, out);
+}
+
+// Parse a sequence of tokens storing the result using the
+// given output iterator.
+template <class InputIterator, class OutputIterator>
+InputIterator parse(InputIterator first, InputIterator last, OutputIterator out) {
+  using namespace std;
+  using namespace boost;
+  using namespace boost::xpressive;
+
+  while (first != last) {
+    string token = *first++;
+    smatch what;
+    if (regex_match(token, what, re_comment())) {
+      // Ignore comments
+    }
+    else if (regex_match(token, what, re_string())) {
+      *out++ = msp(new XYString(unescape(token.substr(1, token.size()-2))));
+    }
+    else if(regex_match(token, re_float()))
+      *out++ = msp(new XYFloat(token));
+    else if(regex_match(token, re_integer())) {
+      *out++ = msp(new XYInteger(token));
+    }
+    else if(token == "[") {
+      shared_ptr<XYList> list(new XYList());
+      first = parse(first, last, back_inserter(list->mList));
+      *out++ = list;
+    }
+    else if( token == "]") {
+      return first;
+    }
+    else if(is_shuffle_pattern(token)) {
+      *out++ = msp(new XYShuffle(token));
+    }
+    else {
+      *out++ = msp(new XYSymbol(token));
+    }
+  }
+
+  return first;
+}
+
+// Parse a string into XY objects, storing the result in the
+// container pointer to by the output iterator.
+template <class OutputIterator>
+void parse(std::string s, OutputIterator out) {
+  using namespace std;
+  using namespace boost;
+
+  vector<string> tokens;
+  tokenize(s.begin(), s.end(), back_inserter(tokens));
+  parse(tokens.begin(), tokens.end(), out);
+}
 
 #endif // cf_h
 // Copyright (C) 2009 Chris Double. All Rights Reserved.

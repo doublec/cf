@@ -11,7 +11,6 @@
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/bind.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/xpressive/xpressive.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include "cf.h"
@@ -869,10 +868,6 @@ static void primitive_tokenize(XY* xy) {
   xy->mX.push_back(result);
 }
 
-// Forward declare parse function for parse primitive
-template <class InputIterator, class OutputIterator>
-InputIterator parse(InputIterator first, InputIterator last, OutputIterator out);
-
 // parse [X^{tokens} Y] [X^{...} Y] 
 // Given a list of tokens, parses it and returns the program
 static void primitive_parse(XY* xy) {
@@ -1165,113 +1160,7 @@ boost::xpressive::sregex re_comment() {
   return as_xpr('*') >> '*' >> -*_ >> '*' >> '*';
 }
 
-// Given a string, store a sequence of XY tokens using the 'out' iterator
-// to put them in a container.
-template <class InputIterator, class OutputIterator>
-void tokenize(InputIterator first, InputIterator last, OutputIterator out)
-{
-  using namespace boost::xpressive;
-
-  // inline string regular expression. Without this I get a 'pure virtual function'
-  // called inside the boost regular expression code when compiled with -O2 and -O3.
-  sregex xy = re_comment() | (as_xpr('\"') >> *(re_stringchar()) >> '\"') | re_special() | re_symbol() | re_number();
-  sregex_token_iterator begin(first, last, xy), end;
-  copy(begin, end, out);
-}
-
-// Parse a sequence of tokens storing the result using the
-// given output iterator.
-template <class InputIterator, class OutputIterator>
-InputIterator parse(InputIterator first, InputIterator last, OutputIterator out) {
-  using namespace boost::xpressive;
-
-  while (first != last) {
-    string token = *first++;
-    smatch what;
-    if (regex_match(token, what, re_comment())) {
-      // Ignore comments
-    }
-    else if (regex_match(token, what, re_string())) {
-      *out++ = msp(new XYString(unescape(token.substr(1, token.size()-2))));
-    }
-    else if(regex_match(token, re_float()))
-      *out++ = msp(new XYFloat(token));
-    else if(regex_match(token, re_integer())) {
-      *out++ = msp(new XYInteger(token));
-    }
-    else if(token == "[") {
-      shared_ptr<XYList> list(new XYList());
-      first = parse(first, last, back_inserter(list->mList));
-      *out++ = list;
-    }
-    else if( token == "]") {
-      return first;
-    }
-    else if(is_shuffle_pattern(token)) {
-      *out++ = msp(new XYShuffle(token));
-    }
-    else {
-      *out++ = msp(new XYSymbol(token));
-    }
-  }
-
-  return first;
-}
-
-// Parse a string into XY objects, storing the result in the
-// container pointer to by the output iterator.
-template <class OutputIterator>
-void parse(string s, OutputIterator out) {
-  vector<string> tokens;
-  tokenize(s.begin(), s.end(), back_inserter(tokens));
-  parse(tokens.begin(), tokens.end(), out);
-}
-
-#if !defined(TEST)
-void eval_file(shared_ptr<XY> xy, char* filename) {
-  cout << "Loading " << filename << endl;
-  ifstream file(filename);
-  ostringstream out;
-  while (file.good()) {
-    string line;
-    getline(file, line);
-    out << line << endl;
-  }
-  file.close();
-
-  parse(out.str(), back_inserter(xy->mY));
-
-  xy->eval();
-}
-
-template <class InputIterator>
-void eval_files(shared_ptr<XY> xy, InputIterator first, InputIterator last) {
-  for_each(first, last, bind(eval_file, xy, _1));
-}
-
-int main(int argc, char* argv[]) {
-  shared_ptr<XY> xy(new XY());
-
-  if (argc > 1) {
-    // Load all files given on the command line in order
-    eval_files(xy, argv + 1, argv + argc);
-  }
-
-  while (cin.good()) {
-    string input;
-    xy->print();
-    cout << "ok ";
-    getline(cin, input);
-    if (cin.good()) {
-      parse(input, back_inserter(xy->mY));
-      xy->eval(); 
-    }
-  }
-
-
-  return 0;
-}
-#else
+#if defined(TEST)
 void testParse() {
   {
     // Simple number parsing
