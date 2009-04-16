@@ -144,12 +144,11 @@ they are:
 set      - set a symbol to a value
 ;        - get the value of a symbol
 !        - Execute a program on the stack
-'        - Same as !. Easier to type at the repl as it's unshifted :-)
 )        - Process a pattern and store the result on the stack X
 (        - Process a pattern and prepend the result to the queue Y
 `        - dip operator
 |        - Reverse a list
-\\       - quote 
+'        - quote 
 $        - stack operator
 $$       - stackqueue operator
 =        - equals
@@ -198,10 +197,10 @@ X and Y with these.
   Joy/Factor: 1 2 3 [ - ] dip => -1 3
           cf: 1 2 3 [-]`
 
-\ is the quote operator. It takes the next item on the Y queue, puts it into a
+' is the quote operator. It takes the next item on the Y queue, puts it into a
 one elements list and pushes it on the X stack.  
 
-  1 2 \+ 
+  1 2 '+ 
    => 1 2 [+]
 
 , is the join operator. It appends things to lists. Given two lists they are

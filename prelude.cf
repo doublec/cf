@@ -14,13 +14,13 @@
 [uncons;!drop;!] first set
 [uncons;![drop;!]`] rest set
 [|first;!] last set
-[\\`] unit set
+[''`] unit set
 [unit;!cons;!] pair set
 [uncons;!first;!] unpair set
 [[drop;!]`] dropd set
 [[dup;!]`] dupd set
 [[swap;!]`] swapd set
-[\`cons;!`] dipd set
+['`cons;!`] dipd set
 
 ** Continuations **
 [[[drop;![]]`]$] clearstack set
@@ -36,7 +36,7 @@
 ** Control Flow **
 [pair;![dupd;!]`[!not]`nth!] cond set
 [unit;!cons;!dup;![uncons;!uncons;!drop;!]`[while;!],,[]cond;!] while set ** [c][t]while **
-[unit;![1 -]swap;!,\`,[]swap;!while;!drop;!] do set ** n[f]do **
+[unit;![1 -]swap;!,'`,[]swap;!while;!drop;!] do set ** n[f]do **
 
 ** Combinators **
 [[a-aa count[]abc-cab]` ab-ba
@@ -63,10 +63,10 @@
 ** => [ 1 10 = [ [] ] [ 1 []! 1 [1 +]! [ 10 > ] [ ] [ 1 + ] unfold cons ] if ] **
 [ [ [s p q t] s p [ drop;! [] ] [ q! s t! p q t unfold;! cons;! ] cond;! ] (] unfold set
 
-[ abc-abac \!dipd;! !] cleave set
+[ abc-abac '!dipd;! !] cleave set
 
 ** benchmarking **
-[millis\!`\millis`-] time set
+[millis'!`'millis`-] time set
 
 ** Examples **
 [[1 =][][dup;!1 - fac;!*]cond;!] fac set

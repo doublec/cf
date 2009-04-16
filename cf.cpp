@@ -926,12 +926,11 @@ XY::XY() {
   mP["set"] = msp(new XYPrimitive("set", primitive_set));
   mP[";"]   = msp(new XYPrimitive(";", primitive_get));
   mP["!"]   = msp(new XYPrimitive("!", primitive_unquote));
-  //  mP["'"]   = msp(new XYPrimitive("'", primitive_unquote));
   mP[")"]   = msp(new XYPrimitive(")", primitive_pattern_ss));
   mP["("]   = msp(new XYPrimitive("(", primitive_pattern_sq));
   mP["`"]   = msp(new XYPrimitive("`", primitive_dip));
   mP["|"]   = msp(new XYPrimitive("|", primitive_reverse));
-  mP["\\"]  = msp(new XYPrimitive("\\", primitive_quote));
+  mP["'"]   = msp(new XYPrimitive("'", primitive_quote));
   mP[","]   = msp(new XYPrimitive(",", primitive_join));
   mP["$"]   = msp(new XYPrimitive("$", primitive_stack));
   mP["$$"]  = msp(new XYPrimitive("$$", primitive_stackqueue));
