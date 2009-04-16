@@ -97,14 +97,14 @@ can be set to values and the value is obtained using the ';' primitive.
 If this value is a list it can then be further evaluated as a program using
 the '!' primitive.
 
-Comments are anything between ## and ##.
+Comments are anything between ** and **.
 For example:
 
-  ok [1 2 +] myfunc set   ## set the 'myfunc' symbol to the list 1,2 and + ##
-  ok myfunc               ## push the 'myfunc' symbol on the stack         ##
-  ok ;                    ## get the value of it ([1 2 +])                 ##
-  ok !                    ## execute the list as a program                 ##
-  ok .                    ## print the result                              ##
+  ok [1 2 +] myfunc set   ** set the 'myfunc' symbol to the list 1,2 and + **
+  ok myfunc               ** push the 'myfunc' symbol on the stack         **
+  ok ;                    ** get the value of it ([1 2 +])                 **
+  ok !                    ** execute the list as a program                 **
+  ok .                    ** print the result                              **
    => 3
 
 Literate Files
