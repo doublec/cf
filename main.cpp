@@ -14,7 +14,45 @@ using namespace std;
 using namespace boost;
 using namespace boost::lambda;
 
-void eval_file(shared_ptr<XY> xy, char* filename) {
+// A literate file. See literate.lcf for details.
+void eval_literate_file(shared_ptr<XY> xy, char* filename) {
+  cout << "Loading " << filename << endl;
+  ifstream file(filename);
+  ostringstream out;
+  while (file.good()) {
+    string line;
+    getline(file, line);
+
+    if (line.size() == 0) {
+      // Evaluate the Bird style of code
+      while (file.good()) {
+	getline(file, line);
+	if (line.size() == 0 || line[0] != '>') 
+	  break;
+
+	out << line.substr(1) << endl;
+      }
+    }
+
+    if (line == "\\begin{code}") {
+      // Evaluate the LaTeX style of code
+      while (file.good()) {
+	getline(file, line);
+	if (line == "\\end{code}")
+	  break;
+
+	out << line << endl;
+      }
+    }
+  }
+  file.close();
+
+  parse(out.str(), back_inserter(xy->mY));
+
+  xy->eval();
+}
+
+void eval_non_literate_file(shared_ptr<XY> xy, char* filename) {
   cout << "Loading " << filename << endl;
   ifstream file(filename);
   ostringstream out;
@@ -28,6 +66,14 @@ void eval_file(shared_ptr<XY> xy, char* filename) {
   parse(out.str(), back_inserter(xy->mY));
 
   xy->eval();
+}
+
+void eval_file(shared_ptr<XY> xy, char* filename) {
+  char* ext = strrchr(filename, '.');
+  if (ext && strcmp(ext, ".lcf") == 0)
+    eval_literate_file(xy, filename);
+  else
+    eval_non_literate_file(xy, filename);
 }
 
 template <class InputIterator>

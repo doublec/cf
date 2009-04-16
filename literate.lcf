@@ -1,0 +1,39 @@
+Literate cf
+===========
+
+This is an example of a literate cf file. Code and text are
+differentiated using the conventions from literate Haskell as defined
+here:
+
+  http://haskell.org/haskellwiki/Literate_programming
+
+Both 'bird style' and 'latex style' are supported.
+
+Bird Style
+==========
+
+All lines starting with > are interpreted as code, everything else is
+a comment. A blank line must also exist before and after code
+blocks. For example:
+
+> "The sum of 1 + 2 is " write 
+> 1 2 + .
+
+Latex Style
+===========
+
+This style is for ease of use within LaTeX documents. In this case all
+code between \begin{code} and \end{code} is executed as code. Note
+that these delimiters must be on individual lines, and only contain
+exactly that text.
+
+\begin{code}
+"This is evaluated as code\n" write
+\end{code}
+
+\begin{code}%this won't be
+"This is not evaluated as code\n" write
+\end{code}
+
+
+
