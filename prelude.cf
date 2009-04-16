@@ -65,6 +65,10 @@
 
 [ abc-abac '!dipd;! !] cleave set
 
+** take/drop **
+[swap;!rest;repeat;!!] ldrop set
+[swap;!dup;![[uncons;!]repeat;!'a-,]`[cons;!]repeat;![[]]swap;!,,!] ltake set
+
 ** benchmarking **
 [millis'!`'millis`-] time set
 
