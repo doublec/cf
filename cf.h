@@ -86,6 +86,7 @@ class XYNumber : public XYObject
     virtual boost::shared_ptr<XYNumber> multiply(boost::shared_ptr<XYNumber> rhs) = 0;
     virtual boost::shared_ptr<XYNumber> divide(boost::shared_ptr<XYNumber> rhs) = 0;
     virtual boost::shared_ptr<XYNumber> power(boost::shared_ptr<XYNumber> rhs) = 0;
+    virtual boost::shared_ptr<XYNumber> floor() = 0;
 };
 
 // Floating point numbers
@@ -110,6 +111,7 @@ class XYFloat : public XYNumber
     virtual boost::shared_ptr<XYNumber> multiply(boost::shared_ptr<XYNumber> rhs);
     virtual boost::shared_ptr<XYNumber> divide(boost::shared_ptr<XYNumber> rhs);
     virtual boost::shared_ptr<XYNumber> power(boost::shared_ptr<XYNumber> rhs);
+    virtual boost::shared_ptr<XYNumber> floor();
 };
 
 // Integer numbers
@@ -134,6 +136,7 @@ class XYInteger : public XYNumber
     virtual boost::shared_ptr<XYNumber> multiply(boost::shared_ptr<XYNumber> rhs);
     virtual boost::shared_ptr<XYNumber> divide(boost::shared_ptr<XYNumber> rhs);
     virtual boost::shared_ptr<XYNumber> power(boost::shared_ptr<XYNumber> rhs);
+    virtual boost::shared_ptr<XYNumber> floor();
 };
 
 // A symbol is an unquoted string.

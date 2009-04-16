@@ -130,6 +130,11 @@ shared_ptr<XYNumber> XYFloat::power(shared_ptr<XYNumber> rhs) {
   return result;
 }
 
+shared_ptr<XYNumber> XYFloat::floor() {
+  shared_ptr<XYFloat> result(new XYFloat(::floor(mValue)));
+  return result;
+}
+
 // XYInteger
 XYInteger::XYInteger(long v) : XYNumber(INTEGER), mValue(v) { }
 XYInteger::XYInteger(string v) : XYNumber(INTEGER), mValue(v) { }
@@ -220,6 +225,10 @@ shared_ptr<XYNumber> XYInteger::power(shared_ptr<XYNumber> rhs) {
   shared_ptr<XYInteger> result(new XYInteger(mValue));
   mpz_pow_ui(result->mValue.get_mpz_t(), mValue.get_mpz_t(), rhs->as_uint());
   return result;
+}
+
+shared_ptr<XYNumber> XYInteger::floor() {
+  return dynamic_pointer_cast<XYNumber>(shared_from_this());
 }
 
 // XYSymbol
@@ -430,7 +439,7 @@ static void primitive_division(XY* xy) {
   xy->mX.push_back(lhs->divide(rhs));
 }
 
-// + [X^lhs^rhs] Y] -> [X^lhs**rhs Y]
+// ^ [X^lhs^rhs] Y] -> [X^lhs**rhs Y]
 static void primitive_power(XY* xy) {
   assert(xy->mX.size() >= 2);
   shared_ptr<XYNumber> rhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
@@ -442,6 +451,16 @@ static void primitive_power(XY* xy) {
   xy->mX.pop_back();
 
   xy->mX.push_back(lhs->power(rhs));
+}
+
+// _ floor [X^n] Y] -> [X^n Y]
+static void primitive_floor(XY* xy) {
+  assert(xy->mX.size() >= 1);
+  shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  assert(n);
+  xy->mX.pop_back();
+
+  xy->mX.push_back(n->floor());
 }
 
 // set [X^value^name Y] -> [X Y] 
@@ -924,6 +943,7 @@ XY::XY() {
   mP["*"]   = msp(new XYPrimitive("*", primitive_multiplication));
   mP["%"]   = msp(new XYPrimitive("%", primitive_division));
   mP["^"]   = msp(new XYPrimitive("^", primitive_power));
+  mP["_"]   = msp(new XYPrimitive("_", primitive_floor));
   mP["set"] = msp(new XYPrimitive("set", primitive_set));
   mP[";"]   = msp(new XYPrimitive(";", primitive_get));
   mP["!"]   = msp(new XYPrimitive("!", primitive_unquote));

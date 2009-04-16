@@ -141,6 +141,7 @@ they are:
 *        - Multiplication
 %        - Division
 ^        - Power
+_        - Floor
 set      - set a symbol to a value
 ;        - get the value of a symbol
 !        - Execute a program on the stack
