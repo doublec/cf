@@ -16,14 +16,15 @@ $ ./cf prelude.cf test.lcf
 Code
 ====
 
-First we need some words for doing simple unit tests:
+First we need some words for doing simple unit tests. The 'test' word
+only prints the failed tests.
 
 > [ 
 >   [[c]stack;![[]unstack;!c!stack;![[]unstack;!]`]`swap;!unit;!,unstack;!] (
 > ] infra set
 > [ 
 >   dup;![infra;!=]`swap;! [drop;!] 
->   [ write " passed\n" write ] 
+>   [ a- ** write " passed\n" write ** ] 
 >   [ write " failed\n" write ] 
 >   cond;! 
 > ] test set
