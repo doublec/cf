@@ -1,0 +1,17 @@
+Changes since c99128
+====================
+1) unquote will now get the value of a symbol if it has one and
+   automatically apply unquote to that value. So:
+    
+    [1 2 +] ! => 3
+    foo ! => foo
+    [1 2 +] foo set foo ! => 3
+    
+   This reduces the need for a ';' to get the value of a symbol
+   before unquoting it. So code like:
+    
+    dup;!drop;!dip;!
+    
+   can be
+    
+    dup!drop!dip

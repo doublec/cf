@@ -495,13 +495,30 @@ static void primitive_unquote(XY* xy) {
   assert(xy->mX.size() >= 1);
   shared_ptr<XYObject> o = xy->mX.back();
   xy->mX.pop_back();
+
   shared_ptr<XYList> list = dynamic_pointer_cast<XYList>(o);
 
   if (list) {
     xy->mY.insert(xy->mY.begin(), list->mList.begin(), list->mList.end());
   }
   else {
-    xy->mY.push_front(o);
+    shared_ptr<XYSymbol> symbol = dynamic_pointer_cast<XYSymbol>(o);
+    if (symbol) {
+      // If it's a symbol, get the value of the symbol and apply
+      // unquote to that.
+      XYEnv::iterator it = xy->mEnv.find(symbol->mValue);
+      if (it != xy->mEnv.end()) {
+	xy->mX.push_back((*it).second);
+	primitive_unquote(xy);
+      }
+      else {
+	// If the symbol doesn't exist in the environment, just
+	// return the symbol itself.
+	xy->mX.push_back(symbol);
+      }
+    }
+    else 
+      xy->mY.push_front(o);
   }
 }
 
