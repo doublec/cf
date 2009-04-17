@@ -1,19 +1,26 @@
+UNAME=$(shell uname -s)
+
+ifeq "$(UNAME)" "Darwin"
+INCLUDE=-I/opt/local/include
+LIB=-L/opt/local/lib
+endif
+
 all: cf testcf
 
 cf.o: cf.cpp cf.h
-	g++ -g -c -o cf.o cf.cpp
+	g++ $(INCLUDE) -g -c -o cf.o cf.cpp
 
 main.o: main.cpp cf.h
-	g++ -g -c -o main.o main.cpp
+	g++ $(INCLUDE) -g -c -o main.o main.cpp
 
 cf: cf.o main.o
-	g++ -g -o cf cf.o main.o -lgmp -lgmpxx
+	g++ $(INCLUDE) -g -o cf cf.o main.o $(LIB) -lgmp -lgmpxx
 
 testmain.o: testmain.cpp cf.h
-	g++ -c -o testmain.o testmain.cpp
+	g++ $(INCLUDE) -c -o testmain.o testmain.cpp
 
 testcf: cf.o testmain.o
-	g++ -o testcf cf.o testmain.o -lgmp -lgmpxx
+	g++ $(INCLUDE) -o testcf cf.o testmain.o $(LIB) -lgmp -lgmpxx
 
 clean: 
 	rm *.o
