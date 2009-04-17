@@ -68,7 +68,7 @@ I recommend using rlwrap, or similar, to get command line editing:
 Data entered at the 'ok' prompt is pushed onto the stack, and pressing enter
 evaluates the program:
 
-  ok  25 5 + fac!
+  ok  25 5 + fac.
   265252859812191058636308480000000  ->
   ok
 
@@ -95,8 +95,8 @@ evaluating it.
 Primitives are the only symbols that are immediately executed. Symbols
 can be set to values and the value is obtained using the ';' primitive.
 If this value is a list it can then be further evaluated as a program using
-the '!' primitive. If '!' is used on a symbol then it's value will be
-obtained (if it has one) and '!' called again on that value. This
+the '.' primitive. If '.' is used on a symbol then it's value will be
+obtained (if it has one) and '.' called again on that value. This
 makes the use of ';' optional in a lot of common cases.
 
 Comments are anything between ** and **.
@@ -105,8 +105,8 @@ For example:
   ok [1 2 +] myfunc set   ** set the 'myfunc' symbol to the list 1,2 and + **
   ok myfunc               ** push the 'myfunc' symbol on the stack         **
   ok ;                    ** get the value of it ([1 2 +])                 **
-  ok !                    ** execute the list as a program                 **
-  ok .                    ** print the result                              **
+  ok .                    ** execute the list as a program                 **
+  ok printnl              ** print the result                              **
    => 3
 
 Literate Files
@@ -146,7 +146,7 @@ they are:
 _        - Floor
 set      - set a symbol to a value
 ;        - get the value of a symbol
-!        - Execute a program on the stack
+.        - Execute a program on the stack
 )        - Process a pattern and store the result on the stack X
 (        - Process a pattern and prepend the result to the queue Y
 `        - dip operator
@@ -172,7 +172,7 @@ millis   - returns number of milliseconds since 1970/1/1.
 
 Numbers can be floats or integers. Integers can be of any length. For example:
 
-  ok 1000 fac! .
+  ok 1000 fac. printnl
   ...a really big number...
 
 Shuffle patterns can be used to move things around on the stack. These are
@@ -219,28 +219,28 @@ Non-Primitives
 ==============
 See 'prelude.cf' for the current non-primitives. Some of these include:
 
-dup        - 1 dup;!          => 1 1
-drop       - 1 2 drop;!       => 1
-swap       - 1 2 swap;!       => 2 1 
-uncons     - [1 2 3] uncons;! => 1 [2 3]
-cons       - 1 [2 3] cons;!   => [1 2 3]
-first      - [1 2 3] first;!  => 1
-rest       - [1 2 3] rest;!   => [2 3]
+dup        - 1 dup.           => 1 1
+drop       - 1 2 drop.        => 1
+swap       - 1 2 swap.        => 2 1 
+uncons     - [1 2 3] uncons.  => 1 [2 3]
+cons       - 1 [2 3] cons.    => [1 2 3]
+first      - [1 2 3] first.   => 1
+rest       - [1 2 3] rest.    => [2 3]
 clear      - Clears the X and Y stacks. Useful at the REPL.
 queue      - Move the top stack item to the tail of the queue. >r in forth/factor
 unqueue    - Move the tail of the queue to the top of the stack. r> in forth/factor
 stack      - push a list cotaining stack contents on the stack
 unstack    - replace the stack with the contents of the list on the top of the stack
-cond       - conditional: 5 [0 >] [ drop;! "is true" ] [drop;! "is false"] cond;!
-while      - 1 [10 <] [1 + a-aa .] while;!
-do         - 10 [ "hello" . ] do;!
-map        - [1 2 3] [1 +] map;! => [2 3 4]
-each       - [1 2 3] [.] each;!
-fold       - [1 2 3] 0 [+] fold;! => 6
+cond       - conditional: 5 [0 >] [ drop. "is true" ] [drop. "is false"] cond.
+while      - 1 [10 <] [1 + a-aa .] while.
+do         - 10 [ "hello" println ] do.
+map        - [1 2 3] [1 +] map. => [2 3 4]
+each       - [1 2 3] [printnl] each.
+fold       - [1 2 3] 0 [+] fold. => 6
 unfold     - 1 [10 >] [] [1 +] unfold => [1 2 3 4 5 6 7 8 9 10]
 cleave     - 1 [1 +] [2 +] cleave => 2 3
-time       - [ 100 fac! drop! ] time! => 7
-fac        - 5 fac! => 120
+time       - [100 fac.drop.] time. => 7
+fac        - 5 fac. => 120
 fac2       - same as 'fac' but uses a fold/unfold and is much slower.
 
 Note that cf doesn't have an 'if' or conditional built in, it's provided by the
@@ -254,8 +254,8 @@ after each line. Note that the Y queue will show the 'remaining computation'
 of the repl itself. Run with:
 
   $ ./cf prelude.cf repl.cf
-  ok repl;!
-  Y: prompt ; ! getline [ "bye" = ] [ drop ; ! ] [ tokenize parse ! repl ; ! ] cond ; ! 
+  ok repl.
+  Y: prompt . getline [ "bye" = ] [ drop . ] [ tokenize parse . repl . ] cond . 
   X: 
   repl> 
 
@@ -273,17 +273,17 @@ idea comes from the False language mentioned in the F documentation.
 Combinators are generally written by building lists of programs to do
 the work. For example, the definition of 'each' from the prelude:
 
-  [[[]]`swap;unit;!`,uncons;unit;!`,while;!drop;!] each set
+  [[[]]`swap;unit.`,uncons;unit.`,while.drop.] each set
 
 This builds a while expression by taking the definition of 'uncons'
 and 'swap' and prefixing them to the program given by the user. So
 the translation looks like:
 
-  [1 2 3] [.] each;! => [1 2 3] [] [uncons swap . ] while;!
+  [1 2 3] [printnl] each. => [1 2 3] [] [uncons.swap.] while.
 
 'fold' works similar it translates like this:
 
-  [1 2 3] 0 [+] fold => [0 1 2 3 + + + ]!
+  [1 2 3] 0 [+] fold => [0 1 2 3 + + + ].
 
 Troubleshooting
 ===============

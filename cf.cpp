@@ -490,7 +490,7 @@ static void primitive_get(XY* xy) {
   xy->mX.push_back(value);
 }
 
-// ! [X^{O1..On} Y] [X O1^..^On^Y]
+// . [X^{O1..On} Y] [X O1^..^On^Y]
 static void primitive_unquote(XY* xy) {
   assert(xy->mX.size() >= 1);
   shared_ptr<XYObject> o = xy->mX.back();
@@ -837,7 +837,7 @@ static void primitive_print(XY* xy) {
   cout << o->toString(true);
 }
 
-// . printnl [X^n Y] [X Y] 
+// printnl [X^n Y] [X Y] 
 static void primitive_printnl(XY* xy) {
   assert(xy->mX.size() >= 1);
 
@@ -963,7 +963,7 @@ XY::XY() {
   mP["_"]   = msp(new XYPrimitive("_", primitive_floor));
   mP["set"] = msp(new XYPrimitive("set", primitive_set));
   mP[";"]   = msp(new XYPrimitive(";", primitive_get));
-  mP["!"]   = msp(new XYPrimitive("!", primitive_unquote));
+  mP["."]   = msp(new XYPrimitive(".", primitive_unquote));
   mP[")"]   = msp(new XYPrimitive(")", primitive_pattern_ss));
   mP["("]   = msp(new XYPrimitive("(", primitive_pattern_sq));
   mP["`"]   = msp(new XYPrimitive("`", primitive_dip));
@@ -979,7 +979,8 @@ XY::XY() {
   mP[">="]  = msp(new XYPrimitive(">=", primitive_greaterThanEqual));
   mP["not"] = msp(new XYPrimitive("not", primitive_not));
   mP["nth"] = msp(new XYPrimitive("nth", primitive_nth));
-  mP["."]   = msp(new XYPrimitive(".", primitive_printnl));
+  //  mP["."]   = msp(new XYPrimitive(".", primitive_printnl));
+  mP["printnl"] = msp(new XYPrimitive("print", primitive_printnl));
   mP["print"] = msp(new XYPrimitive("print", primitive_print));
   mP["write"] = msp(new XYPrimitive("write", primitive_write));
   mP["count"] = msp(new XYPrimitive("count", primitive_count));
@@ -1162,14 +1163,14 @@ boost::xpressive::sregex re_number() {
 boost::xpressive::sregex re_special() {
   using namespace boost::xpressive;
   using boost::xpressive::set;
-  return (set= '\\' , '[' , ']' , '{' , '}' , '(' , ')' , ';' , '!' , ',' , '`' , '\'' , '|');
+  return (set= '\\' , '[' , ']' , '{' , '}' , '(' , ')' , ';' , '!' , '.' , ',' , '`' , '\'' , '|');
 }
 
 // Return regex for non-specials
 boost::xpressive::sregex re_non_special() {
   using namespace boost::xpressive;
   using boost::xpressive::set;
-  return ~(set[(set= '\\','[',']','{','}','(',')',';','!',',','`','\'','|') | _s]);
+  return ~(set[(set= '\\','[',']','{','}','(',')',';','!','.',',','`','\'','|') | _s]);
 }
 
 // Return regex for symbols

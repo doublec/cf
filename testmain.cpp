@@ -122,7 +122,7 @@ void testParse() {
     shared_ptr<XYList> o1(dynamic_pointer_cast<XYList>((*it).second));
     BOOST_CHECK(o1 && o1->mList.size() == 2);
 
-    parse("2 add5;!", back_inserter(xy->mY));
+    parse("2 add5.", back_inserter(xy->mY));
     while(xy->mY.size() > 0) {
       xy->eval1();
     }
@@ -251,7 +251,7 @@ void testParse() {
   {
     // Pattern 3 - Stack to Queue
     shared_ptr<XY> xy(new XY());
-    parse("[ [a a a +] ] double set 2 double;!( 0", back_inserter(xy->mY));
+    parse("[ [a a a +] ] double set 2 double.( 0", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
       xy->eval1();

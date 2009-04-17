@@ -1,3 +1,21 @@
+Changes since 0ab8ac
+====================
+1) Major primitive word change. unquote '!' is now .
+   This change was made to make typing cf code easier without
+   needing to use the shift key so often. The '.' is also less
+   visually jarring and provides more whitespace between words.
+    
+   The old '.' is now 'printnl'. I need to think of a better name
+   for that.
+    
+   So old code:
+    
+    5 fac!
+    
+   New code:
+    
+    5 fac.
+ 
 Changes since c99128
 ====================
 1) unquote will now get the value of a symbol if it has one and

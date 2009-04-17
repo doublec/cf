@@ -309,7 +309,7 @@ void tokenize(InputIterator first, InputIterator last, OutputIterator out)
 
   // inline string regular expression. Without this I get a 'pure virtual function'
   // called inside the boost regular expression code when compiled with -O2 and -O3.
-  sregex xy = re_comment() | (as_xpr('\"') >> *(re_stringchar()) >> '\"') | re_special() | re_symbol() | re_number();
+  sregex xy = re_comment() | (as_xpr('\"') >> *(re_stringchar()) >> '\"') | re_float() | re_special() | re_symbol() | re_integer();
   sregex_token_iterator begin(first, last, xy), end;
   copy(begin, end, out);
 }
