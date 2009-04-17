@@ -68,7 +68,7 @@ I recommend using rlwrap, or similar, to get command line editing:
 Data entered at the 'ok' prompt is pushed onto the stack, and pressing enter
 evaluates the program:
 
-  ok  25 5 + fac;!
+  ok  25 5 + fac!
   265252859812191058636308480000000  ->
   ok
 
@@ -95,7 +95,9 @@ evaluating it.
 Primitives are the only symbols that are immediately executed. Symbols
 can be set to values and the value is obtained using the ';' primitive.
 If this value is a list it can then be further evaluated as a program using
-the '!' primitive.
+the '!' primitive. If '!' is used on a symbol then it's value will be
+obtained (if it has one) and '!' called again on that value. This
+makes the use of ';' optional in a lot of common cases.
 
 Comments are anything between ** and **.
 For example:
@@ -170,7 +172,7 @@ millis   - returns number of milliseconds since 1970/1/1.
 
 Numbers can be floats or integers. Integers can be of any length. For example:
 
-  ok 1000 fac;! .
+  ok 1000 fac! .
   ...a really big number...
 
 Shuffle patterns can be used to move things around on the stack. These are
@@ -237,8 +239,8 @@ each       - [1 2 3] [.] each;!
 fold       - [1 2 3] 0 [+] fold;! => 6
 unfold     - 1 [10 >] [] [1 +] unfold => [1 2 3 4 5 6 7 8 9 10]
 cleave     - 1 [1 +] [2 +] cleave => 2 3
-time       - [ 100 fac;! drop;! ] time;! => 7
-fac        - 5 fac;! => 120
+time       - [ 100 fac! drop! ] time! => 7
+fac        - 5 fac! => 120
 fac2       - same as 'fac' but uses a fold/unfold and is much slower.
 
 Note that cf doesn't have an 'if' or conditional built in, it's provided by the
