@@ -11,67 +11,67 @@
 
 ** Operators **
 [] id set
-[uncons;!drop;!] first set
-[uncons;![drop;!]`] rest set
-[|first;!] last set
+[uncons!drop!] first set
+[uncons![drop!]`] rest set
+[|first!] last set
 [''`] unit set
-[unit;!cons;!] pair set
-[uncons;!first;!] unpair set
-[[drop;!]`] dropd set
-[[dup;!]`] dupd set
-[[swap;!]`] swapd set
-['`cons;!`] dipd set
+[unit!cons!] pair set
+[uncons!first!] unpair set
+[[drop!]`] dropd set
+[[dup!]`] dupd set
+[[swap!]`] swapd set
+['`cons!`] dipd set
 
 ** Continuations **
-[[[drop;![]]`]$] clearstack set
-[[drop;![]]$] clearqueue set
+[[[drop![]]`]$] clearstack set
+[[drop![]]$] clearqueue set
 [[ab- [][]]$] clear set
 
-[[[|uncons;!|swap;!]`swap;!unit;!,]$] queue set
-[[|uncons;!|[unit;!,]`]$] unqueue set
+[[[|uncons!|swap!]`swap!unit!,]$] queue set
+[[|uncons!|[unit!,]`]$] unqueue set
 
-[[[dup;!unit;!,]`]$] stack set
-[[[last;!]`]$] unstack set
+[[[dup!unit!,]`]$] stack set
+[[[last!]`]$] unstack set
 
 ** Control Flow **
-[pair;![dupd;!]`[!not]`nth!] cond set
-[unit;!cons;!dup;![uncons;!uncons;!drop;!]`[while;!],,[]cond;!] while set ** [c][t]while **
-[unit;![1 -]swap;!,'`,[]swap;!while;!drop;!] do set ** n[f]do **
+[pair![dupd!]`[!not]`nth!] cond set
+[unit!cons!dup![uncons!uncons!drop!]`[while!],,[]cond!] while set ** [c][t]while **
+[unit![1 -]swap!,'`,[]swap!while!drop!] do set ** n[f]do **
 
 ** Combinators **
 [[a-aa count[]abc-cab]` ab-ba
- [[uncons;!]` a-aa abc-cab[cons;!!first;! ab-ba cons;!]dipd;!]
- do;! ab- |] map set ** [..][f]map **
+ [[uncons!]` a-aa abc-cab[cons!!first! ab-ba cons!]dipd!]
+ do! ab- |] map set ** [..][f]map **
 
 ** [..][f]each **
-[[[]]`swap;unit;!`,uncons;unit;!`,while;!drop;!] each set
+[[[]]`swap;unit!`,uncons;unit!`,while!drop!] each set
 
 ** repeat [X^n^o Y] [X^{o1..on} Y] **
-[ [ [n o] o n 1 - [ 0 = ] [drop;!] [ o repeat;! , ] cond;! ] ( ] repeat set
+[ [ [n o] o n 1 - [ 0 = ] [drop!] [ o repeat! , ] cond! ] ( ] repeat set
  
 **fold**
 **  [ 1 2 3 ] 0 [+] fold **
 ** => [ 0 1 2 3 + + + ] **
-[[ [l s q] s l, l count [q!] repeat;!,!](] fold set
+[[ [l s q] s l, l count [q!] repeat!,!](] fold set
 
 ** Alternative fold definition **
 ** => [ 2 3 ] 1 [ + ] fold  **
-[ [ [[a A] s q] a [ [] = ] [ drop;! s ] [ drop;! A s a q! q fold2;! ] cond;! ] ( ] fold2 set  
+[ [ [[a A] s q] a [ [] = ] [ drop! s ] [ drop! A s a q! q fold2! ] cond! ] ( ] fold2 set  
 
 **unfold**
 ** 1 [10 > ] [] [1 +]  unfold **
 ** => [ 1 10 = [ [] ] [ 1 []! 1 [1 +]! [ 10 > ] [ ] [ 1 + ] unfold cons ] if ] **
-[ [ [s p q t] s p [ drop;! [] ] [ q! s t! p q t unfold;! cons;! ] cond;! ] (] unfold set
+[ [ [s p q t] s p [ drop! [] ] [ q! s t! p q t unfold! cons! ] cond! ] (] unfold set
 
-[ abc-abac '!dipd;! !] cleave set
+[ abc-abac '!dipd! !] cleave set
 
 ** take/drop **
-[swap;!rest;repeat;!!] ldrop set
-[swap;!dup;![[uncons;!]repeat;!'a-,]`[cons;!]repeat;![[]]swap;!,,!] ltake set
+[swap!rest;repeat!!] ldrop set
+[swap!dup![[uncons!]repeat!'a-,]`[cons!]repeat![[]]swap!,,!] ltake set
 
 ** benchmarking **
 [millis'!`'millis`-] time set
 
 ** Examples **
-[[1 =][][dup;!1 - fac;!*]cond;!] fac set
-[[1 =][][1 -] unfold;! 1 [*] fold;! ] fac2 set
+[[1 =][][dup!1 - fac!*]cond!] fac set
+[[1 =][][1 -] unfold! 1 [*] fold! ] fac2 set
