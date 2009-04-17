@@ -88,3 +88,11 @@ Now the tests themselves:
 > [[1 2 3]] [[1][2 3] ,] test!
 
 .> [4 5 6 1 2 3] [1 2 3 '\ $ 4 5 6 ] test!
+
+Test the new unquote semantics introduced by commit id 82b61f
+
+> [3] [[1 2 +]!] test!
+> [foo] [foo!] test!
+> [3] [[1 2 +] foo set foo! ] test!
+
+> "Test run completed\n" write
