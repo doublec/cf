@@ -428,6 +428,12 @@ XYSlice::XYSlice(shared_ptr<XYObject> original,
   mBegin(begin),
   mEnd(end)
 { 
+  while (dynamic_cast<XYSlice*>(mOriginal.get())) {
+    // Find the original, non-slice sequence. Without this we can
+    // corrupt the C stack due to too much recursion when destroying
+    // the tree of slices.
+    mOriginal = dynamic_cast<XYSlice*>(mOriginal.get())->mOriginal;
+  }
 }
 
 string XYSlice::toString(bool parse) const {
