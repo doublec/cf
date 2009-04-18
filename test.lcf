@@ -95,4 +95,8 @@ Test the new unquote semantics introduced by commit id 82b61f
 > [foo] [foo.] test.
 > [3] [[1 2 +] foo set foo. ] test.
 
+Test enum primitive
+
+> [[0 1 2 3 4]] [5 enum] test.
+
 > "Test run completed\n" write

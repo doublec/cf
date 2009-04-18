@@ -169,6 +169,7 @@ tokenize - given a string, return a list of the cf tokens.
 parse    - given a list of tokens, return a list of cf objects
 getline  - get a line of input from the user
 millis   - returns number of milliseconds since 1970/1/1.
+enum     - given a number, returns a list of elements from 0 to n-1.
 
 Numbers can be floats or integers. Integers can be of any length. For example:
 

@@ -953,6 +953,20 @@ static void primitive_millis(XY* xy) {
   xy->mX.push_back(msp(new XYInteger(d.total_milliseconds())));
 }
 
+// enum [X^n Y] -> [X^{0..n} Y]
+static void primitive_enum(XY* xy) {
+  assert(xy->mX.size() >= 1);
+  shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  assert(n);
+  xy->mX.pop_back();
+
+  int value = n->as_uint();
+  shared_ptr<XYList> list = msp(new XYList());
+  for(int i=0; i < value; ++i)
+    list->mList.push_back(msp(new XYInteger(i)));
+  xy->mX.push_back(list);
+}
+
 // XY
 XY::XY() {
   mP["+"]   = msp(new XYPrimitive("+", primitive_addition));
@@ -988,7 +1002,7 @@ XY::XY() {
   mP["parse"] = msp(new XYPrimitive("parse", primitive_parse));
   mP["getline"] = msp(new XYPrimitive("getline", primitive_getline));
   mP["millis"] = msp(new XYPrimitive("millis", primitive_millis));
-
+  mP["enum"]   = msp(new XYPrimitive("+", primitive_enum));
 }
 
 void XY::print() {
