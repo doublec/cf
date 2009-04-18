@@ -25,6 +25,18 @@ template <class T> boost::shared_ptr<T> msp(T* o)
 // the environment.
 class XY;
 
+// Forward declare classes for double dispatch operations
+class XYFloat;
+class XYInteger;
+class XYSequence;
+
+// Macros to declare double dispatched math operators
+#define DD(name) \
+    virtual boost::shared_ptr<XYObject> name(XYObject* rhs);   \
+    virtual boost::shared_ptr<XYObject> name(XYFloat* lhs);    \
+    virtual boost::shared_ptr<XYObject> name(XYInteger* lhs);  \
+    virtual boost::shared_ptr<XYObject> name(XYSequence* lhs)
+
 // Base class for all objects in the XY system. Anything
 // stored on the stack, in the queue, in the the environment
 // must be derived from this.
@@ -53,12 +65,14 @@ class XYObject : public boost::enable_shared_from_this<XYObject>
     // the rhs object. Return 0 if they are equal. Returns
     // a positive number if it is greater.
     virtual int compare(boost::shared_ptr<XYObject> rhs) = 0;
-};
 
-// Forward declare other number types to allow defining
-// conversion functions in XYNumber.
-class XYInteger;
-class XYFloat;
+    // Math Operators
+    DD(add);
+    DD(subtract);
+    DD(multiply);
+    DD(divide);
+    DD(power);
+};
 
 // All number objects are derived from this class.
 class XYNumber : public XYObject
@@ -81,11 +95,6 @@ class XYNumber : public XYObject
     virtual boost::shared_ptr<XYFloat> as_float() = 0;
 
     // Math Operators
-    virtual boost::shared_ptr<XYNumber> add(boost::shared_ptr<XYNumber> rhs) = 0;
-    virtual boost::shared_ptr<XYNumber> subtract(boost::shared_ptr<XYNumber> rhs) = 0;
-    virtual boost::shared_ptr<XYNumber> multiply(boost::shared_ptr<XYNumber> rhs) = 0;
-    virtual boost::shared_ptr<XYNumber> divide(boost::shared_ptr<XYNumber> rhs) = 0;
-    virtual boost::shared_ptr<XYNumber> power(boost::shared_ptr<XYNumber> rhs) = 0;
     virtual boost::shared_ptr<XYNumber> floor() = 0;
 };
 
@@ -102,15 +111,15 @@ class XYFloat : public XYNumber
     virtual std::string toString(bool parse) const;
     virtual void eval1(XY* xy);
     virtual int compare(boost::shared_ptr<XYObject> rhs);
+    DD(add);
+    DD(subtract);
+    DD(multiply);
+    DD(divide);
+    DD(power);
     virtual bool is_zero() const;
     virtual unsigned int as_uint() const;
     virtual boost::shared_ptr<XYInteger> as_integer();
     virtual boost::shared_ptr<XYFloat> as_float();
-    virtual boost::shared_ptr<XYNumber> add(boost::shared_ptr<XYNumber> rhs);
-    virtual boost::shared_ptr<XYNumber> subtract(boost::shared_ptr<XYNumber> rhs);
-    virtual boost::shared_ptr<XYNumber> multiply(boost::shared_ptr<XYNumber> rhs);
-    virtual boost::shared_ptr<XYNumber> divide(boost::shared_ptr<XYNumber> rhs);
-    virtual boost::shared_ptr<XYNumber> power(boost::shared_ptr<XYNumber> rhs);
     virtual boost::shared_ptr<XYNumber> floor();
 };
 
@@ -127,15 +136,15 @@ class XYInteger : public XYNumber
     virtual std::string toString(bool parse) const;
     virtual void eval1(XY* xy);
     virtual int compare(boost::shared_ptr<XYObject> rhs);
+    DD(add);
+    DD(subtract);
+    DD(multiply);
+    DD(divide);
+    DD(power);
     virtual bool is_zero() const;
     virtual unsigned int as_uint() const;
     virtual boost::shared_ptr<XYInteger> as_integer();
     virtual boost::shared_ptr<XYFloat> as_float();
-    virtual boost::shared_ptr<XYNumber> add(boost::shared_ptr<XYNumber> rhs);
-    virtual boost::shared_ptr<XYNumber> subtract(boost::shared_ptr<XYNumber> rhs);
-    virtual boost::shared_ptr<XYNumber> multiply(boost::shared_ptr<XYNumber> rhs);
-    virtual boost::shared_ptr<XYNumber> divide(boost::shared_ptr<XYNumber> rhs);
-    virtual boost::shared_ptr<XYNumber> power(boost::shared_ptr<XYNumber> rhs);
     virtual boost::shared_ptr<XYNumber> floor();
 };
 
@@ -189,6 +198,11 @@ class XYSequence : public XYObject
 
   public:
     virtual int compare(boost::shared_ptr<XYObject> rhs);
+    DD(add);
+    DD(subtract);
+    DD(multiply);
+    DD(divide);
+    DD(power);
 
     // Returns iterators to access the sequence
     virtual iterator begin() = 0;

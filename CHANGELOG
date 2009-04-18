@@ -1,3 +1,11 @@
+Changes since a17fce
+====================
+1) Math operators on sequences works so that the math operator
+   is applied per element on the sequence. eg:
+
+     [1 2 3] 2 +       => [3 4 5]
+     [1 2 3] [4 5 6] + => [5 7 9]
+
 Changes since 0ab8ac
 ====================
 1) Major primitive word change. unquote '!' is now .

@@ -63,10 +63,282 @@ namespace boost {
   }
 }
 
+// Macro to implement double dispatch operations in class
+#define DD_IMPL(class, name)						\
+  shared_ptr<XYObject> class::name(XYObject* rhs) { return rhs->name(this); } \
+  shared_ptr<XYObject> class::name(XYFloat* lhs) { return dd_##name(lhs, this); } \
+  shared_ptr<XYObject> class::name(XYInteger* lhs) { return dd_##name(lhs, this); } \
+  shared_ptr<XYObject> class::name(XYSequence* lhs) { return dd_##name(lhs, this); }
+
+#define DD_IMPL2(name, op) \
+static shared_ptr<XYObject> dd_##name(XYFloat* lhs, XYFloat* rhs) { \
+  return msp(new XYFloat(lhs->mValue op rhs->mValue)); \
+} \
+\
+static shared_ptr<XYObject> dd_##name(XYFloat* lhs, XYInteger* rhs) { \
+  return msp(new XYFloat(lhs->mValue op rhs->as_float()->mValue)); \
+} \
+\
+static shared_ptr<XYObject> dd_##name(XYFloat* lhs, XYSequence* rhs) { \
+  shared_ptr<XYList> list(new XYList()); \
+  for (XYSequence::iterator it = rhs->begin(); it != rhs->end(); ++it) \
+    list->mList.push_back(lhs->name((*it).get())); \
+  return list; \
+}\
+\
+static shared_ptr<XYObject> dd_##name(XYInteger* lhs, XYFloat* rhs) { \
+  return msp(new XYFloat(lhs->as_float()->mValue op rhs->mValue)); \
+} \
+\
+static shared_ptr<XYObject> dd_##name(XYInteger* lhs, XYInteger* rhs) { \
+  return msp(new XYInteger(lhs->mValue op rhs->mValue)); \
+} \
+\
+static shared_ptr<XYObject> dd_##name(XYInteger* lhs, XYSequence* rhs) { \
+  shared_ptr<XYList> list(new XYList()); \
+  for (XYSequence::iterator it = rhs->begin(); it != rhs->end(); ++it) \
+    list->mList.push_back(lhs->name((*it).get())); \
+  return list; \
+} \
+\
+static shared_ptr<XYObject> dd_##name(XYSequence* lhs, XYInteger* rhs) { \
+  shared_ptr<XYList> list(new XYList()); \
+  for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it) \
+    list->mList.push_back((*it)->name(rhs)); \
+  return list; \
+} \
+ \
+static shared_ptr<XYObject> dd_##name(XYSequence* lhs, XYFloat* rhs) { \
+  shared_ptr<XYList> list(new XYList()); \
+  for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it) \
+    list->mList.push_back((*it)->name(rhs)); \
+  return list; \
+} \
+\
+static shared_ptr<XYObject> dd_##name(XYSequence* lhs, XYSequence* rhs) { \
+  assert(lhs->size() == rhs->size()); \
+  shared_ptr<XYList> list(new XYList()); \
+  for (XYSequence::iterator lit = lhs->begin(), \
+ 	                          rit = rhs->begin(); \
+       lit != lhs->end() && rit != rhs->end(); \
+       ++lit, ++rit) \
+    list->mList.push_back((*lit)->name((*rit).get()));\
+  return list; \
+}
+
+DD_IMPL2(add, +)
+DD_IMPL2(subtract, -)
+DD_IMPL2(multiply, *)
+
+static shared_ptr<XYObject> dd_divide(XYFloat* lhs, XYFloat* rhs) {
+  return msp(new XYFloat(lhs->mValue / rhs->mValue));
+}
+
+static shared_ptr<XYObject> dd_divide(XYFloat* lhs, XYInteger* rhs) {
+  return msp(new XYFloat(lhs->mValue / rhs->as_float()->mValue));
+}
+
+static shared_ptr<XYObject> dd_divide(XYFloat* lhs, XYSequence* rhs) { 
+  shared_ptr<XYList> list(new XYList());
+  for (XYSequence::iterator it = rhs->begin(); it != rhs->end(); ++it)
+    list->mList.push_back(lhs->divide((*it).get()));
+  return list;
+}
+
+static shared_ptr<XYObject> dd_divide(XYInteger* lhs, XYFloat* rhs) {
+  return msp(new XYFloat(lhs->as_float()->mValue / rhs->mValue));
+}
+
+static shared_ptr<XYObject> dd_divide(XYInteger* lhs, XYInteger* rhs) {
+  return msp(new XYFloat(lhs->as_float()->mValue / rhs->as_float()->mValue));
+}
+
+static shared_ptr<XYObject> dd_divide(XYInteger* lhs, XYSequence* rhs) {
+  shared_ptr<XYList> list(new XYList());
+  for (XYSequence::iterator it = rhs->begin(); it != rhs->end(); ++it)
+    list->mList.push_back(lhs->divide((*it).get()));
+  return list;
+}
+
+static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYInteger* rhs) {
+  shared_ptr<XYList> list(new XYList());
+  for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it)
+    list->mList.push_back((*it)->divide(rhs));
+  return list;
+}
+
+static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYFloat* rhs) {
+  shared_ptr<XYList> list(new XYList());
+  for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it)
+    list->mList.push_back((*it)->divide(rhs));
+  return list;
+}
+
+static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYSequence* rhs) {
+  assert(lhs->size() == rhs->size());
+  shared_ptr<XYList> list(new XYList());
+  for (XYSequence::iterator lit = lhs->begin(),
+ 	                          rit = rhs->begin();
+       lit != lhs->end() && rit != rhs->end();
+       ++lit, ++rit)
+    list->mList.push_back((*lit)->divide((*rit).get()));
+  return list; 
+}
+
+static shared_ptr<XYObject> dd_power(XYFloat* lhs, XYFloat* rhs) {
+  shared_ptr<XYFloat> result(new XYFloat(lhs->mValue));
+  mpf_pow_ui(result->mValue.get_mpf_t(), lhs->mValue.get_mpf_t(), rhs->as_uint());
+  return result;
+}
+
+static shared_ptr<XYObject> dd_power(XYFloat* lhs, XYInteger* rhs) {
+  shared_ptr<XYFloat> result(new XYFloat(lhs->mValue));
+  mpf_pow_ui(result->mValue.get_mpf_t(), lhs->mValue.get_mpf_t(), rhs->as_uint());
+  return result;
+}
+
+static shared_ptr<XYObject> dd_power(XYFloat* lhs, XYSequence* rhs) {
+  shared_ptr<XYList> list(new XYList());
+  for (XYSequence::iterator it = rhs->begin(); it != rhs->end(); ++it)
+    list->mList.push_back(lhs->power((*it).get()));
+  return list;
+}
+
+static shared_ptr<XYObject> dd_power(XYInteger* lhs, XYFloat* rhs) {
+  shared_ptr<XYInteger> result(new XYInteger(lhs->mValue));
+  mpz_pow_ui(result->mValue.get_mpz_t(), lhs->mValue.get_mpz_t(), rhs->as_uint());
+  return result;
+}
+
+static shared_ptr<XYObject> dd_power(XYInteger* lhs, XYInteger* rhs) {
+  shared_ptr<XYInteger> result(new XYInteger(lhs->mValue));
+  mpz_pow_ui(result->mValue.get_mpz_t(), lhs->mValue.get_mpz_t(), rhs->as_uint());
+  return result;
+}
+
+static shared_ptr<XYObject> dd_power(XYInteger* lhs, XYSequence* rhs) {
+  shared_ptr<XYList> list(new XYList());
+  for (XYSequence::iterator it = rhs->begin(); it != rhs->end(); ++it)
+    list->mList.push_back(lhs->power((*it).get()));
+  return list;
+}
+
+static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYInteger* rhs) {
+  shared_ptr<XYList> list(new XYList());
+  for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it)
+    list->mList.push_back((*it)->power(rhs));
+  return list;
+}
+
+static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYFloat* rhs) {
+  shared_ptr<XYList> list(new XYList());
+  for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it)
+    list->mList.push_back((*it)->power(rhs));
+  return list;
+}
+
+static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYSequence* rhs) {
+  assert(lhs->size() == rhs->size());
+  shared_ptr<XYList> list(new XYList());
+  for (XYSequence::iterator lit = lhs->begin(),
+ 	                          rit = rhs->begin();
+       lit != lhs->end() && rit != rhs->end();
+       ++lit, ++rit)
+    list->mList.push_back((*lit)->power((*rit).get()));
+  return list;
+}
+
+// XYObject
+shared_ptr<XYObject> XYObject::add(XYObject* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::add(XYFloat* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::add(XYInteger* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::add(XYSequence* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::subtract(XYObject* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::subtract(XYFloat* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::subtract(XYInteger* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::subtract(XYSequence* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::multiply(XYObject* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::multiply(XYFloat* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::multiply(XYInteger* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::multiply(XYSequence* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::divide(XYObject* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::divide(XYFloat* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::divide(XYInteger* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::divide(XYSequence* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::power(XYObject* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::power(XYFloat* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::power(XYInteger* rhs) {
+  assert(1==0);
+}
+
+shared_ptr<XYObject> XYObject::power(XYSequence* rhs) {
+  assert(1==0);
+}
+
 // XYNumber
 XYNumber::XYNumber(Type type) : mType(type) { }
 
 // XYFloat
+DD_IMPL(XYFloat, add)
+DD_IMPL(XYFloat, subtract)
+DD_IMPL(XYFloat, multiply)
+DD_IMPL(XYFloat, divide)
+DD_IMPL(XYFloat, power)
+
 XYFloat::XYFloat(long v) : XYNumber(FLOAT), mValue(v) { }
 XYFloat::XYFloat(string v) : XYNumber(FLOAT), mValue(v) { }
 XYFloat::XYFloat(mpf_class const& v) : XYNumber(FLOAT), mValue(v) { }
@@ -108,34 +380,17 @@ shared_ptr<XYFloat> XYFloat::as_float() {
   return dynamic_pointer_cast<XYFloat>(shared_from_this());
 }
 
-shared_ptr<XYNumber> XYFloat::add(shared_ptr<XYNumber> rhs) {
-  return msp(new XYFloat(mValue + rhs->as_float()->mValue));
-}
-
-shared_ptr<XYNumber> XYFloat::subtract(shared_ptr<XYNumber> rhs) {
-  return msp(new XYFloat(mValue - rhs->as_float()->mValue));
-}
-
-shared_ptr<XYNumber> XYFloat::multiply(shared_ptr<XYNumber> rhs) {
-  return msp(new XYFloat(mValue * rhs->as_float()->mValue));
-}
-
-shared_ptr<XYNumber> XYFloat::divide(shared_ptr<XYNumber> rhs) {
-  return msp(new XYFloat(mValue / rhs->as_float()->mValue));
-}
-
-shared_ptr<XYNumber> XYFloat::power(shared_ptr<XYNumber> rhs) {
-  shared_ptr<XYFloat> result(new XYFloat(mValue));
-  mpf_pow_ui(result->mValue.get_mpf_t(), mValue.get_mpf_t(), rhs->as_uint());
-  return result;
-}
-
 shared_ptr<XYNumber> XYFloat::floor() {
   shared_ptr<XYFloat> result(new XYFloat(::floor(mValue)));
   return result;
 }
 
 // XYInteger
+DD_IMPL(XYInteger, add)
+DD_IMPL(XYInteger, subtract)
+DD_IMPL(XYInteger, multiply)
+DD_IMPL(XYInteger, divide)
+DD_IMPL(XYInteger, power)
 XYInteger::XYInteger(long v) : XYNumber(INTEGER), mValue(v) { }
 XYInteger::XYInteger(string v) : XYNumber(INTEGER), mValue(v) { }
 XYInteger::XYInteger(mpz_class const& v) : XYNumber(INTEGER), mValue(v) { }
@@ -175,56 +430,6 @@ shared_ptr<XYInteger> XYInteger::as_integer() {
 
 shared_ptr<XYFloat> XYInteger::as_float() {
   return msp(new XYFloat(mValue));
-}
-
-shared_ptr<XYNumber> XYInteger::add(shared_ptr<XYNumber> rhs) {
-  switch(rhs->mType) {
-    case INTEGER:
-      return msp(new XYInteger(mValue + rhs->as_integer()->mValue));
-    case FLOAT:
-      return msp(new XYFloat(as_float()->mValue + rhs->as_float()->mValue));
-    default:
-      assert(1==0);
-  }
-}
-
-shared_ptr<XYNumber> XYInteger::subtract(shared_ptr<XYNumber> rhs) {
-  switch(rhs->mType) {
-    case INTEGER:
-      return msp(new XYInteger(mValue - rhs->as_integer()->mValue));
-    case FLOAT:
-      return msp(new XYFloat(as_float()->mValue - rhs->as_float()->mValue));
-    default:
-      assert(1==0);
-  }
-}
-
-shared_ptr<XYNumber> XYInteger::multiply(shared_ptr<XYNumber> rhs) {
-  switch(rhs->mType) {
-    case INTEGER:
-      return msp(new XYInteger(mValue * rhs->as_integer()->mValue));
-    case FLOAT:
-      return msp(new XYFloat(as_float()->mValue * rhs->as_float()->mValue));
-    default:
-      assert(1==0);
-  }
-}
-
-shared_ptr<XYNumber> XYInteger::divide(shared_ptr<XYNumber> rhs) {
-  switch(rhs->mType) {
-    case INTEGER:
-      return msp(new XYFloat(as_float()->mValue / rhs->as_float()->mValue));
-    case FLOAT:
-      return msp(new XYFloat(as_float()->mValue / rhs->as_float()->mValue));
-    default:
-      assert(1==0);
-  }
-}
-
-shared_ptr<XYNumber> XYInteger::power(shared_ptr<XYNumber> rhs) {
-  shared_ptr<XYInteger> result(new XYInteger(mValue));
-  mpz_pow_ui(result->mValue.get_mpz_t(), mValue.get_mpz_t(), rhs->as_uint());
-  return result;
 }
 
 shared_ptr<XYNumber> XYInteger::floor() {
@@ -318,6 +523,11 @@ int XYShuffle::compare(shared_ptr<XYObject> rhs) {
 }
 
 // XYSequence
+DD_IMPL(XYSequence, add)
+DD_IMPL(XYSequence, subtract)
+DD_IMPL(XYSequence, multiply)
+DD_IMPL(XYSequence, divide)
+DD_IMPL(XYSequence, power)
 int XYSequence::compare(shared_ptr<XYObject> rhs) {
   shared_ptr<XYSequence> o = dynamic_pointer_cast<XYSequence>(rhs);
   if (!o)
@@ -670,71 +880,71 @@ int XYPrimitive::compare(shared_ptr<XYObject> rhs) {
 // + [X^lhs^rhs] Y] -> [X^lhs+rhs Y]
 static void primitive_addition(XY* xy) {
   assert(xy->mX.size() >= 2);
-  shared_ptr<XYNumber> rhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  shared_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYNumber> lhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  shared_ptr<XYObject> lhs(xy->mX.back());
   assert(lhs);
   xy->mX.pop_back();
 
-  xy->mX.push_back(lhs->add(rhs));
+  xy->mX.push_back(lhs->add(rhs.get()));
 }
 
-// + [X^lhs^rhs] Y] -> [X^lhs-rhs Y]
+// - [X^lhs^rhs] Y] -> [X^lhs-rhs Y]
 static void primitive_subtraction(XY* xy) {
   assert(xy->mX.size() >= 2);
-  shared_ptr<XYNumber> rhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  shared_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYNumber> lhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  shared_ptr<XYObject> lhs(xy->mX.back());
   assert(lhs);
   xy->mX.pop_back();
 
-  xy->mX.push_back(lhs->subtract(rhs));
+  xy->mX.push_back(lhs->subtract(rhs.get()));
 }
 
-// + [X^lhs^rhs] Y] -> [X^lhs*rhs Y]
+// * [X^lhs^rhs] Y] -> [X^lhs*rhs Y]
 static void primitive_multiplication(XY* xy) {
   assert(xy->mX.size() >= 2);
-  shared_ptr<XYNumber> rhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  shared_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYNumber> lhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  shared_ptr<XYObject> lhs(xy->mX.back());
   assert(lhs);
   xy->mX.pop_back();
 
-  xy->mX.push_back(lhs->multiply(rhs));
+  xy->mX.push_back(lhs->multiply(rhs.get()));
 }
 
-// + [X^lhs^rhs] Y] -> [X^lhs/rhs Y]
+// % [X^lhs^rhs] Y] -> [X^lhs/rhs Y]
 static void primitive_division(XY* xy) {
   assert(xy->mX.size() >= 2);
-  shared_ptr<XYNumber> rhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  shared_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYNumber> lhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  shared_ptr<XYObject> lhs(xy->mX.back());
   assert(lhs);
   xy->mX.pop_back();
 
-  xy->mX.push_back(lhs->divide(rhs));
+  xy->mX.push_back(lhs->divide(rhs.get()));
 }
 
 // ^ [X^lhs^rhs] Y] -> [X^lhs**rhs Y]
 static void primitive_power(XY* xy) {
   assert(xy->mX.size() >= 2);
-  shared_ptr<XYNumber> rhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  shared_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYNumber> lhs = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  shared_ptr<XYObject> lhs(xy->mX.back());
   assert(lhs);
   xy->mX.pop_back();
 
-  xy->mX.push_back(lhs->power(rhs));
+  xy->mX.push_back(lhs->power(rhs.get()));
 }
 
 // _ floor [X^n] Y] -> [X^n Y]
