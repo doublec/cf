@@ -15,7 +15,11 @@ Changes since 0ab8ac
    New code:
     
     5 fac.
- 
+
+2) Impovements to list join and uncons operations. Reference
+   counts are checked to see if objects can be modified directly
+   instead of copied. Appends are done lazily.
+
 Changes since c99128
 ====================
 1) unquote will now get the value of a symbol if it has one and
