@@ -179,17 +179,38 @@ class XYShuffle : public XYObject
     virtual int compare(boost::shared_ptr<XYObject> rhs) const;
 };
 
-
-// A list of objects. Can include other nested
-// lists. All items in the list are derived from
-// XYObject. 
-class XYList : public XYObject
+// A base class for a sequence of XYObject's
+class XYSequence : public XYObject
 {
   public:
     typedef std::vector< boost::shared_ptr<XYObject> > List;
     typedef List::iterator iterator;
     typedef List::const_iterator const_iterator;
 
+  public:
+    // Returns iterators to access the sequence
+    virtual iterator begin() = 0;
+    virtual iterator end() = 0;
+
+    // Returns the size of the sequence
+    virtual size_t size() = 0;
+
+    // Returns the element at index 'n'
+    virtual boost::shared_ptr<XYObject> at(size_t n) = 0;
+
+    // Returns the head of a sequence (the first item).
+    virtual boost::shared_ptr<XYObject> head() = 0;
+
+    // Returns the tail of a sequence (all but the first item)
+    virtual boost::shared_ptr<XYSequence> tail() = 0;
+};
+
+// A list of objects. Can include other nested
+// lists. All items in the list are derived from
+// XYObject. 
+class XYList : public XYSequence
+{
+  public:
     List mList;
 
   public:
@@ -198,6 +219,42 @@ class XYList : public XYObject
     virtual std::string toString(bool parse) const;
     virtual void eval1(XY* xy);
     virtual int compare(boost::shared_ptr<XYObject> rhs) const;
+    virtual iterator begin();
+    virtual iterator end();
+    virtual size_t size();
+    virtual boost::shared_ptr<XYObject> at(size_t n);
+    virtual boost::shared_ptr<XYObject> head();
+    virtual boost::shared_ptr<XYSequence> tail();
+};
+
+// A slice is a virtual subsequence of an existing list.
+class XYSlice : public XYSequence
+{
+  public:
+    // The original sequence we are a slice of
+    // Need to keep a reference to the original to ensure 
+    // it doesn't get destroyed while the slice is active.
+    boost::shared_ptr<XYSequence> mOriginal;
+
+    // The start of the slice. 
+    XYSequence::iterator mBegin;
+
+    // The end of the slice.
+    XYSequence::iterator mEnd;
+
+  public:
+    XYSlice(boost::shared_ptr<XYSequence> original, 
+            XYSequence::iterator start, 
+            XYSequence::iterator end);
+    virtual std::string toString(bool parse) const;
+    virtual void eval1(XY* xy);
+    virtual int compare(boost::shared_ptr<XYObject> rhs) const;
+    virtual iterator begin();
+    virtual iterator end();
+    virtual size_t size();
+    virtual boost::shared_ptr<XYObject> at(size_t n);
+    virtual boost::shared_ptr<XYObject> head();
+    virtual boost::shared_ptr<XYSequence> tail();
 };
 
 // A primitive is the implementation of a core function.
@@ -264,8 +321,8 @@ class XY {
     void match(OutputIterator out, 
                boost::shared_ptr<XYObject> object,
                boost::shared_ptr<XYObject> pattern,
-               boost::shared_ptr<XYList> sequence,
-               XYList::iterator it);
+               boost::shared_ptr<XYSequence> sequence,
+               XYSequence::iterator it);
 
     // Given a pattern list of symbols (which can contain
     // nested lists of symbols), store in the environment

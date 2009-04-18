@@ -362,6 +362,121 @@ int XYList::compare(shared_ptr<XYObject> rhs) const {
   return 0;
 }
 
+XYSequence::iterator XYList::begin()
+{
+  return mList.begin();
+}
+
+XYSequence::iterator XYList::end()
+{
+  return mList.end();
+}
+
+size_t XYList::size()
+{
+  return mList.size();
+}
+
+shared_ptr<XYObject> XYList::at(size_t n)
+{
+  return mList[n];
+}
+
+shared_ptr<XYObject> XYList::head()
+{
+  assert(mList.size() > 0);
+  return mList[0];
+}
+
+shared_ptr<XYSequence> XYList::tail()
+{
+  assert(mList.size() > 1);
+  iterator start = mList.begin();
+  return msp(new XYSlice(dynamic_pointer_cast<XYSequence>(shared_from_this()), 
+                         ++start, mList.end()));
+}
+
+// XYSlice
+XYSlice::XYSlice(shared_ptr<XYSequence> original,
+                 XYSequence::iterator begin,
+		 XYSequence::iterator end)  :
+  mOriginal(original),
+  mBegin(begin),
+  mEnd(end)
+{ 
+}
+
+string XYSlice::toString(bool parse) const {
+  ostringstream s;
+  s << "[ ";
+  for_each(mBegin, mEnd, s << bind(&XYObject::toString, _1, parse) << " ");
+  s << "]";
+  return s.str();
+}
+
+void XYSlice::eval1(XY* xy) {
+  xy->mX.push_back(shared_from_this());
+}
+
+int XYSlice::compare(shared_ptr<XYObject> rhs) const {
+  shared_ptr<XYList> o = dynamic_pointer_cast<XYList>(rhs);
+  if (!o)
+    return toString(true).compare(rhs->toString(true));
+
+  XYSequence::const_iterator lit = mBegin,
+                             rit = o->mList.begin();
+
+  for(;
+      lit != mEnd;
+      ++lit, ++rit) {
+    int c = (*lit)->compare(*rit);
+    if (c != 0)
+      return c;
+  }
+
+  if(lit != mEnd)
+    return -1;
+
+  if(rit != o->mList.end())
+    return 1;
+  return 0;
+}
+
+XYSequence::iterator XYSlice::begin()
+{
+  return mBegin;
+}
+
+XYSequence::iterator XYSlice::end()
+{
+  return mEnd;
+}
+
+size_t XYSlice::size()
+{
+  return mEnd - mBegin;
+}
+
+shared_ptr<XYObject> XYSlice::at(size_t n)
+{
+  assert(mBegin + n < mEnd);
+  return *(mBegin + n);
+}
+
+shared_ptr<XYObject> XYSlice::head()
+{
+  assert(mBegin != mEnd);
+  return *mBegin;
+}
+
+shared_ptr<XYSequence> XYSlice::tail()
+{
+  assert(mBegin != mEnd);
+  XYSequence::iterator start = ++mBegin;
+  assert(start != mEnd);
+  return msp(new XYSlice(mOriginal, start, mEnd));
+}
+
 // XYPrimitive
 XYPrimitive::XYPrimitive(string n, void (*func)(XY*)) : mName(n), mFunc(func) { }
 
@@ -496,10 +611,10 @@ static void primitive_unquote(XY* xy) {
   shared_ptr<XYObject> o = xy->mX.back();
   xy->mX.pop_back();
 
-  shared_ptr<XYList> list = dynamic_pointer_cast<XYList>(o);
+  shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(o);
 
   if (list) {
-    xy->mY.insert(xy->mY.begin(), list->mList.begin(), list->mList.end());
+    xy->mY.insert(xy->mY.begin(), list->begin(), list->end());
   }
   else {
     shared_ptr<XYSymbol> symbol = dynamic_pointer_cast<XYSymbol>(o);
@@ -527,19 +642,19 @@ static void primitive_pattern_ss(XY* xy) {
   assert(xy->mX.size() >= 1);
 
   // Get the pattern from the stack
-  shared_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
+  shared_ptr<XYSequence> pattern = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(pattern);
   xy->mX.pop_back();
-  assert(pattern->mList.size() > 0);
+  assert(pattern->begin() != pattern->end());
 
   // Populate env with a mapping between the pattern variables to the
   // values on the stack.
   XYEnv env;
-  xy->getPatternValues(*(pattern->mList.begin()), inserter(env, env.begin()));
+  xy->getPatternValues(*(pattern->begin()), inserter(env, env.begin()));
   // Process pattern body using these mappings.
-  if (pattern->mList.size() > 1) {
-    XYList::iterator start = pattern->mList.begin();
-    XYList::iterator end   = pattern->mList.end();
+  if (pattern->end() - pattern->begin() > 1) {
+    XYSequence::iterator start = pattern->begin();
+    XYSequence::iterator end   = pattern->end();
     shared_ptr<XYList> list(new XYList());
     xy->replacePattern(env, msp(new XYList(++start, end)), back_inserter(list->mList));
     assert(list->mList.size() > 0);
@@ -556,19 +671,19 @@ static void primitive_pattern_sq(XY* xy) {
   assert(xy->mX.size() >= 1);
 
   // Get the pattern from the stack
-  shared_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
+  shared_ptr<XYSequence> pattern = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(pattern);
   xy->mX.pop_back();
-  assert(pattern->mList.size() > 0);
+  assert(pattern->begin() != pattern->end());
 
   // Populate env with a mapping between the pattern variables to the
   // values on the stack.
   XYEnv env;
-  xy->getPatternValues(*(pattern->mList.begin()), inserter(env, env.begin()));
+  xy->getPatternValues(*(pattern->begin()), inserter(env, env.begin()));
   // Process pattern body using these mappings.
-  if (pattern->mList.size() > 1) {
-    XYList::iterator start = pattern->mList.begin();
-    XYList::iterator end   = pattern->mList.end();
+  if (pattern->end() - pattern->begin() > 1) {
+    XYSequence::iterator start = pattern->begin();
+    XYSequence::iterator end   = pattern->end();
     shared_ptr<XYList> list(new XYList());
     xy->replacePattern(env, msp(new XYList(++start, end)), back_inserter(list->mList));
     assert(list->mList.size() > 0);
@@ -583,7 +698,7 @@ static void primitive_pattern_sq(XY* xy) {
 // ` dip [X^b^{a0..an} Y] [X a0..an^b^Y]
 static void primitive_dip(XY* xy) {
   assert(xy->mX.size() >= 2);
-  shared_ptr<XYList> list = dynamic_pointer_cast<XYList>(xy->mX.back());
+  shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(list);
   xy->mX.pop_back();
 
@@ -592,17 +707,18 @@ static void primitive_dip(XY* xy) {
   xy->mX.pop_back();
 
   xy->mY.push_front(o);
-  xy->mY.insert(xy->mY.begin(), list->mList.begin(), list->mList.end());
+  xy->mY.insert(xy->mY.begin(), list->begin(), list->end());
 }
 
 // | reverse [X^{a0..an} Y] [X^{an..a0} Y]
 static void primitive_reverse(XY* xy) {
   assert(xy->mX.size() >= 1);
-  shared_ptr<XYList> list = dynamic_pointer_cast<XYList>(xy->mX.back());
+  shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(list);
   xy->mX.pop_back();
 
-  shared_ptr<XYList> reversed = msp(new XYList(list->mList.rbegin(), list->mList.rend()));
+  shared_ptr<XYList> reversed = msp(new XYList(list->begin(), list->end()));
+  reverse(reversed->begin(), reversed->end());
   xy->mX.push_back(reversed);
 }
 
@@ -629,18 +745,18 @@ static void primitive_join(XY* xy) {
   assert(lhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYList> list_lhs = dynamic_pointer_cast<XYList>(lhs);
-  shared_ptr<XYList> list_rhs = dynamic_pointer_cast<XYList>(rhs);
+  shared_ptr<XYSequence> list_lhs = dynamic_pointer_cast<XYSequence>(lhs);
+  shared_ptr<XYSequence> list_rhs = dynamic_pointer_cast<XYSequence>(rhs);
 
   if (list_lhs && list_rhs) {
     // Two lists are concatenated
-    shared_ptr<XYList> list(new XYList(list_lhs->mList.begin(), list_lhs->mList.end()));
-    list->mList.insert(list->mList.end(), list_rhs->mList.begin(), list_rhs->mList.end()); 
+    shared_ptr<XYList> list(new XYList(list_lhs->begin(), list_lhs->end()));
+    list->mList.insert(list->end(), list_rhs->begin(), list_rhs->end()); 
     xy->mX.push_back(list);
   }
   else if(list_lhs) {
     // If rhs is not a list, then it is added to the end of the list
-    shared_ptr<XYList> list(new XYList(list_lhs->mList.begin(), list_lhs->mList.end()));
+    shared_ptr<XYList> list(new XYList(list_lhs->begin(), list_lhs->end()));
     list->mList.push_back(rhs);
     xy->mX.push_back(list);
   }
@@ -648,7 +764,7 @@ static void primitive_join(XY* xy) {
     // If lhs is not a list, it is added to the front of the list
     shared_ptr<XYList> list(new XYList());
     list->mList.push_back(lhs);
-    list->mList.insert(list->mList.end(), list_rhs->mList.begin(), list_rhs->mList.end());
+    list->mList.insert(list->end(), list_rhs->begin(), list_rhs->end());
     xy->mX.push_back(list);
   }
   else {
@@ -666,7 +782,7 @@ static void primitive_join(XY* xy) {
 // X and Y with the results.
 static void primitive_stack(XY* xy) {
   assert(xy->mX.size() >= 1);
-  shared_ptr<XYList> list  = dynamic_pointer_cast<XYList>(xy->mX.back());
+  shared_ptr<XYSequence> list  = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(list);
   xy->mX.pop_back();
 
@@ -676,7 +792,7 @@ static void primitive_stack(XY* xy) {
   xy->mX.push_back(stack);
   xy->mX.push_back(queue);
   xy->mY.push_front(msp(new XYSymbol("$$")));
-  xy->mY.insert(xy->mY.begin(), list->mList.begin(), list->mList.end()); 
+  xy->mY.insert(xy->mY.begin(), list->begin(), list->end()); 
 }
 
 // $$ stackqueue - Helper word for '$'. Given a stack and queue on the
@@ -684,16 +800,16 @@ static void primitive_stack(XY* xy) {
 static void primitive_stackqueue(XY* xy) {
   assert(xy->mX.size() >= 2);
 
-  shared_ptr<XYList> queue = dynamic_pointer_cast<XYList>(xy->mX.back());
+  shared_ptr<XYSequence> queue = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(queue);
   xy->mX.pop_back();
 
-  shared_ptr<XYList> stack = dynamic_pointer_cast<XYList>(xy->mX.back());
+  shared_ptr<XYSequence> stack = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(stack);
   xy->mX.pop_back();
 
-  xy->mX.assign(stack->mList.begin(), stack->mList.end());
-  xy->mY.assign(queue->mList.begin(), queue->mList.end());
+  xy->mX.assign(stack->begin(), stack->end());
+  xy->mY.assign(queue->begin(), queue->end());
 }
 
 // = equals [X^a^b Y] [X^? Y] 
@@ -800,8 +916,8 @@ static void primitive_not(XY* xy) {
     xy->mX.push_back(msp(new XYInteger(1)));
   }
   else {
-    shared_ptr<XYList> l = dynamic_pointer_cast<XYList>(o);
-    if(l && l->mList.size() == 0)
+    shared_ptr<XYSequence> l = dynamic_pointer_cast<XYSequence>(o);
+    if(l && l->begin() == l->end())
       xy->mX.push_back(msp(new XYInteger(1)));
     else
       xy->mX.push_back(msp(new XYInteger(0)));
@@ -812,7 +928,7 @@ static void primitive_not(XY* xy) {
 static void primitive_nth(XY* xy) {
   assert(xy->mX.size() >= 2);
 
-  shared_ptr<XYList> list = dynamic_pointer_cast<XYList>(xy->mX.back());
+  shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(list);
   xy->mX.pop_back();
 
@@ -820,10 +936,10 @@ static void primitive_nth(XY* xy) {
   assert(n);
   xy->mX.pop_back();
 
-  if (n->as_uint() >= list->mList.size()) 
-    xy->mX.push_back(msp(new XYInteger(list->mList.size())));
+  if (n->as_uint() >= list->size()) 
+    xy->mX.push_back(msp(new XYInteger(list->size())));
   else
-    xy->mX.push_back(list->mList[n->as_uint()]);
+    xy->mX.push_back(list->at(n->as_uint()));
 }
 
 // print [X^n Y] [X Y] 
@@ -870,9 +986,9 @@ static void primitive_count(XY* xy) {
   assert(o);
   xy->mX.pop_back();
 
-  shared_ptr<XYList> list(dynamic_pointer_cast<XYList>(o));
+  shared_ptr<XYSequence> list(dynamic_pointer_cast<XYSequence>(o));
   if (list)
-    xy->mX.push_back(msp(new XYInteger(list->mList.size())));
+    xy->mX.push_back(msp(new XYInteger(list->size())));
   else {
     shared_ptr<XYString> s(dynamic_pointer_cast<XYString>(o));
     if (s)
@@ -910,12 +1026,12 @@ static void primitive_tokenize(XY* xy) {
 static void primitive_parse(XY* xy) {
   assert(xy->mX.size() >= 1);
 
-  shared_ptr<XYList> tokens(dynamic_pointer_cast<XYList>(xy->mX.back()));
+  shared_ptr<XYSequence> tokens(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   assert(tokens);
   xy->mX.pop_back();
 
   vector<string> strings;
-  for(XYList::iterator it = tokens->mList.begin(); it!=tokens->mList.end(); ++it) {
+  for(XYSequence::iterator it = tokens->begin(); it!=tokens->end(); ++it) {
     shared_ptr<XYString> s = dynamic_pointer_cast<XYString>(*it);
     assert(s);
     strings.push_back(s->mValue);
@@ -1032,22 +1148,22 @@ template <class OutputIterator>
 void XY::match(OutputIterator out, 
                shared_ptr<XYObject> object,
                shared_ptr<XYObject> pattern,
-               shared_ptr<XYList> sequence,
-               XYList::iterator it) {
-  shared_ptr<XYList> object_list = dynamic_pointer_cast<XYList>(object);
-  shared_ptr<XYList> pattern_list = dynamic_pointer_cast<XYList>(pattern);
+               shared_ptr<XYSequence> sequence,
+               XYSequence::iterator it) {
+  shared_ptr<XYSequence> object_list = dynamic_pointer_cast<XYSequence>(object);
+  shared_ptr<XYSequence> pattern_list = dynamic_pointer_cast<XYSequence>(pattern);
   shared_ptr<XYSymbol> pattern_symbol = dynamic_pointer_cast<XYSymbol>(pattern);
   if (object_list && pattern_list) {
-    XYList::iterator pit = pattern_list->mList.begin(),
-                     oit = object_list->mList.begin(); 
+    XYSequence::iterator pit = pattern_list->begin(),
+                         oit = object_list->begin(); 
     for(;
-        pit != pattern_list->mList.end() && oit != object_list->mList.end(); 
+        pit != pattern_list->end() && oit != object_list->end(); 
         ++pit, ++oit) {
       match(out, (*oit), (*pit), object_list, oit);
     }
     // If there are more pattern items than there are list items,
     // set the pattern value to null.
-    while(pit != pattern_list->mList.end()) {
+    while(pit != pattern_list->end()) {
       shared_ptr<XYSymbol> s = dynamic_pointer_cast<XYSymbol>(*pit);
       if (s) {
         *out++ = make_pair(s->mValue, msp(new XYList()));
@@ -1067,7 +1183,7 @@ void XY::match(OutputIterator out,
     string uppercase = pattern_symbol->mValue;
     to_upper(uppercase);
     if (uppercase == pattern_symbol->mValue) {
-      *out++ = make_pair(pattern_symbol->mValue, new XYList(it, sequence->mList.end()));
+      *out++ = make_pair(pattern_symbol->mValue, new XYSlice(sequence, it, sequence->end()));
     }
     else
       *out++ = make_pair(pattern_symbol->mValue, object);
@@ -1076,29 +1192,29 @@ void XY::match(OutputIterator out,
 
 template <class OutputIterator>
 void XY::getPatternValues(shared_ptr<XYObject> pattern, OutputIterator out) {
-  shared_ptr<XYList> list = dynamic_pointer_cast<XYList>(pattern);
+  shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(pattern);
   if (list) {
-    assert(mX.size() >= list->mList.size());
-    shared_ptr<XYList> stack(new XYList(mX.end() - list->mList.size(), mX.end()));
-    match(out, stack, pattern, stack, stack->mList.begin());
-    mX.resize(mX.size() - list->mList.size());
+    assert(mX.size() >= list->size());
+    shared_ptr<XYList> stack(new XYList(mX.end() - list->size(), mX.end()));
+    match(out, stack, pattern, stack, stack->begin());
+    mX.resize(mX.size() - list->size());
   }
   else {
     shared_ptr<XYObject> o = mX.back();
     mX.pop_back();
     shared_ptr<XYList> list(new XYList());
-    match(out, o, pattern, list, list->mList.end());
+    match(out, o, pattern, list, list->end());
   }
 }
  
 template <class OutputIterator>
 void XY::replacePattern(XYEnv const& env, shared_ptr<XYObject> object, OutputIterator out) {
-  shared_ptr<XYList>   list   = dynamic_pointer_cast<XYList>(object);
-  shared_ptr<XYSymbol> symbol = dynamic_pointer_cast<XYSymbol>(object); 
+  shared_ptr<XYSequence> list   = dynamic_pointer_cast<XYSequence>(object);
+  shared_ptr<XYSymbol>   symbol = dynamic_pointer_cast<XYSymbol>(object); 
   if (list) {
     // Recurse through the list replacing variables as needed
     shared_ptr<XYList> new_list(new XYList());
-    for(XYList::iterator it = list->mList.begin(); it != list->mList.end(); ++it) 
+    for(XYSequence::iterator it = list->begin(); it != list->end(); ++it) 
       replacePattern(env, *it, back_inserter(new_list->mList));
     *out++ = new_list;
   }
