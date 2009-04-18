@@ -52,7 +52,7 @@ class XYObject : public boost::enable_shared_from_this<XYObject>
     // Return a negative number if this object is less than
     // the rhs object. Return 0 if they are equal. Returns
     // a positive number if it is greater.
-    virtual int compare(boost::shared_ptr<XYObject> rhs) const = 0;
+    virtual int compare(boost::shared_ptr<XYObject> rhs) = 0;
 };
 
 // Forward declare other number types to allow defining
@@ -101,7 +101,7 @@ class XYFloat : public XYNumber
     XYFloat(mpf_class const& v);
     virtual std::string toString(bool parse) const;
     virtual void eval1(XY* xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs) const;
+    virtual int compare(boost::shared_ptr<XYObject> rhs);
     virtual bool is_zero() const;
     virtual unsigned int as_uint() const;
     virtual boost::shared_ptr<XYInteger> as_integer();
@@ -126,7 +126,7 @@ class XYInteger : public XYNumber
     XYInteger(mpz_class const& v);
     virtual std::string toString(bool parse) const;
     virtual void eval1(XY* xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs) const;
+    virtual int compare(boost::shared_ptr<XYObject> rhs);
     virtual bool is_zero() const;
     virtual unsigned int as_uint() const;
     virtual boost::shared_ptr<XYInteger> as_integer();
@@ -149,7 +149,7 @@ class XYSymbol : public XYObject
     XYSymbol(std::string v);
     virtual std::string toString(bool parse) const;
     virtual void eval1(XY* xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs) const;
+    virtual int compare(boost::shared_ptr<XYObject> rhs);
 };
 
 // A string
@@ -162,7 +162,7 @@ class XYString : public XYObject
     XYString(std::string v);
     virtual std::string toString(bool parse) const;
     virtual void eval1(XY* xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs) const;
+    virtual int compare(boost::shared_ptr<XYObject> rhs);
 };
 
 // A shuffle symbol describes pattern to rearrange the stack.
@@ -176,7 +176,7 @@ class XYShuffle : public XYObject
     XYShuffle(std::string v);
     virtual std::string toString(bool parse) const;
     virtual void eval1(XY* xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs) const;
+    virtual int compare(boost::shared_ptr<XYObject> rhs);
 };
 
 // A base class for a sequence of XYObject's
@@ -188,6 +188,8 @@ class XYSequence : public XYObject
     typedef List::const_iterator const_iterator;
 
   public:
+    virtual int compare(boost::shared_ptr<XYObject> rhs);
+
     // Returns iterators to access the sequence
     virtual iterator begin() = 0;
     virtual iterator end() = 0;
@@ -221,7 +223,6 @@ class XYList : public XYSequence
     template <class InputIterator> XYList(InputIterator first, InputIterator last);
     virtual std::string toString(bool parse) const;
     virtual void eval1(XY* xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs) const;
     virtual iterator begin();
     virtual iterator end();
     virtual size_t size();
@@ -252,7 +253,6 @@ class XYSlice : public XYSequence
             XYSequence::iterator end);
     virtual std::string toString(bool parse) const;
     virtual void eval1(XY* xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs) const;
     virtual iterator begin();
     virtual iterator end();
     virtual size_t size();
@@ -281,7 +281,6 @@ class XYJoin : public XYSequence
            boost::shared_ptr<XYSequence> second); 
     virtual std::string toString(bool parse) const;
     virtual void eval1(XY* xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs) const;
     virtual XYSequence::iterator begin();
     virtual XYSequence::iterator end();
     virtual size_t size();
@@ -304,7 +303,7 @@ class XYPrimitive : public XYObject
     XYPrimitive(std::string name, void (*func)(XY*));
     virtual std::string toString(bool parse) const;
     virtual void eval1(XY* xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs) const;
+    virtual int compare(boost::shared_ptr<XYObject> rhs);
 };
 
 // The environment maps names to objects

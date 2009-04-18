@@ -79,7 +79,7 @@ void XYFloat::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
 }
 
-int XYFloat::compare(shared_ptr<XYObject> rhs) const {
+int XYFloat::compare(shared_ptr<XYObject> rhs) {
   shared_ptr<XYFloat> o = dynamic_pointer_cast<XYFloat>(rhs);
   if (!o) {
     shared_ptr<XYInteger> i = dynamic_pointer_cast<XYInteger>(rhs);
@@ -148,7 +148,7 @@ void XYInteger::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
 }
 
-int XYInteger::compare(shared_ptr<XYObject> rhs) const {
+int XYInteger::compare(shared_ptr<XYObject> rhs) {
   shared_ptr<XYInteger> o = dynamic_pointer_cast<XYInteger>(rhs);
   if (!o) {
     shared_ptr<XYFloat> f = dynamic_pointer_cast<XYFloat>(rhs);
@@ -247,7 +247,7 @@ void XYSymbol::eval1(XY* xy) {
     xy->mX.push_back(shared_from_this());
 }
 
-int XYSymbol::compare(shared_ptr<XYObject> rhs) const {
+int XYSymbol::compare(shared_ptr<XYObject> rhs) {
   shared_ptr<XYSymbol> o = dynamic_pointer_cast<XYSymbol>(rhs);
   if (!o)
     return toString(true).compare(rhs->toString(true));
@@ -272,7 +272,7 @@ void XYString::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
 }
 
-int XYString::compare(shared_ptr<XYObject> rhs) const {
+int XYString::compare(shared_ptr<XYObject> rhs) {
   shared_ptr<XYString> o = dynamic_pointer_cast<XYString>(rhs);
   if (!o)
     return toString(true).compare(rhs->toString(true));
@@ -309,7 +309,7 @@ void XYShuffle::eval1(XY* xy) {
   }
 }
 
-int XYShuffle::compare(shared_ptr<XYObject> rhs) const {
+int XYShuffle::compare(shared_ptr<XYObject> rhs) {
   shared_ptr<XYShuffle> o = dynamic_pointer_cast<XYShuffle>(rhs);
   if (!o)
     return toString(true).compare(rhs->toString(true));
@@ -317,6 +317,31 @@ int XYShuffle::compare(shared_ptr<XYObject> rhs) const {
   return (mBefore + mAfter).compare(o->mBefore + o->mAfter);
 }
 
+// XYSequence
+int XYSequence::compare(shared_ptr<XYObject> rhs) {
+  shared_ptr<XYSequence> o = dynamic_pointer_cast<XYSequence>(rhs);
+  if (!o)
+    return toString(true).compare(rhs->toString(true));
+
+  XYSequence::const_iterator lit = begin(),
+                             rit = o->begin();
+
+  for(;
+      lit != end() && rit != o->end();
+      ++lit, ++rit) {
+    int c = (*lit)->compare(*rit);
+    if (c != 0)
+      return c;
+  }
+
+  if(lit != end())
+    return -1;
+
+  if(rit != o->end())
+    return 1;
+
+  return 0;
+}
 
 // XYList
 XYList::XYList() { }
@@ -336,30 +361,6 @@ string XYList::toString(bool parse) const {
 
 void XYList::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
-}
-
-int XYList::compare(shared_ptr<XYObject> rhs) const {
-  shared_ptr<XYList> o = dynamic_pointer_cast<XYList>(rhs);
-  if (!o)
-    return toString(true).compare(rhs->toString(true));
-
-  const_iterator lit = mList.begin(),
-                 rit = o->mList.begin();
-
-  for(;
-      lit != mList.end();
-      ++lit, ++rit) {
-    int c = (*lit)->compare(*rit);
-    if (c != 0)
-      return c;
-  }
-
-  if(lit != mList.end())
-    return -1;
-
-  if(rit != o->mList.end())
-    return 1;
-  return 0;
 }
 
 XYSequence::iterator XYList::begin()
@@ -448,30 +449,6 @@ void XYSlice::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
 }
 
-int XYSlice::compare(shared_ptr<XYObject> rhs) const {
-  shared_ptr<XYList> o = dynamic_pointer_cast<XYList>(rhs);
-  if (!o)
-    return toString(true).compare(rhs->toString(true));
-
-  XYSequence::const_iterator lit = mBegin,
-                             rit = o->mList.begin();
-
-  for(;
-      lit != mEnd;
-      ++lit, ++rit) {
-    int c = (*lit)->compare(*rit);
-    if (c != 0)
-      return c;
-  }
-
-  if(lit != mEnd)
-    return -1;
-
-  if(rit != o->mList.end())
-    return 1;
-  return 0;
-}
-
 XYSequence::iterator XYSlice::begin()
 {
   return mBegin;
@@ -551,45 +528,6 @@ string XYJoin::toString(bool parse) const {
 
 void XYJoin::eval1(XY* xy) {
   xy->mX.push_back(shared_from_this());
-}
-
-int XYJoin::compare(shared_ptr<XYObject> rhs) const {
-  // TODO
-#if 0
-  shared_ptr<XYList> o = dynamic_pointer_cast<XYList>(rhs);
-  if (!o)
-    return toString(true).compare(rhs->toString(true));
-
-  XYSequence::const_iterator lit  = mFirst->begin(),
-                             lit2 = mSecond->begin(),
-                             rit  = o->begin();
-
-  for(;
-      lit != mFirst->end() && rit != o->end();
-      ++lit, ++rit) {
-    int c = (*lit)->compare(*rit);
-    if (c != 0)
-      return c;
-  }
-
-  if (lit == mFirst->end()) {
-    for(;
-	lit2 != mSecond->end() && rit != o->end();
-	++lit2, ++rit) {
-      int c = (*lit2)->compare(*rit);
-      if (c != 0)
-	return c;
-    }
-  }
-
-  if(lit == mFirst->end() && lit2 != mSecond->end() || lit != mFirst->end())
-    return -1;
-
-  if(rit != o->end())
-    return 1;
-  return 0;
-#endif
-  return 0;
 }
 
 XYSequence::iterator XYJoin::begin()
@@ -719,7 +657,7 @@ void XYPrimitive::eval1(XY* xy) {
   mFunc(xy);
 }
 
-int XYPrimitive::compare(shared_ptr<XYObject> rhs) const {
+int XYPrimitive::compare(shared_ptr<XYObject> rhs) {
   shared_ptr<XYPrimitive> o = dynamic_pointer_cast<XYPrimitive>(rhs);
   if (!o)
     return toString(true).compare(rhs->toString(true));
