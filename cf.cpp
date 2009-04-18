@@ -392,12 +392,36 @@ shared_ptr<XYSequence> XYList::tail()
 {
   assert(mList.size() > 1);
   iterator start = mList.begin();
-  return msp(new XYSlice(dynamic_pointer_cast<XYSequence>(shared_from_this()), 
-                         ++start, mList.end()));
+  return msp(new XYSlice(shared_from_this(), ++start, mList.end()));
+}
+
+boost::shared_ptr<XYSequence> XYList::join(boost::shared_ptr<XYSequence> const& rhs)
+{
+  shared_ptr<XYSequence> self(dynamic_pointer_cast<XYSequence>(shared_from_this()));
+
+  if (dynamic_cast<XYJoin const*>(rhs.get())) {
+    // If the reference to rhs is unique then we can modify the object itself.
+    if (rhs.unique()) {    
+      shared_ptr<XYJoin> result(dynamic_pointer_cast<XYJoin>(rhs));
+      result->mSequences.push_front(self);
+      return result;
+    }
+    else {
+      // Pointer is shared, we have to copy the data
+      shared_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
+      shared_ptr<XYJoin> result(new XYJoin());
+      result->mSequences.push_back(self);
+      result->mSequences.insert(result->mSequences.end(), 
+		  	        join_rhs->mSequences.begin(), join_rhs->mSequences.end());
+      return result;
+    }
+  }
+
+  return msp(new XYJoin(self, rhs));
 }
 
 // XYSlice
-XYSlice::XYSlice(shared_ptr<XYSequence> original,
+XYSlice::XYSlice(shared_ptr<XYObject> original,
                  XYSequence::iterator begin,
 		 XYSequence::iterator end)  :
   mOriginal(original),
@@ -475,6 +499,207 @@ shared_ptr<XYSequence> XYSlice::tail()
   XYSequence::iterator start = ++mBegin;
   assert(start != mEnd);
   return msp(new XYSlice(mOriginal, start, mEnd));
+}
+
+boost::shared_ptr<XYSequence> XYSlice::join(boost::shared_ptr<XYSequence> const& rhs)
+{
+  shared_ptr<XYSequence> self(dynamic_pointer_cast<XYSequence>(shared_from_this()));
+
+  if (dynamic_cast<XYJoin const*>(rhs.get())) {
+    // If the reference to rhs is unique then we can modify the object itself.
+    if (rhs.unique()) {    
+      shared_ptr<XYJoin> result(dynamic_pointer_cast<XYJoin>(rhs));
+      result->mSequences.push_front(self);
+      return result;
+    }
+    else {
+      // Pointer is shared, we have to copy the data
+      shared_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
+      shared_ptr<XYJoin> result(new XYJoin());
+      result->mSequences.push_back(self);
+      result->mSequences.insert(result->mSequences.end(), 
+		  	        join_rhs->mSequences.begin(), join_rhs->mSequences.end());
+      return result;
+    }
+  }
+
+  return msp(new XYJoin(self, rhs));
+}
+
+// XYJoin
+XYJoin::XYJoin(shared_ptr<XYSequence> first,
+               shared_ptr<XYSequence> second)
+{ 
+  mSequences.push_back(first);
+  mSequences.push_back(second);
+}
+
+string XYJoin::toString(bool parse) const {
+  ostringstream s;
+  s << "[ ";
+  for(const_iterator it = mSequences.begin(); it != mSequences.end(); ++it)
+    for_each((*it)->begin(), (*it)->end(), s << bind(&XYObject::toString, _1, parse) << " ");
+  s << "]";
+  return s.str();
+}
+
+void XYJoin::eval1(XY* xy) {
+  xy->mX.push_back(shared_from_this());
+}
+
+int XYJoin::compare(shared_ptr<XYObject> rhs) const {
+  // TODO
+#if 0
+  shared_ptr<XYList> o = dynamic_pointer_cast<XYList>(rhs);
+  if (!o)
+    return toString(true).compare(rhs->toString(true));
+
+  XYSequence::const_iterator lit  = mFirst->begin(),
+                             lit2 = mSecond->begin(),
+                             rit  = o->begin();
+
+  for(;
+      lit != mFirst->end() && rit != o->end();
+      ++lit, ++rit) {
+    int c = (*lit)->compare(*rit);
+    if (c != 0)
+      return c;
+  }
+
+  if (lit == mFirst->end()) {
+    for(;
+	lit2 != mSecond->end() && rit != o->end();
+	++lit2, ++rit) {
+      int c = (*lit2)->compare(*rit);
+      if (c != 0)
+	return c;
+    }
+  }
+
+  if(lit == mFirst->end() && lit2 != mSecond->end() || lit != mFirst->end())
+    return -1;
+
+  if(rit != o->end())
+    return 1;
+  return 0;
+#endif
+  return 0;
+}
+
+XYSequence::iterator XYJoin::begin()
+{
+  // TODO:
+  // This is a workaround until generic iterators for the different
+  // sequence classes are implemented. We force the lazy append so that
+  // the first list has the result, and the second is empty.
+  if (mSequences.size() == 1)
+    return mSequences[0]->begin();
+
+  shared_ptr<XYList> list(new XYList());
+  for(iterator it = mSequences.begin(); it != mSequences.end(); ++it) 
+    list->mList.insert(list->mList.end(), (*it)->begin(), (*it)->end());
+
+  mSequences.clear();
+  mSequences.push_back(list);
+  
+  return list->begin();
+}
+
+XYSequence::iterator XYJoin::end()
+{
+  // TODO:
+  // This is a workaround until generic iterators for the different
+  // sequence classes are implemented. We force the lazy append so that
+  // the first list has the result, and the second is empty.
+  if (mSequences.size() == 1)
+    return mSequences[0]->end();
+
+  shared_ptr<XYList> list(new XYList());
+  for(iterator it = mSequences.begin(); it != mSequences.end(); ++it) 
+    list->mList.insert(list->mList.end(), (*it)->begin(), (*it)->end());
+
+  mSequences.clear();
+  mSequences.push_back(list);
+  
+  return list->end();
+}
+
+size_t XYJoin::size()
+{
+  size_t s = 0;
+  for(iterator it = mSequences.begin(); it != mSequences.end(); ++it) 
+    s += (*it)->size();
+
+  return s;
+}
+
+shared_ptr<XYObject> XYJoin::at(size_t n)
+{
+  assert(n < size());
+  
+  size_t s = 0;
+  for(iterator it = mSequences.begin(); it != mSequences.end(); ++it) {
+    size_t b = s;
+    s += (*it)->size();
+    if (n < s)
+      return (*it)->at(n-b);
+  }
+
+  assert(1 == 0);
+}
+
+shared_ptr<XYObject> XYJoin::head()
+{
+  return at(0);
+}
+
+shared_ptr<XYSequence> XYJoin::tail()
+{
+  return msp(new XYSlice(shared_from_this(), begin() + 1, end()));
+}
+
+boost::shared_ptr<XYSequence> XYJoin::join(boost::shared_ptr<XYSequence> const& rhs)
+{
+  shared_ptr<XYJoin> self(dynamic_pointer_cast<XYJoin>(shared_from_this()));
+
+  if (dynamic_cast<XYJoin const*>(rhs.get())) {
+    // If the reference to rhs is unique then we can modify the object itself.
+    if (rhs.unique()) {    
+      shared_ptr<XYJoin> result(dynamic_pointer_cast<XYJoin>(rhs));
+      result->mSequences.insert(result->mSequences.begin(), 
+				mSequences.begin(), mSequences.end());
+      return result;
+    }
+    else if (self.use_count() == 2) { // to account for the 1 reference we are holding
+      shared_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
+      mSequences.insert(mSequences.end(), 
+			join_rhs->mSequences.begin(), join_rhs->mSequences.end());
+      return self;
+    }
+    else {
+      // Pointer is shared, we have to copy the data
+      shared_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
+      shared_ptr<XYJoin> result(new XYJoin());
+      result->mSequences.insert(result->mSequences.end(), 
+				mSequences.begin(), mSequences.end());
+      result->mSequences.insert(result->mSequences.end(), 
+				join_rhs->mSequences.begin(), join_rhs->mSequences.end());
+      return result;
+    }
+  }
+
+  // rhs is not a join
+  if (self.use_count() == 2) { // to account for the 1 reference we are holding
+    mSequences.push_back(rhs);
+    return self;
+  }
+  
+  // rhs is not a join and we can't modify ourselves
+  shared_ptr<XYJoin> result(new XYJoin());
+  result->mSequences.insert(result->mSequences.end(), 
+			    mSequences.begin(), mSequences.end());
+  result->mSequences.push_back(rhs);
+  return result;
 }
 
 // XYPrimitive
@@ -749,23 +974,30 @@ static void primitive_join(XY* xy) {
   shared_ptr<XYSequence> list_rhs = dynamic_pointer_cast<XYSequence>(rhs);
 
   if (list_lhs && list_rhs) {
+    // Reset original pointers to enable copy on write optimisations
+    rhs.reset(static_cast<XYSequence*>(0));
+    lhs.reset(static_cast<XYSequence*>(0));
+
     // Two lists are concatenated
-    shared_ptr<XYList> list(new XYList(list_lhs->begin(), list_lhs->end()));
-    list->mList.insert(list->end(), list_rhs->begin(), list_rhs->end()); 
-    xy->mX.push_back(list);
+    xy->mX.push_back(list_lhs->join(list_rhs));
   }
   else if(list_lhs) {
-    // If rhs is not a list, then it is added to the end of the list
-    shared_ptr<XYList> list(new XYList(list_lhs->begin(), list_lhs->end()));
+    // Reset original pointers to enable copy on write optimisations
+    lhs.reset(static_cast<XYSequence*>(0));
+
+    // If rhs is not a list, it is added to the end of the list.
+    shared_ptr<XYList> list(new XYList());
     list->mList.push_back(rhs);
-    xy->mX.push_back(list);
+    xy->mX.push_back(list_lhs->join(list));
   }
   else if(list_rhs) {
+    // Reset original pointers to enable copy on write optimisations
+    rhs.reset(static_cast<XYSequence*>(0));
+
     // If lhs is not a list, it is added to the front of the list
     shared_ptr<XYList> list(new XYList());
     list->mList.push_back(lhs);
-    list->mList.insert(list->end(), list_rhs->begin(), list_rhs->end());
-    xy->mX.push_back(list);
+    xy->mX.push_back(list->join(list_rhs));
   }
   else {
     // If neither are lists, a list is made containing the two items
@@ -1083,6 +1315,18 @@ static void primitive_enum(XY* xy) {
   xy->mX.push_back(list);
 }
 
+// clone [X^o Y] -> [X^o Y]
+static void primitive_clone(XY* xy) {
+  // TODO: Only works for sequences for now
+  // Implemented to work around an XYJoin limitation
+  assert(xy->mX.size() >= 1);
+  shared_ptr<XYSequence> o = dynamic_pointer_cast<XYSequence>(xy->mX.back());
+  assert(o);
+  xy->mX.pop_back();
+
+  xy->mX.push_back(msp(new XYList(o->begin(), o->end())));
+}
+
 // XY
 XY::XY() {
   mP["+"]   = msp(new XYPrimitive("+", primitive_addition));
@@ -1119,6 +1363,7 @@ XY::XY() {
   mP["getline"] = msp(new XYPrimitive("getline", primitive_getline));
   mP["millis"] = msp(new XYPrimitive("millis", primitive_millis));
   mP["enum"]   = msp(new XYPrimitive("+", primitive_enum));
+  mP["clone"]   = msp(new XYPrimitive("clone", primitive_clone));
 }
 
 void XY::print() {

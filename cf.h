@@ -203,6 +203,9 @@ class XYSequence : public XYObject
 
     // Returns the tail of a sequence (all but the first item)
     virtual boost::shared_ptr<XYSequence> tail() = 0;
+
+    // Concatenate two sequences
+    virtual boost::shared_ptr<XYSequence> join(boost::shared_ptr<XYSequence> const& rhs) = 0;
 };
 
 // A list of objects. Can include other nested
@@ -225,6 +228,7 @@ class XYList : public XYSequence
     virtual boost::shared_ptr<XYObject> at(size_t n);
     virtual boost::shared_ptr<XYObject> head();
     virtual boost::shared_ptr<XYSequence> tail();
+    virtual boost::shared_ptr<XYSequence> join(boost::shared_ptr<XYSequence> const& rhs);
 };
 
 // A slice is a virtual subsequence of an existing list.
@@ -234,7 +238,7 @@ class XYSlice : public XYSequence
     // The original sequence we are a slice of
     // Need to keep a reference to the original to ensure 
     // it doesn't get destroyed while the slice is active.
-    boost::shared_ptr<XYSequence> mOriginal;
+    boost::shared_ptr<XYObject> mOriginal;
 
     // The start of the slice. 
     XYSequence::iterator mBegin;
@@ -243,7 +247,7 @@ class XYSlice : public XYSequence
     XYSequence::iterator mEnd;
 
   public:
-    XYSlice(boost::shared_ptr<XYSequence> original, 
+    XYSlice(boost::shared_ptr<XYObject> original, 
             XYSequence::iterator start, 
             XYSequence::iterator end);
     virtual std::string toString(bool parse) const;
@@ -255,6 +259,36 @@ class XYSlice : public XYSequence
     virtual boost::shared_ptr<XYObject> at(size_t n);
     virtual boost::shared_ptr<XYObject> head();
     virtual boost::shared_ptr<XYSequence> tail();
+    virtual boost::shared_ptr<XYSequence> join(boost::shared_ptr<XYSequence> const& rhs);
+};
+
+// A join is a virtual sequence composed of two other
+// sequences. It's primary use is to allow lazy
+// appending of two sequences.
+class XYJoin : public XYSequence
+{
+  public:
+    // The original sequences we join.
+    typedef std::deque<boost::shared_ptr<XYSequence> > Vector;
+    typedef Vector::iterator iterator;
+    typedef Vector::const_iterator const_iterator;
+
+    Vector mSequences;
+
+  public:
+    XYJoin() { }
+    XYJoin(boost::shared_ptr<XYSequence> first,
+           boost::shared_ptr<XYSequence> second); 
+    virtual std::string toString(bool parse) const;
+    virtual void eval1(XY* xy);
+    virtual int compare(boost::shared_ptr<XYObject> rhs) const;
+    virtual XYSequence::iterator begin();
+    virtual XYSequence::iterator end();
+    virtual size_t size();
+    virtual boost::shared_ptr<XYObject> at(size_t n);
+    virtual boost::shared_ptr<XYObject> head();
+    virtual boost::shared_ptr<XYSequence> tail();
+    virtual boost::shared_ptr<XYSequence> join(boost::shared_ptr<XYSequence> const& rhs);
 };
 
 // A primitive is the implementation of a core function.
