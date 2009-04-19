@@ -116,8 +116,7 @@ Haskell: http://haskell.org/haskellwiki/Literate_programming
 
 Any file that ends with the extension .lcf is a literate cf file. All
 lines starting with '>' are treated as code, everything else is a
-comment. A blank line must also exist before and after code
-blocks. For example:
+comment. For example:
 
 > "The sum of 1 + 2 is " write 
 > 1 2 + .
