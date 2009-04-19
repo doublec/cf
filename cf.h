@@ -106,6 +106,7 @@ class XYFloat : public XYNumber
 
   public:
     XYFloat(long v = 0);
+    XYFloat(double v = 0.0);
     XYFloat(std::string v);
     XYFloat(mpf_class const& v);
     virtual std::string toString(bool parse) const;

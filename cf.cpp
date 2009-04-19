@@ -1,6 +1,7 @@
 // Copyright (C) 2009 Chris Double. All Rights Reserved.
 // See the license at the end of this file
 #include <cassert>
+#include <cmath>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -186,9 +187,8 @@ static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYSequence* rhs) {
 }
 
 static shared_ptr<XYObject> dd_power(XYFloat* lhs, XYFloat* rhs) {
-  shared_ptr<XYFloat> result(new XYFloat(lhs->mValue));
-  mpf_pow_ui(result->mValue.get_mpf_t(), lhs->mValue.get_mpf_t(), rhs->as_uint());
-  return result;
+  return msp(new XYFloat(pow(static_cast<double>(lhs->mValue.get_d()), 
+			     static_cast<double>(rhs->mValue.get_d()))));
 }
 
 static shared_ptr<XYObject> dd_power(XYFloat* lhs, XYInteger* rhs) {
@@ -205,9 +205,8 @@ static shared_ptr<XYObject> dd_power(XYFloat* lhs, XYSequence* rhs) {
 }
 
 static shared_ptr<XYObject> dd_power(XYInteger* lhs, XYFloat* rhs) {
-  shared_ptr<XYInteger> result(new XYInteger(lhs->mValue));
-  mpz_pow_ui(result->mValue.get_mpz_t(), lhs->mValue.get_mpz_t(), rhs->as_uint());
-  return result;
+  return msp(new XYFloat(pow(static_cast<double>(lhs->mValue.get_d()), 
+			     static_cast<double>(rhs->mValue.get_d()))));
 }
 
 static shared_ptr<XYObject> dd_power(XYInteger* lhs, XYInteger* rhs) {
@@ -340,6 +339,7 @@ DD_IMPL(XYFloat, divide)
 DD_IMPL(XYFloat, power)
 
 XYFloat::XYFloat(long v) : XYNumber(FLOAT), mValue(v) { }
+XYFloat::XYFloat(double v) : XYNumber(FLOAT), mValue(v) { }
 XYFloat::XYFloat(string v) : XYNumber(FLOAT), mValue(v) { }
 XYFloat::XYFloat(mpf_class const& v) : XYNumber(FLOAT), mValue(v) { }
 
