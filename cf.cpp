@@ -1323,42 +1323,70 @@ static void primitive_nth(XY* xy) {
   }
   else if (s) {
     // Index is a list. Use this as a path into the list.
-    shared_ptr<XYObject> head = s->head();
-    shared_ptr<XYSequence> tail = s->tail();
-
-    // If head is a list, then it's a request to get multiple values
-    shared_ptr<XYSequence> headlist = dynamic_pointer_cast<XYSequence>(head);
-    if (headlist) {
-      XYSequence::List code;
-      XYSequence::List code2;
-      for (XYSequence::iterator it = headlist->begin(); it != headlist->end(); ++it) {
-	code.push_back(*it);
-	code.push_back(list);
-	code.push_back(msp(new XYSymbol("@")));			
-	code.push_back(msp(new XYSymbol("'")));
-	code.push_back(msp(new XYSymbol("'")));
-	code.push_back(msp(new XYSymbol("`")));
-      }
-      
-      for (int i=0; i < headlist->size()-1; ++i) {
-	code2.push_back(msp(new XYSymbol(",")));
-      }
-
-      xy->mY.insert(xy->mY.begin(), code2.begin(), code2.end());
-      xy->mY.insert(xy->mY.begin(), code.begin(), code.end());
-    }
-    else if (tail->size() == 0) {
-      xy->mX.push_back(head);
+    if (s->size() == 0) {
+      // If the path is empty, return the entire list
       xy->mX.push_back(list);
-      xy->mY.push_front(msp(new XYSymbol("@")));
-    }
+    }    
     else {
-      xy->mX.push_back(head);
-      xy->mX.push_back(list);
-      xy->mY.push_front(msp(new XYSymbol("@")));
-      xy->mY.push_front(msp(new XYShuffle("ab-ba")));
-      xy->mY.push_front(tail);
-      xy->mY.push_front(msp(new XYSymbol("@")));
+      shared_ptr<XYObject> head = s->head();
+      shared_ptr<XYSequence> tail = s->tail();
+
+      // If head is a list, then it's a request to get multiple values
+      shared_ptr<XYSequence> headlist = dynamic_pointer_cast<XYSequence>(head);
+      if (headlist && headlist->size() == 0) {
+	if (tail->size() == 0) {
+	  xy->mX.push_back(list);
+	}
+	else {
+	  XYSequence::List code;
+	  XYSequence::List code2;
+	  for (XYSequence::iterator it = list->begin(); it != list->end(); ++it) {
+	    code.push_back(tail);
+	    code.push_back(*it);
+	    code.push_back(msp(new XYSymbol("@")));
+	    code.push_back(msp(new XYSymbol("'")));
+	    code.push_back(msp(new XYSymbol("'")));
+	    code.push_back(msp(new XYSymbol("`")));	  
+	  }	
+	  for (int i=0; i < list->size() - 1; ++i) {
+	    code2.push_back(msp(new XYSymbol(",")));
+	  }
+	  xy->mY.insert(xy->mY.begin(), code2.begin(), code2.end());
+	  xy->mY.insert(xy->mY.begin(), code.begin(), code.end());	  
+	}
+      }
+      else if (headlist) {
+	XYSequence::List code;
+	XYSequence::List code2;
+	for (XYSequence::iterator it = headlist->begin(); it != headlist->end(); ++it) {
+	  code.push_back(*it);
+	  code.push_back(list);
+	  code.push_back(msp(new XYSymbol("@")));			
+	  code.push_back(msp(new XYSymbol("'")));
+	  code.push_back(msp(new XYSymbol("'")));
+	  code.push_back(msp(new XYSymbol("`")));
+	}
+	
+	for (int i=0; i < headlist->size()-1; ++i) {
+	  code2.push_back(msp(new XYSymbol(",")));
+	}
+
+	xy->mY.insert(xy->mY.begin(), code2.begin(), code2.end());
+	xy->mY.insert(xy->mY.begin(), code.begin(), code.end());
+      }
+      else if (tail->size() == 0) {
+	xy->mX.push_back(head);
+	xy->mX.push_back(list);
+	xy->mY.push_front(msp(new XYSymbol("@")));
+      }
+      else {
+	xy->mX.push_back(head);
+	xy->mX.push_back(list);
+	xy->mY.push_front(msp(new XYSymbol("@")));
+	xy->mY.push_front(msp(new XYShuffle("ab-ba")));
+	xy->mY.push_front(tail);
+	xy->mY.push_front(msp(new XYSymbol("@")));
+      }
     }
   }
 }

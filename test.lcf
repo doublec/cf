@@ -139,4 +139,13 @@ Deep Index
 > [[1 5]] [[[0 [4 0]]] [1 2 3 4 [5 6 7]] @] test.
 > [[1 [5 7]]] [[[0 [4 [0 2]]]] [1 2 3 4 [5 6 7]] @] test.
 
+Eliding indexes to get matrix slices
+
+> [[ 4 400 4000 ] ] [
+>   [[] 3]
+>   [ [1 2 3 4]
+>     [100 200 300 400]
+>     [1000 2000 3000 4000]
+>   ] @
+> ] test.
 > "Test run completed\n" write
