@@ -102,14 +102,7 @@ static shared_ptr<XYObject> dd_##name(XYInteger* lhs, XYSequence* rhs) { \
   return list; \
 } \
 \
-static shared_ptr<XYObject> dd_##name(XYSequence* lhs, XYInteger* rhs) { \
-  shared_ptr<XYList> list(new XYList()); \
-  for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it) \
-    list->mList.push_back((*it)->name(rhs)); \
-  return list; \
-} \
- \
-static shared_ptr<XYObject> dd_##name(XYSequence* lhs, XYFloat* rhs) { \
+static shared_ptr<XYObject> dd_##name(XYSequence* lhs, XYObject* rhs) { \
   shared_ptr<XYList> list(new XYList()); \
   for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it) \
     list->mList.push_back((*it)->name(rhs)); \
@@ -161,19 +154,13 @@ static shared_ptr<XYObject> dd_divide(XYInteger* lhs, XYSequence* rhs) {
   return list;
 }
 
-static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYInteger* rhs) {
+static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYObject* rhs) {
   shared_ptr<XYList> list(new XYList());
   for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it)
     list->mList.push_back((*it)->divide(rhs));
   return list;
 }
 
-static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYFloat* rhs) {
-  shared_ptr<XYList> list(new XYList());
-  for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it)
-    list->mList.push_back((*it)->divide(rhs));
-  return list;
-}
 
 static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYSequence* rhs) {
   assert(lhs->size() == rhs->size());
@@ -222,19 +209,13 @@ static shared_ptr<XYObject> dd_power(XYInteger* lhs, XYSequence* rhs) {
   return list;
 }
 
-static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYInteger* rhs) {
+static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYObject* rhs) {
   shared_ptr<XYList> list(new XYList());
   for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it)
     list->mList.push_back((*it)->power(rhs));
   return list;
 }
 
-static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYFloat* rhs) {
-  shared_ptr<XYList> list(new XYList());
-  for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it)
-    list->mList.push_back((*it)->power(rhs));
-  return list;
-}
 
 static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYSequence* rhs) {
   assert(lhs->size() == rhs->size());

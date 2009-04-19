@@ -123,4 +123,8 @@ Math Double Dispatch
 > [[1 5 9]] [[1 2.5 3] [1 2 3] *] test.
 > [[1 2 2]] [[1 4 6] [1 2 3] %] test.
 
+> [[-1]] [[2] 3 - ] test.
+> [[2]] [[8] 4 % ] test.
+> [[16]] [[4] 2 ^] test.
+
 > "Test run completed\n" write
