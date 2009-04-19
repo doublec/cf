@@ -1291,7 +1291,7 @@ static void primitive_not(XY* xy) {
   }
 }
 
-// nth nth [X^n^{...} Y] [X^o Y] 
+// @ nth [X^n^{...} Y] [X^o Y] 
 static void primitive_nth(XY* xy) {
   assert(xy->mX.size() >= 2);
 
@@ -1487,7 +1487,7 @@ XY::XY() {
   mP[">"]   = msp(new XYPrimitive(">", primitive_greaterThan));
   mP[">="]  = msp(new XYPrimitive(">=", primitive_greaterThanEqual));
   mP["not"] = msp(new XYPrimitive("not", primitive_not));
-  mP["nth"] = msp(new XYPrimitive("nth", primitive_nth));
+  mP["@"]   = msp(new XYPrimitive("@", primitive_nth));
   //  mP["."]   = msp(new XYPrimitive(".", primitive_printnl));
   mP["printnl"] = msp(new XYPrimitive("print", primitive_printnl));
   mP["print"] = msp(new XYPrimitive("print", primitive_print));
@@ -1673,14 +1673,14 @@ boost::xpressive::sregex re_number() {
 boost::xpressive::sregex re_special() {
   using namespace boost::xpressive;
   using boost::xpressive::set;
-  return (set= '\\' , '[' , ']' , '{' , '}' , '(' , ')' , ';' , '!' , '.' , ',' , '`' , '\'' , '|');
+  return (set= '\\' , '[' , ']' , '{' , '}' , '(' , ')' , ';' , '!' , '.' , ',' , '`' , '\'' , '|', '@');
 }
 
 // Return regex for non-specials
 boost::xpressive::sregex re_non_special() {
   using namespace boost::xpressive;
   using boost::xpressive::set;
-  return ~(set[(set= '\\','[',']','{','}','(',')',';','!','.',',','`','\'','|') | _s]);
+  return ~(set[(set= '\\','[',']','{','}','(',')',';','!','.',',','`','\'','|','@') | _s]);
 }
 
 // Return regex for symbols

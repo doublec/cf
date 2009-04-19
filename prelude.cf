@@ -34,7 +34,7 @@
 [[[last.]`]$] unstack set
 
 ** Control Flow **
-[pair.[dupd.]`[.not]`nth.] cond set
+[pair.[dupd.]`[.not]`@.] cond set
 [unit.cons.dup.[uncons.uncons.drop.]`[while.],,[]cond.] while set ** [c][t]while **
 [unit.[1 -]swap.,'`,[]swap.while.drop.] do set ** n[f]do **
 

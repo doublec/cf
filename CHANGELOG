@@ -1,3 +1,7 @@
+Changes since d12443
+====================
+1) The 'nth' primitive is now '@'.
+
 Changes since a17fce
 ====================
 1) Math operators on sequences works so that the math operator

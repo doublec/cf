@@ -159,7 +159,7 @@ $$       - stackqueue operator
 >        - greater than
 >=       - greater than or equal to
 not      - if true, return false and vice versa.
-nth      - retrieve nth item from a list
+@        - retrieve nth item from a list (2 [1 2 3 4] @ => 3)
 .        - print the topmost item on the stack
 print    - as '.' but don't do a newline
 write    - write the topmost item on the stack
