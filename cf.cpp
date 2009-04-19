@@ -582,7 +582,9 @@ shared_ptr<XYObject> XYList::head()
 
 shared_ptr<XYSequence> XYList::tail()
 {
-  assert(mList.size() > 1);
+  if (mList.size() <= 1) 
+    return msp(new XYList());
+
   iterator start = mList.begin();
   return msp(new XYSlice(shared_from_this(), ++start, mList.end()));
 }
@@ -669,7 +671,9 @@ shared_ptr<XYObject> XYSlice::head()
 
 shared_ptr<XYSequence> XYSlice::tail()
 {
-  assert(mBegin != mEnd);
+  if (size() <= 1)
+    return msp(new XYList());
+
   XYSequence::iterator start = ++mBegin;
   assert(start != mEnd);
   return msp(new XYSlice(mOriginal, start, mEnd));
@@ -790,6 +794,9 @@ shared_ptr<XYObject> XYJoin::head()
 
 shared_ptr<XYSequence> XYJoin::tail()
 {
+  if (size() <= 1)
+    return msp(new XYList());
+
   return msp(new XYSlice(shared_from_this(), begin() + 1, end()));
 }
 
@@ -1299,14 +1306,61 @@ static void primitive_nth(XY* xy) {
   assert(list);
   xy->mX.pop_back();
 
-  shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(xy->mX.back());
-  assert(n);
+  shared_ptr<XYObject> index(xy->mX.back());
+  assert(index);
   xy->mX.pop_back();
 
-  if (n->as_uint() >= list->size()) 
-    xy->mX.push_back(msp(new XYInteger(list->size())));
-  else
-    xy->mX.push_back(list->at(n->as_uint()));
+  shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(index);
+  shared_ptr<XYSequence> s = dynamic_pointer_cast<XYSequence>(index);
+  assert(n || s);
+
+  if (n) {
+    // Index is a number, do a direct index into the list
+    if (n->as_uint() >= list->size()) 
+      xy->mX.push_back(msp(new XYInteger(list->size())));
+    else
+      xy->mX.push_back(list->at(n->as_uint()));    
+  }
+  else if (s) {
+    // Index is a list. Use this as a path into the list.
+    shared_ptr<XYObject> head = s->head();
+    shared_ptr<XYSequence> tail = s->tail();
+
+    // If head is a list, then it's a request to get multiple values
+    shared_ptr<XYSequence> headlist = dynamic_pointer_cast<XYSequence>(head);
+    if (headlist) {
+      XYSequence::List code;
+      XYSequence::List code2;
+      for (XYSequence::iterator it = headlist->begin(); it != headlist->end(); ++it) {
+	code.push_back(*it);
+	code.push_back(list);
+	code.push_back(msp(new XYSymbol("@")));			
+	code.push_back(msp(new XYSymbol("'")));
+	code.push_back(msp(new XYSymbol("'")));
+	code.push_back(msp(new XYSymbol("`")));
+      }
+      
+      for (int i=0; i < headlist->size()-1; ++i) {
+	code2.push_back(msp(new XYSymbol(",")));
+      }
+
+      xy->mY.insert(xy->mY.begin(), code2.begin(), code2.end());
+      xy->mY.insert(xy->mY.begin(), code.begin(), code.end());
+    }
+    else if (tail->size() == 0) {
+      xy->mX.push_back(head);
+      xy->mX.push_back(list);
+      xy->mY.push_front(msp(new XYSymbol("@")));
+    }
+    else {
+      xy->mX.push_back(head);
+      xy->mX.push_back(list);
+      xy->mY.push_front(msp(new XYSymbol("@")));
+      xy->mY.push_front(msp(new XYShuffle("ab-ba")));
+      xy->mY.push_front(tail);
+      xy->mY.push_front(msp(new XYSymbol("@")));
+    }
+  }
 }
 
 // print [X^n Y] [X Y] 
