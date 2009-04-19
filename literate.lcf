@@ -16,7 +16,7 @@ All lines starting with > are interpreted as code, everything else is
 a comment. For example:
 
 > "The sum of 1 + 2 is " write 
-> 1 2 + printnl
+> 1 2 + println
 
 Latex Style
 ===========

@@ -106,7 +106,7 @@ For example:
   ok myfunc               ** push the 'myfunc' symbol on the stack         **
   ok ;                    ** get the value of it ([1 2 +])                 **
   ok .                    ** execute the list as a program                 **
-  ok printnl              ** print the result                              **
+  ok println              ** print the result                              **
    => 3
 
 Literate Files
@@ -172,7 +172,7 @@ enum     - given a number, returns a list of elements from 0 to n-1.
 
 Numbers can be floats or integers. Integers can be of any length. For example:
 
-  ok 1000 fac. printnl
+  ok 1000 fac. println
   ...a really big number...
 
 Shuffle patterns can be used to move things around on the stack. These are
@@ -235,7 +235,7 @@ cond       - conditional: 5 [0 >] [ drop. "is true" ] [drop. "is false"] cond.
 while      - 1 [10 <] [1 + a-aa .] while.
 do         - 10 [ "hello" println ] do.
 map        - [1 2 3] [1 +] map. => [2 3 4]
-each       - [1 2 3] [printnl] each.
+each       - [1 2 3] [println] each.
 fold       - [1 2 3] 0 [+] fold. => 6
 unfold     - 1 [10 >] [] [1 +] unfold => [1 2 3 4 5 6 7 8 9 10]
 cleave     - 1 [1 +] [2 +] cleave => 2 3
@@ -279,7 +279,7 @@ This builds a while expression by taking the definition of 'uncons'
 and 'swap' and prefixing them to the program given by the user. So
 the translation looks like:
 
-  [1 2 3] [printnl] each. => [1 2 3] [] [uncons.swap.] while.
+  [1 2 3] [println] each. => [1 2 3] [] [uncons.swap.] while.
 
 'fold' works similar it translates like this:
 

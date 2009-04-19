@@ -1,6 +1,7 @@
 Changes since d12443
 ====================
 1) The 'nth' primitive is now '@'.
+2) The 'printnl' primitive is now 'println'
 
 Changes since a17fce
 ====================

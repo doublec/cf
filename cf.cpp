@@ -1320,8 +1320,8 @@ static void primitive_print(XY* xy) {
   cout << o->toString(true);
 }
 
-// printnl [X^n Y] [X Y] 
-static void primitive_printnl(XY* xy) {
+// println [X^n Y] [X Y] 
+static void primitive_println(XY* xy) {
   assert(xy->mX.size() >= 1);
 
   shared_ptr<XYObject> o(xy->mX.back());
@@ -1488,8 +1488,7 @@ XY::XY() {
   mP[">="]  = msp(new XYPrimitive(">=", primitive_greaterThanEqual));
   mP["not"] = msp(new XYPrimitive("not", primitive_not));
   mP["@"]   = msp(new XYPrimitive("@", primitive_nth));
-  //  mP["."]   = msp(new XYPrimitive(".", primitive_printnl));
-  mP["printnl"] = msp(new XYPrimitive("print", primitive_printnl));
+  mP["println"] = msp(new XYPrimitive("print", primitive_println));
   mP["print"] = msp(new XYPrimitive("print", primitive_print));
   mP["write"] = msp(new XYPrimitive("write", primitive_write));
   mP["count"] = msp(new XYPrimitive("count", primitive_count));
