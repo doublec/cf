@@ -321,16 +321,45 @@ class XYPrimitive : public XYObject
     virtual int compare(boost::shared_ptr<XYObject> rhs);
 };
 
+// Base class to to provide limits to the executing
+// XY program. Limit examples might be a requirement to run
+// within a certain number of ticks, time period or
+// memory size.
+class XYLimit {
+ public:
+  // Called when execution starts so the limit checker can
+  // initialize things like initial start time or tick count.
+  virtual void start(XY* xy) = 0;
+  
+  // Check if the limit has been reached. Return's true if
+  // so.
+  virtual bool check(XY* xy) = 0;
+};
+
+// Limit a call of eval to run within a
+// certain number of milliseconds.
+class XYTimeLimit : public XYLimit {
+ public:
+  unsigned int mMilliseconds;
+  unsigned int mStart;
+
+ public:
+  XYTimeLimit(unsigned int milliseconds);
+  virtual void start(XY* xy);
+  virtual bool check(XY* xy);
+};
+
 // The environment maps names to objects
 typedef std::map<std::string, boost::shared_ptr<XYObject> > XYEnv;
 typedef std::vector<boost::shared_ptr<XYObject> > XYStack;
 typedef std::deque<boost::shared_ptr<XYObject> > XYQueue;
+typedef std::vector<boost::shared_ptr<XYLimit> > XYLimits;
 
 // The state of the runtime interpreter.
 // Holds the environment, stack and queue
 // and provides methods to step through or run
 // the interpreter.
-class XY {
+class XY  : public boost::enable_shared_from_this<XY> {
   public:
     // Environment holding mappings of names
     // to objects.
@@ -348,10 +377,18 @@ class XY {
     // The Queue
     XYQueue mY;
 
+    // The limits that restrict the operation of this
+    // interpreter.
+    XYLimits mLimits;
+
   public:
     // Constructor installs any primitives into the
     // environment.
     XY();
+
+    // Check limits. Throw the limit object if it has
+    // been exceeded.
+    void checkLimits();
 
     // Print a representation of the state of the
     // interpter.

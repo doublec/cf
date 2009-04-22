@@ -1544,6 +1544,23 @@ static void primitive_clone(XY* xy) {
   xy->mX.push_back(msp(new XYList(o->begin(), o->end())));
 }
 
+// XYTimeLimit
+XYTimeLimit::XYTimeLimit(unsigned int milliseconds) :
+  mMilliseconds(milliseconds) {
+}
+
+void XYTimeLimit::start(XY* xy) {
+  using namespace boost::posix_time;
+  
+  mStart = (microsec_clock::universal_time() - ptime(min_date_time)).total_milliseconds();
+}
+
+bool XYTimeLimit::check(XY* xy) {
+  using namespace boost::posix_time;
+  unsigned int now = (microsec_clock::universal_time() - ptime(min_date_time)).total_milliseconds();
+  return (now - mStart >= mMilliseconds);
+}
+
 // XY
 XY::XY() {
   mP["+"]   = msp(new XYPrimitive("+", primitive_addition));
@@ -1582,6 +1599,15 @@ XY::XY() {
   mP["clone"]   = msp(new XYPrimitive("clone", primitive_clone));
 }
 
+void XY::checkLimits() {
+  for(XYLimits::iterator it = mLimits.begin(); it != mLimits.end(); ++it) {
+    if ((*it)->check(this)) {
+      // This limit was reached, stop executing and throw the limit.
+      throw *it;
+    }
+  }
+}
+
 void XY::print() {
   for_each(mX.begin(), mX.end(), cout << bind(&XYObject::toString, _1, true) << " ");
   cout << " -> ";
@@ -1600,8 +1626,13 @@ void XY::eval1() {
 }
 
 void XY::eval() {
+  for(XYLimits::iterator it = mLimits.begin(); it != mLimits.end(); ++it) {
+    (*it)->start(this);
+  }
+
   while (mY.size() > 0) {
     eval1();
+    checkLimits();
   }
 }
 

@@ -83,17 +83,26 @@ int main(int argc, char* argv[]) {
     eval_files(xy, argv + 1, argv + argc);
   }
 
-  while (cin.good()) {
-    string input;
-    xy->print();
-    cout << "ok ";
-    getline(cin, input);
-    if (cin.good()) {
-      parse(input, back_inserter(xy->mY));
-      xy->eval(); 
+  // Limit test. If any line input by the user takes
+  // longer than this time period to run then a
+  // limit exception is thrown.
+  xy->mLimits.push_back(msp(new XYTimeLimit(1000)));
+
+  try {
+    while (cin.good()) {
+      string input;
+      xy->print();
+      cout << "ok ";
+      getline(cin, input);
+      if (cin.good()) {
+	parse(input, back_inserter(xy->mY));
+	xy->eval();
+      }
     }
   }
-
+  catch(shared_ptr<XYLimit> limit) {
+    cout << "Time limit to run code has been exceeded." << endl;
+  }
 
   return 0;
 }
