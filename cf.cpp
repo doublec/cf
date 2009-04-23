@@ -685,7 +685,7 @@ XYSlice::XYSlice(shared_ptr<XYSequence> original,
   mOriginal(original),
   mBegin(begin),
   mEnd(end)
-{   
+{
   shared_ptr<XYSlice> slice;
   while ((slice = dynamic_pointer_cast<XYSlice>(mOriginal))) {
     // Find the original, non-slice sequence. Without this we can
@@ -693,7 +693,7 @@ XYSlice::XYSlice(shared_ptr<XYSequence> original,
     // the tree of slices.
     mOriginal = slice->mOriginal;
     mBegin += slice->mBegin;
-    mEnd += slice->mEnd;
+    mEnd += slice->mBegin;
   }
 }
 
