@@ -1673,6 +1673,116 @@ static void primitive_to_string(boost::shared_ptr<XY> const& xy) {
   xy->mX.push_back(msp(new XYString(o->toString(true))));
 }
 
+// foldl [X^seq^seed^quot Y] -> [X^seq Y]
+// [1 2 3] 0 [+] foldl
+// [2 3] 0 1 + [+] foldl
+// [3] 1 2 + [+] foldl
+// [] 3 3 + [+] foldl
+// 6
+static void primitive_foldl(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
+  shared_ptr<XYSequence> quot(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  xy_assert(quot, XYError::TYPE);
+  xy->mX.pop_back();
+
+  shared_ptr<XYObject> seed(xy->mX.back());
+  xy->mX.pop_back();
+
+  shared_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  xy_assert(seq, XYError::TYPE);
+  xy->mX.pop_back();
+			     
+  if (seq->size() == 0) {
+    xy->mX.push_back(seed);
+  }
+  else {
+    shared_ptr<XYObject> head(seq->head());
+    shared_ptr<XYSequence> tail(seq->tail());
+  
+    XYStack temp;
+    temp.push_back(tail);
+    temp.push_back(seed);
+    temp.push_back(head);    
+    temp.push_back(quot);
+    temp.push_back(msp(new XYPrimitive(".", primitive_unquote)));
+    temp.push_back(quot);
+    temp.push_back(msp(new XYPrimitive("foldl", primitive_foldl)));
+    
+    xy->mY.insert(xy->mY.begin(), temp.begin(), temp.end());    
+  }
+}
+
+// foldr [X^seq^seed^quot Y] -> [X^seq Y]
+// [1 2 3] 0 [+] foldr
+// 0 [2 3] 1 [+] foldr +
+// 0 1 [3] 2 [+] foldr + +
+// 0 1 2 [] 3 [+] foldr + + +
+// 0 1 2 3  + + +
+// 6
+static void primitive_foldr(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
+  shared_ptr<XYSequence> quot(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  xy_assert(quot, XYError::TYPE);
+  xy->mX.pop_back();
+
+  shared_ptr<XYObject> seed(xy->mX.back());
+  xy->mX.pop_back();
+
+  shared_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  xy_assert(seq, XYError::TYPE);
+  xy->mX.pop_back();
+			     
+  if (seq->size() == 0) {
+    xy->mX.push_back(seed);
+  }
+  else {
+    shared_ptr<XYObject> head(seq->head());
+    shared_ptr<XYSequence> tail(seq->tail());
+    
+    XYStack temp;
+    temp.push_back(seed);
+    temp.push_back(tail);
+    temp.push_back(head);    
+    temp.push_back(quot);
+    temp.push_back(msp(new XYPrimitive("foldr", primitive_foldr)));
+    temp.push_back(quot);
+    temp.push_back(msp(new XYPrimitive(".", primitive_unquote)));
+    
+    xy->mY.insert(xy->mY.begin(), temp.begin(), temp.end());    
+  }
+}
+
+// if [X^bool^then^else Y] -> [X Y]
+// 2 1 = [ ... ] [ ... ] if
+static void primitive_if(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
+  shared_ptr<XYSequence> else_quot(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  xy_assert(else_quot, XYError::TYPE);
+  xy->mX.pop_back();
+
+  shared_ptr<XYSequence> then_quot(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  xy_assert(then_quot, XYError::TYPE);
+  xy->mX.pop_back();
+
+  shared_ptr<XYObject> o(xy->mX.back());
+  shared_ptr<XYNumber> num(dynamic_pointer_cast<XYNumber>(o));
+  shared_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(o));
+  xy_assert(o || num || seq, XYError::TYPE);
+  xy->mX.pop_back();
+
+  if (num && num->is_zero() ||
+      seq && seq->size() == 0) {
+    XYStack temp;
+    else_quot->pushBackInto(temp);
+    xy->mY.insert(xy->mY.begin(), temp.begin(), temp.end());    
+  }
+  else {
+    XYStack temp;
+    then_quot->pushBackInto(temp);
+    xy->mY.insert(xy->mY.begin(), temp.begin(), temp.end());    
+  } 
+}
+
 // XYTimeLimit
 XYTimeLimit::XYTimeLimit(unsigned int milliseconds) :
   mMilliseconds(milliseconds) {
@@ -1780,6 +1890,9 @@ XY::XY() {
   mP["split"] = msp(new XYPrimitive("split", primitive_split));
   mP["sdrop"] = msp(new XYPrimitive("sdrop", primitive_sdrop));
   mP["stake"] = msp(new XYPrimitive("stake", primitive_stake));
+  mP["foldl"] = msp(new XYPrimitive("foldl", primitive_foldl));
+  mP["foldr"] = msp(new XYPrimitive("foldr", primitive_foldr));
+  mP["if"] = msp(new XYPrimitive("if", primitive_if));
 }
 
 void XY::checkLimits() {
