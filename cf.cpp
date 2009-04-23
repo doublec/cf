@@ -90,8 +90,9 @@ static shared_ptr<XYObject> dd_##name(XYFloat* lhs, XYInteger* rhs) { \
 \
 static shared_ptr<XYObject> dd_##name(XYFloat* lhs, XYSequence* rhs) { \
   shared_ptr<XYList> list(new XYList()); \
-  for (XYSequence::iterator it = rhs->begin(); it != rhs->end(); ++it) \
-    list->mList.push_back(lhs->name((*it).get())); \
+  size_t len = rhs->size();\
+  for(int i=0; i < len; ++i)\
+    list->mList.push_back(lhs->name(rhs->at(i).get()));	\
   return list; \
 }\
 \
@@ -105,26 +106,27 @@ static shared_ptr<XYObject> dd_##name(XYInteger* lhs, XYInteger* rhs) { \
 \
 static shared_ptr<XYObject> dd_##name(XYInteger* lhs, XYSequence* rhs) { \
   shared_ptr<XYList> list(new XYList()); \
-  for (XYSequence::iterator it = rhs->begin(); it != rhs->end(); ++it) \
-    list->mList.push_back(lhs->name((*it).get())); \
+  size_t len = rhs->size();\
+  for(int i=0; i < len; ++i)\
+    list->mList.push_back(lhs->name(rhs->at(i).get()));	\
   return list; \
 } \
 \
 static shared_ptr<XYObject> dd_##name(XYSequence* lhs, XYObject* rhs) { \
   shared_ptr<XYList> list(new XYList()); \
-  for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it) \
-    list->mList.push_back((*it)->name(rhs)); \
+  size_t len = lhs->size();\
+  for(int i=0; i < len; ++i)\
+    list->mList.push_back(lhs->at(i)->name(rhs));	\
   return list; \
 } \
 \
 static shared_ptr<XYObject> dd_##name(XYSequence* lhs, XYSequence* rhs) { \
   assert(lhs->size() == rhs->size()); \
   shared_ptr<XYList> list(new XYList()); \
-  for (XYSequence::iterator lit = lhs->begin(), \
- 	                          rit = rhs->begin(); \
-       lit != lhs->end() && rit != rhs->end(); \
-       ++lit, ++rit) \
-    list->mList.push_back((*lit)->name((*rit).get()));\
+  size_t lhs_len = lhs->size();\
+  size_t rhs_len = rhs->size();\
+  for(int li = 0, ri = 0; li < lhs_len && ri < rhs_len; ++li, ++ri)\
+    list->mList.push_back(lhs->at(li)->name(rhs->at(ri).get()));    \
   return list; \
 }
 
@@ -142,8 +144,9 @@ static shared_ptr<XYObject> dd_divide(XYFloat* lhs, XYInteger* rhs) {
 
 static shared_ptr<XYObject> dd_divide(XYFloat* lhs, XYSequence* rhs) { 
   shared_ptr<XYList> list(new XYList());
-  for (XYSequence::iterator it = rhs->begin(); it != rhs->end(); ++it)
-    list->mList.push_back(lhs->divide((*it).get()));
+  size_t len = rhs->size();
+  for (int i=0; i < len; ++i)
+    list->mList.push_back(lhs->divide(rhs->at(i).get()));
   return list;
 }
 
@@ -157,15 +160,17 @@ static shared_ptr<XYObject> dd_divide(XYInteger* lhs, XYInteger* rhs) {
 
 static shared_ptr<XYObject> dd_divide(XYInteger* lhs, XYSequence* rhs) {
   shared_ptr<XYList> list(new XYList());
-  for (XYSequence::iterator it = rhs->begin(); it != rhs->end(); ++it)
-    list->mList.push_back(lhs->divide((*it).get()));
+  size_t len = rhs->size();
+  for (int i=0; i < len; ++i)
+    list->mList.push_back(lhs->divide(rhs->at(i).get()));
   return list;
 }
 
 static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYObject* rhs) {
   shared_ptr<XYList> list(new XYList());
-  for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it)
-    list->mList.push_back((*it)->divide(rhs));
+  size_t len = lhs->size();
+  for (int i=0; i < len; ++i)
+    list->mList.push_back(lhs->at(i)->divide(rhs));
   return list;
 }
 
@@ -173,11 +178,10 @@ static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYObject* rhs) {
 static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYSequence* rhs) {
   assert(lhs->size() == rhs->size());
   shared_ptr<XYList> list(new XYList());
-  for (XYSequence::iterator lit = lhs->begin(),
- 	                          rit = rhs->begin();
-       lit != lhs->end() && rit != rhs->end();
-       ++lit, ++rit)
-    list->mList.push_back((*lit)->divide((*rit).get()));
+  size_t lhs_len = lhs->size();
+  size_t rhs_len = rhs->size();
+  for(int li=0, ri=0; li < lhs_len && ri < rhs_len; ++li, ++ri)
+    list->mList.push_back(lhs->at(li)->divide(rhs->at(ri).get()));
   return list; 
 }
 
@@ -194,8 +198,9 @@ static shared_ptr<XYObject> dd_power(XYFloat* lhs, XYInteger* rhs) {
 
 static shared_ptr<XYObject> dd_power(XYFloat* lhs, XYSequence* rhs) {
   shared_ptr<XYList> list(new XYList());
-  for (XYSequence::iterator it = rhs->begin(); it != rhs->end(); ++it)
-    list->mList.push_back(lhs->power((*it).get()));
+  size_t len = rhs->size();
+  for (int i=0; i < len; ++i)
+    list->mList.push_back(lhs->power(rhs->at(i).get()));
   return list;
 }
 
@@ -212,15 +217,17 @@ static shared_ptr<XYObject> dd_power(XYInteger* lhs, XYInteger* rhs) {
 
 static shared_ptr<XYObject> dd_power(XYInteger* lhs, XYSequence* rhs) {
   shared_ptr<XYList> list(new XYList());
-  for (XYSequence::iterator it = rhs->begin(); it != rhs->end(); ++it)
-    list->mList.push_back(lhs->power((*it).get()));
+  size_t len = rhs->size();
+  for (int i=0; i < len; ++i)
+    list->mList.push_back(lhs->power(rhs->at(i).get()));
   return list;
 }
 
 static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYObject* rhs) {
   shared_ptr<XYList> list(new XYList());
-  for (XYSequence::iterator it = lhs->begin(); it != lhs->end(); ++it)
-    list->mList.push_back((*it)->power(rhs));
+  size_t len = lhs->size();
+  for (int i=0; i < len; ++i)
+    list->mList.push_back(lhs->at(i)->power(rhs));
   return list;
 }
 
@@ -228,11 +235,10 @@ static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYObject* rhs) {
 static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYSequence* rhs) {
   assert(lhs->size() == rhs->size());
   shared_ptr<XYList> list(new XYList());
-  for (XYSequence::iterator lit = lhs->begin(),
- 	                          rit = rhs->begin();
-       lit != lhs->end() && rit != rhs->end();
-       ++lit, ++rit)
-    list->mList.push_back((*lit)->power((*rit).get()));
+  size_t lhs_len = lhs->size();
+  size_t rhs_len = rhs->size();
+  for (int li=0, ri=0; li < lhs_len && ri < rhs_len; ++li, ++ri)
+    list->mList.push_back(lhs->at(li)->power(rhs->at(ri).get()));
   return list;
 }
 
@@ -522,21 +528,21 @@ int XYSequence::compare(shared_ptr<XYObject> rhs) {
   if (!o)
     return toString(true).compare(rhs->toString(true));
 
-  XYSequence::const_iterator lit = begin(),
-                             rit = o->begin();
+  size_t lhs_len = size();
+  size_t rhs_len = o->size();
+  int li = 0;
+  int ri = 0;
 
-  for(;
-      lit != end() && rit != o->end();
-      ++lit, ++rit) {
-    int c = (*lit)->compare(*rit);
+  for(li=0, ri=0;li < lhs_len && ri < rhs_len; ++li, ++ri) {
+    int c = at(li)->compare(o->at(ri));
     if (c != 0)
       return c;
   }
 
-  if(lit != end())
+  if(li != lhs_len)
     return -1;
 
-  if(rit != o->end())
+  if(ri != rhs_len)
     return 1;
 
   return 0;
@@ -562,16 +568,6 @@ void XYList::eval1(shared_ptr<XY> const& xy) {
   xy->mX.push_back(shared_from_this());
 }
 
-XYSequence::iterator XYList::begin()
-{
-  return mList.begin();
-}
-
-XYSequence::iterator XYList::end()
-{
-  return mList.end();
-}
-
 size_t XYList::size()
 {
   return mList.size();
@@ -593,8 +589,7 @@ shared_ptr<XYSequence> XYList::tail()
   if (mList.size() <= 1) 
     return msp(new XYList());
 
-  iterator start = mList.begin();
-  return msp(new XYSlice(shared_from_this(), ++start, mList.end()));
+  return msp(new XYSlice(dynamic_pointer_cast<XYSequence>(shared_from_this()), 1, mList.size()));
 }
 
 boost::shared_ptr<XYSequence> XYList::join(boost::shared_ptr<XYSequence> const& rhs)
@@ -623,41 +618,35 @@ boost::shared_ptr<XYSequence> XYList::join(boost::shared_ptr<XYSequence> const& 
 }
 
 // XYSlice
-XYSlice::XYSlice(shared_ptr<XYObject> original,
-                 XYSequence::iterator begin,
-		 XYSequence::iterator end)  :
+XYSlice::XYSlice(shared_ptr<XYSequence> original,
+                 int begin,
+		 int end)  :
   mOriginal(original),
   mBegin(begin),
   mEnd(end)
-{ 
-  while (dynamic_cast<XYSlice*>(mOriginal.get())) {
+{   
+  shared_ptr<XYSlice> slice;
+  while ((slice = dynamic_pointer_cast<XYSlice>(mOriginal))) {
     // Find the original, non-slice sequence. Without this we can
     // corrupt the C stack due to too much recursion when destroying
     // the tree of slices.
-    mOriginal = dynamic_cast<XYSlice*>(mOriginal.get())->mOriginal;
+    mOriginal = slice->mOriginal;
+    mBegin += slice->mBegin;
+    mEnd += slice->mEnd;
   }
 }
 
 string XYSlice::toString(bool parse) const {
   ostringstream s;
   s << "[ ";
-  for_each(mBegin, mEnd, s << bind(&XYObject::toString, _1, parse) << " ");
+  for (int i=mBegin; i < mEnd; ++i) 
+    s << mOriginal->at(i)->toString(parse) << " ";
   s << "]";
   return s.str();
 }
 
 void XYSlice::eval1(shared_ptr<XY> const& xy) {
   xy->mX.push_back(shared_from_this());
-}
-
-XYSequence::iterator XYSlice::begin()
-{
-  return mBegin;
-}
-
-XYSequence::iterator XYSlice::end()
-{
-  return mEnd;
 }
 
 size_t XYSlice::size()
@@ -668,13 +657,13 @@ size_t XYSlice::size()
 shared_ptr<XYObject> XYSlice::at(size_t n)
 {
   assert(mBegin + n < mEnd);
-  return *(mBegin + n);
+  return mOriginal->at(mBegin + n);
 }
 
 shared_ptr<XYObject> XYSlice::head()
 {
   assert(mBegin != mEnd);
-  return *mBegin;
+  return mOriginal->at(mBegin);
 }
 
 shared_ptr<XYSequence> XYSlice::tail()
@@ -682,9 +671,7 @@ shared_ptr<XYSequence> XYSlice::tail()
   if (size() <= 1)
     return msp(new XYList());
 
-  XYSequence::iterator start = ++mBegin;
-  assert(start != mEnd);
-  return msp(new XYSlice(mOriginal, start, mEnd));
+  return msp(new XYSlice(mOriginal, mBegin+1, mEnd));
 }
 
 boost::shared_ptr<XYSequence> XYSlice::join(boost::shared_ptr<XYSequence> const& rhs)
@@ -723,52 +710,16 @@ XYJoin::XYJoin(shared_ptr<XYSequence> first,
 string XYJoin::toString(bool parse) const {
   ostringstream s;
   s << "[ ";
-  for(const_iterator it = mSequences.begin(); it != mSequences.end(); ++it)
-    for_each((*it)->begin(), (*it)->end(), s << bind(&XYObject::toString, _1, parse) << " ");
+  for(const_iterator it = mSequences.begin(); it != mSequences.end(); ++it) {
+    for (int i=0; i < (*it)->size(); ++i)
+      s << (*it)->at(i)->toString(parse) << " ";
+  }
   s << "]";
   return s.str();
 }
 
 void XYJoin::eval1(shared_ptr<XY> const& xy) {
   xy->mX.push_back(shared_from_this());
-}
-
-XYSequence::iterator XYJoin::begin()
-{
-  // TODO:
-  // This is a workaround until generic iterators for the different
-  // sequence classes are implemented. We force the lazy append so that
-  // the first list has the result, and the second is empty.
-  if (mSequences.size() == 1)
-    return mSequences[0]->begin();
-
-  shared_ptr<XYList> list(new XYList());
-  for(iterator it = mSequences.begin(); it != mSequences.end(); ++it) 
-    list->mList.insert(list->mList.end(), (*it)->begin(), (*it)->end());
-
-  mSequences.clear();
-  mSequences.push_back(list);
-  
-  return list->begin();
-}
-
-XYSequence::iterator XYJoin::end()
-{
-  // TODO:
-  // This is a workaround until generic iterators for the different
-  // sequence classes are implemented. We force the lazy append so that
-  // the first list has the result, and the second is empty.
-  if (mSequences.size() == 1)
-    return mSequences[0]->end();
-
-  shared_ptr<XYList> list(new XYList());
-  for(iterator it = mSequences.begin(); it != mSequences.end(); ++it) 
-    list->mList.insert(list->mList.end(), (*it)->begin(), (*it)->end());
-
-  mSequences.clear();
-  mSequences.push_back(list);
-  
-  return list->end();
 }
 
 size_t XYJoin::size()
@@ -805,7 +756,7 @@ shared_ptr<XYSequence> XYJoin::tail()
   if (size() <= 1)
     return msp(new XYList());
 
-  return msp(new XYSlice(shared_from_this(), begin() + 1, end()));
+  return msp(new XYSlice(dynamic_pointer_cast<XYSequence>(shared_from_this()), 1, size()));
 }
 
 boost::shared_ptr<XYSequence> XYJoin::join(boost::shared_ptr<XYSequence> const& rhs)
@@ -989,7 +940,11 @@ static void primitive_unquote(boost::shared_ptr<XY> const& xy) {
   shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(o);
 
   if (list) {
-    xy->mY.insert(xy->mY.begin(), list->begin(), list->end());
+    XYStack temp;
+    for (int i=0; i < list->size(); ++i)
+      temp.push_back(list->at(i));
+
+    xy->mY.insert(xy->mY.begin(), temp.begin(), temp.end());
   }
   else {
     shared_ptr<XYSymbol> symbol = dynamic_pointer_cast<XYSymbol>(o);
@@ -1020,19 +975,19 @@ static void primitive_pattern_ss(boost::shared_ptr<XY> const& xy) {
   shared_ptr<XYSequence> pattern = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(pattern);
   xy->mX.pop_back();
-  assert(pattern->begin() != pattern->end());
+  assert(pattern->size() != 0);
 
   // Populate env with a mapping between the pattern variables to the
   // values on the stack.
   XYEnv env;
-  xy->getPatternValues(*(pattern->begin()), inserter(env, env.begin()));
+  xy->getPatternValues(pattern->at(0), inserter(env, env.begin()));
   // Process pattern body using these mappings.
-  if (pattern->end() - pattern->begin() > 1) {
-    XYSequence::iterator start = pattern->begin();
-    XYSequence::iterator end   = pattern->end();
-    shared_ptr<XYList> list(new XYList());
-    xy->replacePattern(env, msp(new XYList(++start, end)), back_inserter(list->mList));
-    assert(list->mList.size() > 0);
+  if (pattern->size() > 1) {
+    int start = 0;
+    int end   = pattern->size();
+    shared_ptr<XYList> list(new XYList());    
+    xy->replacePattern(env, msp(new XYSlice(pattern, ++start, end)), back_inserter(list->mList));
+    assert(list->size() > 0);
 
     // Append to stack
     list = dynamic_pointer_cast<XYList>(list->mList[0]);
@@ -1049,19 +1004,19 @@ static void primitive_pattern_sq(boost::shared_ptr<XY> const& xy) {
   shared_ptr<XYSequence> pattern = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(pattern);
   xy->mX.pop_back();
-  assert(pattern->begin() != pattern->end());
+  assert(pattern->size() != 0);
 
   // Populate env with a mapping between the pattern variables to the
   // values on the stack.
   XYEnv env;
-  xy->getPatternValues(*(pattern->begin()), inserter(env, env.begin()));
+  xy->getPatternValues(pattern->at(0), inserter(env, env.begin()));
   // Process pattern body using these mappings.
-  if (pattern->end() - pattern->begin() > 1) {
-    XYSequence::iterator start = pattern->begin();
-    XYSequence::iterator end   = pattern->end();
+  if (pattern->size() > 1) {
+    int start = 0;
+    int end   = pattern->size();
     shared_ptr<XYList> list(new XYList());
-    xy->replacePattern(env, msp(new XYList(++start, end)), back_inserter(list->mList));
-    assert(list->mList.size() > 0);
+    xy->replacePattern(env, msp(new XYSlice(pattern, ++start, end)), back_inserter(list->mList));
+    assert(list->size() > 0);
 
     // Prepend to queue
     list = dynamic_pointer_cast<XYList>(list->mList[0]);
@@ -1082,7 +1037,10 @@ static void primitive_dip(boost::shared_ptr<XY> const& xy) {
   xy->mX.pop_back();
 
   xy->mY.push_front(o);
-  xy->mY.insert(xy->mY.begin(), list->begin(), list->end());
+  XYStack temp;
+  for (int i=0; i < list->size(); ++i)
+    temp.push_back(list->at(i));
+  xy->mY.insert(xy->mY.begin(), temp.begin(), temp.end());
 }
 
 // | reverse [X^{a0..an} Y] [X^{an..a0} Y]
@@ -1092,8 +1050,10 @@ static void primitive_reverse(boost::shared_ptr<XY> const& xy) {
   assert(list);
   xy->mX.pop_back();
 
-  shared_ptr<XYList> reversed = msp(new XYList(list->begin(), list->end()));
-  reverse(reversed->begin(), reversed->end());
+  shared_ptr<XYList> reversed(new XYList());
+  for(int i=0; i < list->size(); ++i)
+    reversed->mList.push_back(list->at(i));
+  reverse(reversed->mList.begin(), reversed->mList.end());
   xy->mX.push_back(reversed);
 }
 
@@ -1174,7 +1134,10 @@ static void primitive_stack(boost::shared_ptr<XY> const& xy) {
   xy->mX.push_back(stack);
   xy->mX.push_back(queue);
   xy->mY.push_front(msp(new XYSymbol("$$")));
-  xy->mY.insert(xy->mY.begin(), list->begin(), list->end()); 
+  XYStack temp;
+  for(int i=0; i < list->size(); ++i)
+    temp.push_back(list->at(i));
+  xy->mY.insert(xy->mY.begin(), temp.begin(), temp.end()); 
 }
 
 // $$ stackqueue - Helper word for '$'. Given a stack and queue on the
@@ -1190,8 +1153,16 @@ static void primitive_stackqueue(boost::shared_ptr<XY> const& xy) {
   assert(stack);
   xy->mX.pop_back();
 
-  xy->mX.assign(stack->begin(), stack->end());
-  xy->mY.assign(queue->begin(), queue->end());
+  XYStack stemp;
+  for( int i=0; i < stack->size(); ++i)
+    stemp.push_back(stack->at(i));
+
+  XYQueue qtemp;
+  for( int i=0; i < queue->size(); ++i)
+    qtemp.push_back(queue->at(i));
+
+  xy->mX.assign(stemp.begin(), stemp.end());
+  xy->mY.assign(qtemp.begin(), qtemp.end());
 }
 
 // = equals [X^a^b Y] [X^? Y] 
@@ -1299,7 +1270,7 @@ static void primitive_not(boost::shared_ptr<XY> const& xy) {
   }
   else {
     shared_ptr<XYSequence> l = dynamic_pointer_cast<XYSequence>(o);
-    if(l && l->begin() == l->end())
+    if(l && l->size() == 0)
       xy->mX.push_back(msp(new XYInteger(1)));
     else
       xy->mX.push_back(msp(new XYInteger(0)));
@@ -1348,9 +1319,9 @@ static void primitive_nth(boost::shared_ptr<XY> const& xy) {
 	else {
 	  XYSequence::List code;
 	  XYSequence::List code2;
-	  for (XYSequence::iterator it = list->begin(); it != list->end(); ++it) {
+	  for (int i=0; i < list->size(); ++i) {
 	    code.push_back(tail);
-	    code.push_back(*it);
+	    code.push_back(list->at(i));
 	    code.push_back(msp(new XYSymbol("@")));
 	    code.push_back(msp(new XYSymbol("'")));
 	    code.push_back(msp(new XYSymbol("'")));
@@ -1366,8 +1337,8 @@ static void primitive_nth(boost::shared_ptr<XY> const& xy) {
       else if (headlist) {
 	XYSequence::List code;
 	XYSequence::List code2;
-	for (XYSequence::iterator it = headlist->begin(); it != headlist->end(); ++it) {
-	  code.push_back(*it);
+	for (int i=0; i < headlist->size(); ++ i) {
+	  code.push_back(headlist->at(i));
 	  code.push_back(list);
 	  code.push_back(msp(new XYSymbol("@")));			
 	  code.push_back(msp(new XYSymbol("'")));
@@ -1488,8 +1459,8 @@ static void primitive_parse(boost::shared_ptr<XY> const& xy) {
   xy->mX.pop_back();
 
   vector<string> strings;
-  for(XYSequence::iterator it = tokens->begin(); it!=tokens->end(); ++it) {
-    shared_ptr<XYString> s = dynamic_pointer_cast<XYString>(*it);
+  for (int i=0; i < tokens->size(); ++i) {
+    shared_ptr<XYString> s = dynamic_pointer_cast<XYString>(tokens->at(i));
     assert(s);
     strings.push_back(s->mValue);
   }
@@ -1549,7 +1520,10 @@ static void primitive_clone(boost::shared_ptr<XY> const& xy) {
   assert(o);
   xy->mX.pop_back();
 
-  xy->mX.push_back(msp(new XYList(o->begin(), o->end())));
+  shared_ptr<XYList> r(new XYList());
+  for (int i=0; i < o->size(); ++i)
+    r->mList.push_back(o->at(i));
+  xy->mX.push_back(r);
 }
 
 // XYTimeLimit
@@ -1691,26 +1665,24 @@ void XY::match(OutputIterator out,
                shared_ptr<XYObject> object,
                shared_ptr<XYObject> pattern,
                shared_ptr<XYSequence> sequence,
-               XYSequence::iterator it) {
+               int i) {
   shared_ptr<XYSequence> object_list = dynamic_pointer_cast<XYSequence>(object);
   shared_ptr<XYSequence> pattern_list = dynamic_pointer_cast<XYSequence>(pattern);
   shared_ptr<XYSymbol> pattern_symbol = dynamic_pointer_cast<XYSymbol>(pattern);
   if (object_list && pattern_list) {
-    XYSequence::iterator pit = pattern_list->begin(),
-                         oit = object_list->begin(); 
-    for(;
-        pit != pattern_list->end() && oit != object_list->end(); 
-        ++pit, ++oit) {
-      match(out, (*oit), (*pit), object_list, oit);
+    int pi = 0;
+    int oi = 0;
+    for(pi=0, oi=0; pi < pattern_list->size() && oi < object_list->size(); ++pi, ++oi) {
+      match(out, object_list->at(oi), pattern_list->at(pi), object_list, oi);
     }
     // If there are more pattern items than there are list items,
     // set the pattern value to null.
-    while(pit != pattern_list->end()) {
-      shared_ptr<XYSymbol> s = dynamic_pointer_cast<XYSymbol>(*pit);
+    while(pi < pattern_list->size()) {
+      shared_ptr<XYSymbol> s = dynamic_pointer_cast<XYSymbol>(pattern_list->at(pi));
       if (s) {
         *out++ = make_pair(s->mValue, msp(new XYList()));
       }
-      ++pit;
+      ++pi;
     }
   }
   else if(pattern_list && !object_list) {
@@ -1719,13 +1691,13 @@ void XY::match(OutputIterator out,
     // 42 [ [[a A]] a A ] -> 42 []
     shared_ptr<XYList> list(new XYList());
     list->mList.push_back(object);
-    match(out, list, pattern, sequence, it);
+    match(out, list, pattern, sequence, i);
   }
   else if(pattern_symbol) {
     string uppercase = pattern_symbol->mValue;
     to_upper(uppercase);
     if (uppercase == pattern_symbol->mValue) {
-      *out++ = make_pair(pattern_symbol->mValue, new XYSlice(sequence, it, sequence->end()));
+      *out++ = make_pair(pattern_symbol->mValue, new XYSlice(sequence, i, sequence->size()));
     }
     else
       *out++ = make_pair(pattern_symbol->mValue, object);
@@ -1738,14 +1710,14 @@ void XY::getPatternValues(shared_ptr<XYObject> pattern, OutputIterator out) {
   if (list) {
     assert(mX.size() >= list->size());
     shared_ptr<XYList> stack(new XYList(mX.end() - list->size(), mX.end()));
-    match(out, stack, pattern, stack, stack->begin());
+    match(out, stack, pattern, stack, 0);
     mX.resize(mX.size() - list->size());
   }
   else {
     shared_ptr<XYObject> o = mX.back();
     mX.pop_back();
     shared_ptr<XYList> list(new XYList());
-    match(out, o, pattern, list, list->end());
+    match(out, o, pattern, list, list->size());
   }
 }
  
@@ -1756,8 +1728,8 @@ void XY::replacePattern(XYEnv const& env, shared_ptr<XYObject> object, OutputIte
   if (list) {
     // Recurse through the list replacing variables as needed
     shared_ptr<XYList> new_list(new XYList());
-    for(XYSequence::iterator it = list->begin(); it != list->end(); ++it) 
-      replacePattern(env, *it, back_inserter(new_list->mList));
+    for(int i=0; i < list->size(); ++i)
+      replacePattern(env, list->at(i), back_inserter(new_list->mList));
     *out++ = new_list;
   }
   else if (symbol) {

@@ -205,10 +205,6 @@ class XYSequence : public XYObject
     DD(divide);
     DD(power);
 
-    // Returns iterators to access the sequence
-    virtual iterator begin() = 0;
-    virtual iterator end() = 0;
-
     // Returns the size of the sequence
     virtual size_t size() = 0;
 
@@ -238,8 +234,6 @@ class XYList : public XYSequence
     template <class InputIterator> XYList(InputIterator first, InputIterator last);
     virtual std::string toString(bool parse) const;
     virtual void eval1(boost::shared_ptr<XY> const& xy);
-    virtual iterator begin();
-    virtual iterator end();
     virtual size_t size();
     virtual boost::shared_ptr<XYObject> at(size_t n);
     virtual boost::shared_ptr<XYObject> head();
@@ -252,24 +246,20 @@ class XYSlice : public XYSequence
 {
   public:
     // The original sequence we are a slice of
-    // Need to keep a reference to the original to ensure 
-    // it doesn't get destroyed while the slice is active.
-    boost::shared_ptr<XYObject> mOriginal;
+    boost::shared_ptr<XYSequence> mOriginal;
 
     // The start of the slice. 
-    XYSequence::iterator mBegin;
+    int mBegin;
 
     // The end of the slice.
-    XYSequence::iterator mEnd;
+    int mEnd;
 
   public:
-    XYSlice(boost::shared_ptr<XYObject> original, 
-            XYSequence::iterator start, 
-            XYSequence::iterator end);
+    XYSlice(boost::shared_ptr<XYSequence> original, 
+            int start, 
+            int end);
     virtual std::string toString(bool parse) const;
     virtual void eval1(boost::shared_ptr<XY> const& xy);
-    virtual iterator begin();
-    virtual iterator end();
     virtual size_t size();
     virtual boost::shared_ptr<XYObject> at(size_t n);
     virtual boost::shared_ptr<XYObject> head();
@@ -296,8 +286,6 @@ class XYJoin : public XYSequence
            boost::shared_ptr<XYSequence> second); 
     virtual std::string toString(bool parse) const;
     virtual void eval1(boost::shared_ptr<XY> const& xy);
-    virtual XYSequence::iterator begin();
-    virtual XYSequence::iterator end();
     virtual size_t size();
     virtual boost::shared_ptr<XYObject> at(size_t n);
     virtual boost::shared_ptr<XYObject> head();
@@ -434,7 +422,7 @@ class XY  : public boost::enable_shared_from_this<XY> {
                boost::shared_ptr<XYObject> object,
                boost::shared_ptr<XYObject> pattern,
                boost::shared_ptr<XYSequence> sequence,
-               XYSequence::iterator it);
+               int i);
 
     // Given a pattern list of symbols (which can contain
     // nested lists of symbols), store in the environment
