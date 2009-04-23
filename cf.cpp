@@ -1561,6 +1561,22 @@ bool XYTimeLimit::check(XY* xy) {
   return (now - mStart >= mMilliseconds);
 }
 
+// XYError
+XYError::XYError(shared_ptr<XY> const& xy, code c) :
+  mXY(xy),
+  mCode(c)
+{
+}
+
+string XYError::message() {
+  switch(mCode) {
+  case LIMIT_REACHED:
+    return "Time limit to run code has been exceeded.";
+  default:
+    return "Unknown error.";
+  }
+}
+
 // XY
 XY::XY() {
   mP["+"]   = msp(new XYPrimitive("+", primitive_addition));
@@ -1602,8 +1618,8 @@ XY::XY() {
 void XY::checkLimits() {
   for(XYLimits::iterator it = mLimits.begin(); it != mLimits.end(); ++it) {
     if ((*it)->check(this)) {
-      // This limit was reached, stop executing and throw the limit.
-      throw *it;
+      // This limit was reached, stop executing and throw the error
+      throw XYError(shared_from_this(), XYError::LIMIT_REACHED);
     }
   }
 }

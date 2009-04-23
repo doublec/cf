@@ -100,8 +100,8 @@ int main(int argc, char* argv[]) {
       }
     }
   }
-  catch(shared_ptr<XYLimit> limit) {
-    cout << "Time limit to run code has been exceeded." << endl;
+  catch(XYError& error) {
+    cout << error.message() << endl;
   }
 
   return 0;

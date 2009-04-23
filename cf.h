@@ -349,6 +349,27 @@ class XYTimeLimit : public XYLimit {
   virtual bool check(XY* xy);
 };
 
+// An object that gets thrown when an error occurs
+class XYError {
+ public:
+  // The error codes
+  enum code {
+    LIMIT_REACHED
+  };
+
+  // The interpreter state at the time of the error
+  boost::shared_ptr<XY> mXY;
+
+  // What error occurred
+  code mCode;
+  
+ public:
+  XYError(boost::shared_ptr<XY> const& xy, code c);
+
+  // A textual representation of the error
+  std::string message();
+};
+
 // The environment maps names to objects
 typedef std::map<std::string, boost::shared_ptr<XYObject> > XYEnv;
 typedef std::vector<boost::shared_ptr<XYObject> > XYStack;
