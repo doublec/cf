@@ -1516,6 +1516,55 @@ static void primitive_split(boost::shared_ptr<XY> const& xy) {
   xy->mX.push_back(list);
 }
 
+// sdrop [X^seq^n Y] [X^{...} Y] 
+// drops n items from the beginning of the sequence
+static void primitive_sdrop(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
+
+  shared_ptr<XYNumber> n(dynamic_pointer_cast<XYNumber>(xy->mX.back()));
+  xy_assert(n, XYError::TYPE);
+  xy->mX.pop_back();
+  
+  shared_ptr<XYString>   str(dynamic_pointer_cast<XYString>(xy->mX.back()));
+  shared_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  xy_assert(str || seq, XYError::TYPE);
+  xy->mX.pop_back();
+
+  if (str) {
+    if (n->as_uint() >= str->mValue.size())
+      xy->mX.push_back(msp(new XYString("")));
+    else
+      xy->mX.push_back(msp(new XYString(str->mValue.substr(n->as_uint()))));
+  }
+  else {
+    // TODO
+    assert(1 == 0);
+  }
+}
+
+// stake [X^seq^n Y] [X^{...} Y] 
+// takes n items from the beginning of the sequence
+static void primitive_stake(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
+
+  shared_ptr<XYNumber> n(dynamic_pointer_cast<XYNumber>(xy->mX.back()));
+  xy_assert(n, XYError::TYPE);
+  xy->mX.pop_back();
+  
+  shared_ptr<XYString>   str(dynamic_pointer_cast<XYString>(xy->mX.back()));
+  shared_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  xy_assert(str || seq, XYError::TYPE);
+  xy->mX.pop_back();
+
+  if (str) {
+    xy->mX.push_back(msp(new XYString(str->mValue.substr(0, n->as_uint()))));
+  }
+  else {
+    // TODO
+    assert(1 == 0);
+  }
+}
+
 // Forward declare tokenize function for tokenize primitive
 template <class InputIterator, class OutputIterator>
 void tokenize(InputIterator first, InputIterator last, OutputIterator out);
@@ -1729,6 +1778,8 @@ XY::XY() {
   mP["clone"]   = msp(new XYPrimitive("clone", primitive_clone));
   mP["to-string"] = msp(new XYPrimitive("to-string", primitive_to_string));
   mP["split"] = msp(new XYPrimitive("split", primitive_split));
+  mP["sdrop"] = msp(new XYPrimitive("sdrop", primitive_sdrop));
+  mP["stake"] = msp(new XYPrimitive("stake", primitive_stake));
 }
 
 void XY::checkLimits() {
