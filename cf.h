@@ -538,6 +538,19 @@ void parse(std::string s, OutputIterator out) {
   parse(tokens.begin(), tokens.end(), out);
 }
 
+// Assert a condition is true and throw an XYError if it is not
+#define xy_assert(condition, code) \
+  xy_assert_impl((condition), (code), xy, __FILE__, __LINE__)
+
+inline void xy_assert_impl(bool condition, 
+			   XYError::code c, 
+			   boost::shared_ptr<XY> const& xy, 
+			   char const* file, 
+			   int line) {
+  if (!condition)
+    throw XYError(xy, c, file, line);
+}
+
 #endif // cf_h
 // Copyright (C) 2009 Chris Double. All Rights Reserved.
 // The original author of this code can be contacted at: chris.double@double.co.nz

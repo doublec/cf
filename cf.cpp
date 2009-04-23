@@ -26,14 +26,6 @@ using namespace std;
 using namespace boost;
 using namespace boost::lambda;
 
-// Assert a condition is true and throw an XYError if it is not
-#define xy_assert(condition, code) xy_assert_impl((condition), (code), xy, __FILE__, __LINE__)
-
-void xy_assert_impl(bool condition, XYError::code c, shared_ptr<XY> const& xy, char const* file, int line) {
-  if (!condition)
-    throw XYError(xy, c, file, line);
-}
-
 // Given an input string, unescape any special characters
 string unescape(string s) {
   string r1 = replace_all_copy(s, "\\\"", "\"");
