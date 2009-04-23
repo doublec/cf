@@ -169,6 +169,11 @@ parse    - given a list of tokens, return a list of cf objects
 getline  - get a line of input from the user
 millis   - returns number of milliseconds since 1970/1/1.
 enum     - given a number, returns a list of elements from 0 to n-1.
+clone    - creates a copy of the object on the stack
+to-string - leaves a string representation of the object on the stack
+split     - ( string seperators -- seq ) splits a string
+sdrop     - ( seq n -- seq ) removes n items from the sequence
+stake     - ( seq n -- seq ) returns a sequence with the first n elements
 
 Numbers can be floats or integers. Integers can be of any length. For example:
 
