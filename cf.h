@@ -162,19 +162,6 @@ class XYSymbol : public XYObject
     virtual int compare(boost::shared_ptr<XYObject> rhs);
 };
 
-// A string
-class XYString : public XYObject
-{
-  public:
-    std::string mValue;
-
-  public:
-    XYString(std::string v);
-    virtual std::string toString(bool parse) const;
-    virtual void eval1(boost::shared_ptr<XY> const& xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs);
-};
-
 // A shuffle symbol describes pattern to rearrange the stack.
 class XYShuffle : public XYObject
 {
@@ -219,6 +206,24 @@ class XYSequence : public XYObject
 
     // Concatenate two sequences
     virtual boost::shared_ptr<XYSequence> join(boost::shared_ptr<XYSequence> const& rhs) = 0;
+};
+
+// A string
+class XYString : public XYSequence
+{
+  public:
+    std::string mValue;
+
+  public:
+    XYString(std::string v);
+    virtual std::string toString(bool parse) const;
+    virtual void eval1(boost::shared_ptr<XY> const& xy);
+    virtual int compare(boost::shared_ptr<XYObject> rhs);
+    virtual size_t size();
+    virtual boost::shared_ptr<XYObject> at(size_t n);
+    virtual boost::shared_ptr<XYObject> head();
+    virtual boost::shared_ptr<XYSequence> tail();
+    virtual boost::shared_ptr<XYSequence> join(boost::shared_ptr<XYSequence> const& rhs);
 };
 
 // A list of objects. Can include other nested

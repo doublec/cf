@@ -480,6 +480,65 @@ int XYString::compare(shared_ptr<XYObject> rhs) {
   return mValue.compare(o->mValue);
 }
 
+size_t XYString::size()
+{
+  return mValue.size();
+}
+
+shared_ptr<XYObject> XYString::at(size_t n)
+{
+  return msp(new XYInteger(mValue[n]));
+}
+
+shared_ptr<XYObject> XYString::head()
+{
+  assert(mValue.size() > 0);
+  return msp(new XYInteger(mValue[0]));
+}
+
+shared_ptr<XYSequence> XYString::tail()
+{
+  if (mValue.size() <= 1) 
+    return msp(new XYString(""));
+
+  return msp(new XYString(mValue.substr(1)));
+}
+
+boost::shared_ptr<XYSequence> XYString::join(boost::shared_ptr<XYSequence> const& rhs)
+{
+  XYString const* rhs_string = dynamic_cast<XYString const*>(rhs.get());
+  if (rhs_string) {
+    if (this->shared_from_this().use_count() == 2) {
+      mValue += rhs_string->mValue;
+      return dynamic_pointer_cast<XYSequence>(this->shared_from_this());
+    }
+
+    return msp(new XYString(mValue + rhs_string->mValue));
+  }
+
+  shared_ptr<XYSequence> self(dynamic_pointer_cast<XYSequence>(shared_from_this()));
+
+  if (dynamic_cast<XYJoin const*>(rhs.get())) {
+    // If the reference to rhs is unique then we can modify the object itself.
+    if (rhs.unique()) {    
+      shared_ptr<XYJoin> result(dynamic_pointer_cast<XYJoin>(rhs));
+      result->mSequences.push_front(self);
+      return result;
+    }
+    else {
+      // Pointer is shared, we have to copy the data
+      shared_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
+      shared_ptr<XYJoin> result(new XYJoin());
+      result->mSequences.push_back(self);
+      result->mSequences.insert(result->mSequences.end(), 
+		  	        join_rhs->mSequences.begin(), join_rhs->mSequences.end());
+      return result;
+    }
+  }
+
+  return msp(new XYJoin(self, rhs));
+}
+
 // XYShuffle
 XYShuffle::XYShuffle(string v) { 
   vector<string> result;
