@@ -88,8 +88,8 @@ int main(int argc, char* argv[]) {
   // limit exception is thrown.
   xy->mLimits.push_back(msp(new XYTimeLimit(1000)));
 
-  try {
-    while (cin.good()) {
+  while (cin.good()) {
+    try {
       string input;
       xy->print();
       cout << "ok ";
@@ -99,9 +99,9 @@ int main(int argc, char* argv[]) {
 	xy->eval();
       }
     }
-  }
-  catch(XYError& error) {
-    cout << error.message() << endl;
+    catch(XYError& error) {
+      cout << error.message() << endl;
+      }
   }
 
   return 0;
