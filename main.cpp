@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
     }
     catch(XYError& error) {
       cout << error.message() << endl;
-      }
+    }
   }
 
   return 0;
