@@ -80,7 +80,13 @@ int main(int argc, char* argv[]) {
 
   if (argc > 1) {
     // Load all files given on the command line in order
-    eval_files(xy, argv + 1, argv + argc);
+    try {
+      eval_files(xy, argv + 1, argv + argc);
+    }
+    catch(XYError& error) {
+      cout << error.message() << endl;
+      xy.reset(new XY());
+    }
   }
 
   // Limit test. If any line input by the user takes

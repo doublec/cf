@@ -978,7 +978,7 @@ static void primitive_power(boost::shared_ptr<XY> const& xy) {
 static void primitive_floor(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(xy->mX.back());
-  assert(n);
+  xy_assert(n, XYError::TYPE);
   xy->mX.pop_back();
 
   xy->mX.push_back(n->floor());
@@ -988,7 +988,7 @@ static void primitive_floor(boost::shared_ptr<XY> const& xy) {
 static void primitive_set(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
   shared_ptr<XYSymbol> name = dynamic_pointer_cast<XYSymbol>(xy->mX.back());
-  assert(name);
+  xy_assert(name, XYError::TYPE);
   xy->mX.pop_back();
 
   shared_ptr<XYObject> value = xy->mX.back();
@@ -1001,7 +1001,7 @@ static void primitive_set(boost::shared_ptr<XY> const& xy) {
 static void primitive_get(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   shared_ptr<XYSymbol> name = dynamic_pointer_cast<XYSymbol>(xy->mX.back());
-  assert(name);
+  xy_assert(name, XYError::TYPE);
   xy->mX.pop_back();
 
   XYEnv::iterator it = xy->mEnv.find(name->mValue);
@@ -1052,7 +1052,7 @@ static void primitive_pattern_ss(boost::shared_ptr<XY> const& xy) {
 
   // Get the pattern from the stack
   shared_ptr<XYSequence> pattern = dynamic_pointer_cast<XYSequence>(xy->mX.back());
-  assert(pattern);
+  xy_assert(pattern, XYError::TYPE);
   xy->mX.pop_back();
   assert(pattern->size() != 0);
 
@@ -1070,7 +1070,7 @@ static void primitive_pattern_ss(boost::shared_ptr<XY> const& xy) {
 
     // Append to stack
     list = dynamic_pointer_cast<XYList>(list->mList[0]);
-    assert(list);
+    xy_assert(list, XYError::TYPE);
     xy->mX.insert(xy->mX.end(), list->mList.begin(), list->mList.end());
   }
 }
@@ -1081,7 +1081,7 @@ static void primitive_pattern_sq(boost::shared_ptr<XY> const& xy) {
 
   // Get the pattern from the stack
   shared_ptr<XYSequence> pattern = dynamic_pointer_cast<XYSequence>(xy->mX.back());
-  assert(pattern);
+  xy_assert(pattern, XYError::TYPE);
   xy->mX.pop_back();
   assert(pattern->size() != 0);
 
@@ -1099,7 +1099,7 @@ static void primitive_pattern_sq(boost::shared_ptr<XY> const& xy) {
 
     // Prepend to queue
     list = dynamic_pointer_cast<XYList>(list->mList[0]);
-    assert(list);
+    xy_assert(list, XYError::TYPE);
     xy->mY.insert(xy->mY.begin(), list->mList.begin(), list->mList.end());
   }
 }
@@ -1108,7 +1108,7 @@ static void primitive_pattern_sq(boost::shared_ptr<XY> const& xy) {
 static void primitive_dip(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
   shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
-  assert(list);
+  xy_assert(list, XYError::TYPE);
   xy->mX.pop_back();
 
   shared_ptr<XYObject> o = xy->mX.back();
@@ -1125,7 +1125,7 @@ static void primitive_dip(boost::shared_ptr<XY> const& xy) {
 static void primitive_reverse(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
-  assert(list);
+  xy_assert(list, XYError::TYPE);
   xy->mX.pop_back();
 
   shared_ptr<XYList> reversed(new XYList());
@@ -1202,7 +1202,7 @@ static void primitive_join(boost::shared_ptr<XY> const& xy) {
 static void primitive_stack(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   shared_ptr<XYSequence> list  = dynamic_pointer_cast<XYSequence>(xy->mX.back());
-  assert(list);
+  xy_assert(list, XYError::TYPE);
   xy->mX.pop_back();
 
   shared_ptr<XYList> stack(new XYList(xy->mX.begin(), xy->mX.end()));
@@ -1222,11 +1222,11 @@ static void primitive_stackqueue(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYSequence> queue = dynamic_pointer_cast<XYSequence>(xy->mX.back());
-  assert(queue);
+  xy_assert(queue, XYError::TYPE);
   xy->mX.pop_back();
 
   shared_ptr<XYSequence> stack = dynamic_pointer_cast<XYSequence>(xy->mX.back());
-  assert(stack);
+  xy_assert(stack, XYError::TYPE);
   xy->mX.pop_back();
 
   XYStack stemp;
@@ -1357,7 +1357,7 @@ static void primitive_nth(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
-  assert(list);
+  xy_assert(list, XYError::TYPE);
   xy->mX.pop_back();
 
   shared_ptr<XYObject> index(xy->mX.back());
@@ -1366,7 +1366,7 @@ static void primitive_nth(boost::shared_ptr<XY> const& xy) {
 
   shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(index);
   shared_ptr<XYSequence> s = dynamic_pointer_cast<XYSequence>(index);
-  assert(n || s);
+  xy_assert(n || s, XYError::TYPE);
 
   if (n) {
     // Index is a number, do a direct index into the list
@@ -1511,7 +1511,7 @@ static void primitive_tokenize(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYString> s(dynamic_pointer_cast<XYString>(xy->mX.back()));
-  assert(s);
+  xy_assert(s, XYError::TYPE);
   xy->mX.pop_back();
 
   vector<string> tokens;
@@ -1530,13 +1530,13 @@ static void primitive_parse(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYSequence> tokens(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
-  assert(tokens);
+  xy_assert(tokens, XYError::TYPE);
   xy->mX.pop_back();
 
   vector<string> strings;
   for (int i=0; i < tokens->size(); ++i) {
     shared_ptr<XYString> s = dynamic_pointer_cast<XYString>(tokens->at(i));
-    assert(s);
+    xy_assert(s, XYError::TYPE);
     strings.push_back(s->mValue);
   }
 
@@ -1576,7 +1576,7 @@ static void primitive_millis(boost::shared_ptr<XY> const& xy) {
 static void primitive_enum(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(xy->mX.back());
-  assert(n);
+  xy_assert(n, XYError::TYPE);
   xy->mX.pop_back();
 
   int value = n->as_uint();
@@ -1592,7 +1592,7 @@ static void primitive_clone(boost::shared_ptr<XY> const& xy) {
   // Implemented to work around an XYJoin limitation
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   shared_ptr<XYSequence> o = dynamic_pointer_cast<XYSequence>(xy->mX.back());
-  assert(o);
+  xy_assert(o, XYError::TYPE);
   xy->mX.pop_back();
 
   shared_ptr<XYList> r(new XYList());
@@ -1647,6 +1647,10 @@ string XYError::message() {
 
   case SYMBOL_NOT_FOUND:
     str << "Symbol not found";
+    break;
+
+  case TYPE:
+    str << "Type error";
     break;
 
   default:

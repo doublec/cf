@@ -356,6 +356,7 @@ class XYError {
   enum code {
     STACK_UNDERFLOW,
     SYMBOL_NOT_FOUND,
+    TYPE,
     LIMIT_REACHED
   };
 
