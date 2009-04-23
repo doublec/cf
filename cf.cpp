@@ -485,6 +485,11 @@ size_t XYString::size()
   return mValue.size();
 }
 
+void XYString::pushBackInto(List& list) {
+  for(string::iterator it = mValue.begin(); it != mValue.end(); ++it)
+    list.push_back(msp(new XYInteger(*it)));
+}
+
 shared_ptr<XYObject> XYString::at(size_t n)
 {
   return msp(new XYInteger(mValue[n]));
@@ -632,6 +637,11 @@ size_t XYList::size()
   return mList.size();
 }
 
+void XYList::pushBackInto(List& list) {
+  for(List::iterator it = mList.begin(); it != mList.end(); ++it)
+    list.push_back(*it);
+}
+
 shared_ptr<XYObject> XYList::at(size_t n)
 {
   return mList[n];
@@ -711,6 +721,11 @@ void XYSlice::eval1(shared_ptr<XY> const& xy) {
 size_t XYSlice::size()
 {
   return mEnd - mBegin;
+}
+
+void XYSlice::pushBackInto(List& list) {
+  for (int i = mBegin; i != mEnd; ++i)
+    list.push_back(mOriginal->at(i));
 }
 
 shared_ptr<XYObject> XYSlice::at(size_t n)
@@ -793,7 +808,6 @@ size_t XYJoin::size()
 shared_ptr<XYObject> XYJoin::at(size_t n)
 {
   assert(n < size());
-  
   size_t s = 0;
   for(iterator it = mSequences.begin(); it != mSequences.end(); ++it) {
     size_t b = s;
@@ -803,6 +817,13 @@ shared_ptr<XYObject> XYJoin::at(size_t n)
   }
 
   assert(1 == 0);
+}
+
+void XYJoin::pushBackInto(List& list)
+{  
+  for(iterator it = mSequences.begin(); it != mSequences.end(); ++it) {
+    (*it)->pushBackInto(list);
+  }
 }
 
 shared_ptr<XYObject> XYJoin::head()
@@ -1000,8 +1021,7 @@ static void primitive_unquote(boost::shared_ptr<XY> const& xy) {
 
   if (list) {
     XYStack temp;
-    for (int i=0; i < list->size(); ++i)
-      temp.push_back(list->at(i));
+    list->pushBackInto(temp);
 
     xy->mY.insert(xy->mY.begin(), temp.begin(), temp.end());
   }
@@ -1097,8 +1117,7 @@ static void primitive_dip(boost::shared_ptr<XY> const& xy) {
 
   xy->mY.push_front(o);
   XYStack temp;
-  for (int i=0; i < list->size(); ++i)
-    temp.push_back(list->at(i));
+  list->pushBackInto(temp);
   xy->mY.insert(xy->mY.begin(), temp.begin(), temp.end());
 }
 
@@ -1110,8 +1129,7 @@ static void primitive_reverse(boost::shared_ptr<XY> const& xy) {
   xy->mX.pop_back();
 
   shared_ptr<XYList> reversed(new XYList());
-  for(int i=0; i < list->size(); ++i)
-    reversed->mList.push_back(list->at(i));
+  list->pushBackInto(reversed->mList);
   reverse(reversed->mList.begin(), reversed->mList.end());
   xy->mX.push_back(reversed);
 }
@@ -1194,8 +1212,7 @@ static void primitive_stack(boost::shared_ptr<XY> const& xy) {
   xy->mX.push_back(queue);
   xy->mY.push_front(msp(new XYSymbol("$$")));
   XYStack temp;
-  for(int i=0; i < list->size(); ++i)
-    temp.push_back(list->at(i));
+  list->pushBackInto(temp);
   xy->mY.insert(xy->mY.begin(), temp.begin(), temp.end()); 
 }
 
@@ -1213,8 +1230,7 @@ static void primitive_stackqueue(boost::shared_ptr<XY> const& xy) {
   xy->mX.pop_back();
 
   XYStack stemp;
-  for( int i=0; i < stack->size(); ++i)
-    stemp.push_back(stack->at(i));
+  stack->pushBackInto(stemp);
 
   XYQueue qtemp;
   for( int i=0; i < queue->size(); ++i)
@@ -1580,8 +1596,7 @@ static void primitive_clone(boost::shared_ptr<XY> const& xy) {
   xy->mX.pop_back();
 
   shared_ptr<XYList> r(new XYList());
-  for (int i=0; i < o->size(); ++i)
-    r->mList.push_back(o->at(i));
+  o->pushBackInto(r->mList);
   xy->mX.push_back(r);
 }
 

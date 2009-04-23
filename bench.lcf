@@ -3,41 +3,41 @@ always copied. The following show's times to run for adding an item to
 the head of a list for various sizes of list.
 
 > [[ 1 swap. ,] repeat. [[] swap..drop.] time.] headtest set
-> "Adding to the head of a list:" printnl
-> "1000 = " write 1000 headtest.printnl
-> "2000 = " write 2000 headtest.printnl
-> "3000 = " write 3000 headtest.printnl
-> "4000 = " write 4000 headtest.printnl
-> "5000 = " write 5000 headtest.printnl
+> "Adding to the head of a list:" println
+> "1000 = " write 1000 headtest.println
+> "2000 = " write 2000 headtest.println
+> "3000 = " write 3000 headtest.println
+> "4000 = " write 4000 headtest.println
+> "5000 = " write 5000 headtest.println
 
 Tail is also bad:
 
 > [[ 1 ,] repeat. [[] swap..drop.] time.] tailtest set
-> "Adding to the tail of a list:" printnl
-> "1000 = " write 1000 tailtest.printnl
-> "2000 = " write 2000 tailtest.printnl
-> "3000 = " write 3000 tailtest.printnl
-> "4000 = " write 4000 tailtest.printnl
-> "5000 = " write 5000 tailtest.printnl
+> "Adding to the tail of a list:" println
+> "1000 = " write 1000 tailtest.println
+> "2000 = " write 2000 tailtest.println
+> "3000 = " write 3000 tailtest.println
+> "4000 = " write 4000 tailtest.println
+> "5000 = " write 5000 tailtest.println
 
 Appending two lists:
 
 > [[ [1] ,] repeat. [[] swap..drop.] time.] appendtest set
-> "Appending two lists:" printnl
-> "1000 = " write 1000 appendtest.printnl
-> "2000 = " write 2000 appendtest.printnl
-> "3000 = " write 3000 appendtest.printnl
-> "4000 = " write 4000 appendtest.printnl
-> "5000 = " write 5000 appendtest.printnl
+> "Appending two lists:" println
+> "1000 = " write 1000 appendtest.println
+> "2000 = " write 2000 appendtest.println
+> "3000 = " write 3000 appendtest.println
+> "4000 = " write 4000 appendtest.println
+> "5000 = " write 5000 appendtest.println
 
 Unconsing:
 
-> "Uncons:" printnl
+> "Uncons:" println
 > [dup. [ [[[a A]] A] (] repeat.swap. 1 repeat. swap. [ . drop. ] time. ] unconstest set
-> "1000 = " write 1000 unconstest.printnl
-> "2000 = " write 2000 unconstest.printnl
-> "3000 = " write 3000 unconstest.printnl
-> "4000 = " write 4000 unconstest.printnl
-> "5000 = " write 5000 unconstest.printnl
+> "1000 = " write 1000 unconstest.println
+> "2000 = " write 2000 unconstest.println
+> "3000 = " write 3000 unconstest.println
+> "4000 = " write 4000 unconstest.println
+> "5000 = " write 5000 unconstest.println
 
 

@@ -195,6 +195,9 @@ class XYSequence : public XYObject
     // Returns the size of the sequence
     virtual size_t size() = 0;
 
+    // Inserts all elements of this sequence into the C++ container
+    virtual void pushBackInto(List& list) = 0;
+
     // Returns the element at index 'n'
     virtual boost::shared_ptr<XYObject> at(size_t n) = 0;
 
@@ -220,6 +223,7 @@ class XYString : public XYSequence
     virtual void eval1(boost::shared_ptr<XY> const& xy);
     virtual int compare(boost::shared_ptr<XYObject> rhs);
     virtual size_t size();
+    virtual void pushBackInto(List& list);
     virtual boost::shared_ptr<XYObject> at(size_t n);
     virtual boost::shared_ptr<XYObject> head();
     virtual boost::shared_ptr<XYSequence> tail();
@@ -240,6 +244,7 @@ class XYList : public XYSequence
     virtual std::string toString(bool parse) const;
     virtual void eval1(boost::shared_ptr<XY> const& xy);
     virtual size_t size();
+    virtual void pushBackInto(List& list);
     virtual boost::shared_ptr<XYObject> at(size_t n);
     virtual boost::shared_ptr<XYObject> head();
     virtual boost::shared_ptr<XYSequence> tail();
@@ -266,6 +271,7 @@ class XYSlice : public XYSequence
     virtual std::string toString(bool parse) const;
     virtual void eval1(boost::shared_ptr<XY> const& xy);
     virtual size_t size();
+    virtual void pushBackInto(List& list);
     virtual boost::shared_ptr<XYObject> at(size_t n);
     virtual boost::shared_ptr<XYObject> head();
     virtual boost::shared_ptr<XYSequence> tail();
@@ -292,6 +298,7 @@ class XYJoin : public XYSequence
     virtual std::string toString(bool parse) const;
     virtual void eval1(boost::shared_ptr<XY> const& xy);
     virtual size_t size();
+    virtual void pushBackInto(List& list);
     virtual boost::shared_ptr<XYObject> at(size_t n);
     virtual boost::shared_ptr<XYObject> head();
     virtual boost::shared_ptr<XYSequence> tail();
