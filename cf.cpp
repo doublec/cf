@@ -1493,6 +1493,29 @@ static void primitive_count(boost::shared_ptr<XY> const& xy) {
   }
 }
 
+// split [X^string^seps Y] [X^{...} Y] 
+// Splits a string into an array of strings, splitting
+// on the specified characters.
+static void primitive_split(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
+
+  shared_ptr<XYString> seps(dynamic_pointer_cast<XYString>(xy->mX.back()));
+  xy_assert(seps, XYError::TYPE);
+  xy->mX.pop_back();
+
+  shared_ptr<XYString> str(dynamic_pointer_cast<XYString>(xy->mX.back()));
+  xy_assert(str, XYError::TYPE);
+  xy->mX.pop_back();
+
+  vector<string> result;
+  split(result, str->mValue, is_any_of(seps->mValue));
+ 
+  shared_ptr<XYList> list(new XYList());
+  for (vector<string>::iterator it = result.begin(); it != result.end(); ++it)
+    list->mList.push_back(msp(new XYString(*it)));
+  xy->mX.push_back(list);
+}
+
 // Forward declare tokenize function for tokenize primitive
 template <class InputIterator, class OutputIterator>
 void tokenize(InputIterator first, InputIterator last, OutputIterator out);
@@ -1705,6 +1728,7 @@ XY::XY() {
   mP["enum"]   = msp(new XYPrimitive("+", primitive_enum));
   mP["clone"]   = msp(new XYPrimitive("clone", primitive_clone));
   mP["to-string"] = msp(new XYPrimitive("to-string", primitive_to_string));
+  mP["split"] = msp(new XYPrimitive("split", primitive_split));
 }
 
 void XY::checkLimits() {
