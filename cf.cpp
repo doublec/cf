@@ -1783,6 +1783,25 @@ static void primitive_if(boost::shared_ptr<XY> const& xy) {
   } 
 }
 
+// ? find [X^seq^elt Y] -> [X^index Y]
+static void primitive_find(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
+  shared_ptr<XYObject> elt(xy->mX.back());
+  xy->mX.pop_back();
+
+  shared_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  xy_assert(seq, XYError::TYPE);
+  xy->mX.pop_back();
+
+  int i=0;
+  for (i=0; i < seq->size(); ++i) {
+    if(seq->at(i)->compare(elt) == 0)
+      break;
+  }
+
+  xy->mX.push_back(msp(new XYInteger(i)));
+}
+
 // XYTimeLimit
 XYTimeLimit::XYTimeLimit(unsigned int milliseconds) :
   mMilliseconds(milliseconds) {
@@ -1893,6 +1912,7 @@ XY::XY() {
   mP["foldl"] = msp(new XYPrimitive("foldl", primitive_foldl));
   mP["foldr"] = msp(new XYPrimitive("foldr", primitive_foldr));
   mP["if"] = msp(new XYPrimitive("if", primitive_if));
+  mP["?"] = msp(new XYPrimitive("?", primitive_find));
 }
 
 void XY::checkLimits() {

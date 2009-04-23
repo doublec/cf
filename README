@@ -177,6 +177,7 @@ stake     - ( seq n -- seq ) returns a sequence with the first n elements
 foldl     - ( seq seed q -- seq ) left fold 
 foldr     - ( seq seed q -- seq ) right fold 
 if        - ( bool then else -- )
+?         - ( seq elt -- index ) find
 
 Numbers can be floats or integers. Integers can be of any length. For example:
 
