@@ -1005,7 +1005,7 @@ static void primitive_get(boost::shared_ptr<XY> const& xy) {
   xy->mX.pop_back();
 
   XYEnv::iterator it = xy->mEnv.find(name->mValue);
-  assert(it != xy->mEnv.end());
+  xy_assert(it != xy->mEnv.end(), XYError::SYMBOL_NOT_FOUND);
 
   shared_ptr<XYObject> value = (*it).second;
   xy->mX.push_back(value);
@@ -1643,6 +1643,10 @@ string XYError::message() {
 
   case STACK_UNDERFLOW:
     str << "Stack underflow";
+    break;
+
+  case SYMBOL_NOT_FOUND:
+    str << "Symbol not found";
     break;
 
   default:
