@@ -9,6 +9,7 @@
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/bind.hpp>
 #include "cf.h"
+#include "socket.h"
 
 using namespace std;
 using namespace boost;
@@ -76,7 +77,8 @@ void eval_files(shared_ptr<XY> xy, InputIterator first, InputIterator last) {
 }
 
 int main(int argc, char* argv[]) {
-  shared_ptr<XY> xy(new XY());
+  shared_ptr<XY> xy(new BoostXY());
+  install_socket_primitives(xy);
 
   if (argc > 1) {
     // Load all files given on the command line in order

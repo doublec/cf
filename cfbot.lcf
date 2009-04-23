@@ -1,0 +1,16 @@
+Simple IRC Bot
+
+> [ ab-aba socket-writeln ] irc-write set
+> [ "NICK cfbot" irc-write. ] nick set
+> [ "USER cfbot +iw cfbot :$0" irc-write. ] status set
+> [ "JOIN #concatenative" irc-write. ] join set
+> [ [[c m] "PRIVMSG " c , " :" , m , ] ( irc-write. ] say set 
+> [ "irc.freenode.net" "6667" socket a-aa line-channel ab-ba nick. status. ] cfbot set
+> [ ab-aba line-channel-get println ] cfline set
+> [ ab-abaa [line-channel-count]`[ line-channel-get println ] , do. ] cflines set
+
+> [ 
+>   [[c]stack.[[]unstack.c.stack.[[]unstack.]`]`swap.unit.,unstack.] (
+> ] infra set
+
+> [ tokenize parse infra. to-string ] eval set

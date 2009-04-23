@@ -414,6 +414,7 @@ class XY  : public boost::enable_shared_from_this<XY> {
     // Constructor installs any primitives into the
     // environment.
     XY();
+    virtual ~XY() { }
 
     // Check limits. Throw the limit object if it has
     // been exceeded.
@@ -424,10 +425,10 @@ class XY  : public boost::enable_shared_from_this<XY> {
     void print();
 
     // Remove one item from the queue and evaluate it.
-    void eval1();
+    virtual void eval1();
 
     // Evaluate all items in the queue.
-    void eval();
+    virtual void eval();
 
     // Perform a recursive match of pattern values to items
     // in the given stack.
