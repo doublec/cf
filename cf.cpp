@@ -1592,6 +1592,15 @@ static void primitive_clone(boost::shared_ptr<XY> const& xy) {
   xy->mX.push_back(r);
 }
 
+// clone [X^o Y] -> [X^string Y]
+static void primitive_to_string(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
+  shared_ptr<XYObject> o(xy->mX.back());
+  xy->mX.pop_back();
+
+  xy->mX.push_back(msp(new XYString(o->toString(true))));
+}
+
 // XYTimeLimit
 XYTimeLimit::XYTimeLimit(unsigned int milliseconds) :
   mMilliseconds(milliseconds) {
@@ -1695,6 +1704,7 @@ XY::XY() {
   mP["millis"] = msp(new XYPrimitive("millis", primitive_millis));
   mP["enum"]   = msp(new XYPrimitive("+", primitive_enum));
   mP["clone"]   = msp(new XYPrimitive("clone", primitive_clone));
+  mP["to-string"] = msp(new XYPrimitive("to-string", primitive_to_string));
 }
 
 void XY::checkLimits() {
