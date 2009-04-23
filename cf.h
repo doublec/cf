@@ -54,7 +54,7 @@ class XYObject : public boost::enable_shared_from_this<XYObject>
     // queue and some action needs to be taken. For
     // literal objects (numbers, strings, etc) this 
     // involves pushing the object on the stack.
-    virtual void eval1(XY* xy) = 0;
+    virtual void eval1(boost::shared_ptr<XY> const& xy) = 0;
 
     // Convert the object into a string repesentation for
     // printing. if 'parse' is true then the output
@@ -110,7 +110,7 @@ class XYFloat : public XYNumber
     XYFloat(std::string v);
     XYFloat(mpf_class const& v);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(XY* xy);
+    virtual void eval1(boost::shared_ptr<XY> const& xy);
     virtual int compare(boost::shared_ptr<XYObject> rhs);
     DD(add);
     DD(subtract);
@@ -135,7 +135,7 @@ class XYInteger : public XYNumber
     XYInteger(std::string v);
     XYInteger(mpz_class const& v);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(XY* xy);
+    virtual void eval1(boost::shared_ptr<XY> const& xy);
     virtual int compare(boost::shared_ptr<XYObject> rhs);
     DD(add);
     DD(subtract);
@@ -158,7 +158,7 @@ class XYSymbol : public XYObject
   public:
     XYSymbol(std::string v);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(XY* xy);
+    virtual void eval1(boost::shared_ptr<XY> const& xy);
     virtual int compare(boost::shared_ptr<XYObject> rhs);
 };
 
@@ -171,7 +171,7 @@ class XYString : public XYObject
   public:
     XYString(std::string v);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(XY* xy);
+    virtual void eval1(boost::shared_ptr<XY> const& xy);
     virtual int compare(boost::shared_ptr<XYObject> rhs);
 };
 
@@ -185,7 +185,7 @@ class XYShuffle : public XYObject
   public:
     XYShuffle(std::string v);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(XY* xy);
+    virtual void eval1(boost::shared_ptr<XY> const& xy);
     virtual int compare(boost::shared_ptr<XYObject> rhs);
 };
 
@@ -237,7 +237,7 @@ class XYList : public XYSequence
     XYList();
     template <class InputIterator> XYList(InputIterator first, InputIterator last);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(XY* xy);
+    virtual void eval1(boost::shared_ptr<XY> const& xy);
     virtual iterator begin();
     virtual iterator end();
     virtual size_t size();
@@ -267,7 +267,7 @@ class XYSlice : public XYSequence
             XYSequence::iterator start, 
             XYSequence::iterator end);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(XY* xy);
+    virtual void eval1(boost::shared_ptr<XY> const& xy);
     virtual iterator begin();
     virtual iterator end();
     virtual size_t size();
@@ -295,7 +295,7 @@ class XYJoin : public XYSequence
     XYJoin(boost::shared_ptr<XYSequence> first,
            boost::shared_ptr<XYSequence> second); 
     virtual std::string toString(bool parse) const;
-    virtual void eval1(XY* xy);
+    virtual void eval1(boost::shared_ptr<XY> const& xy);
     virtual XYSequence::iterator begin();
     virtual XYSequence::iterator end();
     virtual size_t size();
@@ -312,12 +312,12 @@ class XYPrimitive : public XYObject
 {
   public:
     std::string mName;
-    void (*mFunc)(XY*);
+    void (*mFunc)(boost::shared_ptr<XY> const&);
 
   public:
-    XYPrimitive(std::string name, void (*func)(XY*));
+    XYPrimitive(std::string name, void (*func)(boost::shared_ptr<XY> const&));
     virtual std::string toString(bool parse) const;
-    virtual void eval1(XY* xy);
+    virtual void eval1(boost::shared_ptr<XY> const& xy);
     virtual int compare(boost::shared_ptr<XYObject> rhs);
 };
 
@@ -354,6 +354,7 @@ class XYError {
  public:
   // The error codes
   enum code {
+    STACK_UNDERFLOW,
     LIMIT_REACHED
   };
 
@@ -362,9 +363,14 @@ class XYError {
 
   // What error occurred
   code mCode;
+
+  // Location if available
+  int mLine;
+  char const* mFile;
   
  public:
   XYError(boost::shared_ptr<XY> const& xy, code c);
+  XYError(boost::shared_ptr<XY> const& xy, code c, char const* file, int line);
 
   // A textual representation of the error
   std::string message();

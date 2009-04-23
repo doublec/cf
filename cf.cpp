@@ -26,6 +26,14 @@ using namespace std;
 using namespace boost;
 using namespace boost::lambda;
 
+// Assert a condition is true and throw an XYError if it is not
+#define xy_assert(condition, code) xy_assert_impl((condition), (code), xy, __FILE__, __LINE__)
+
+void xy_assert_impl(bool condition, XYError::code c, shared_ptr<XY> const& xy, char const* file, int line) {
+  if (!condition)
+    throw XYError(xy, c, file, line);
+}
+
 // Given an input string, unescape any special characters
 string unescape(string s) {
   string r1 = replace_all_copy(s, "\\\"", "\"");
@@ -328,7 +336,7 @@ string XYFloat::toString(bool) const {
   return lexical_cast<string>(mValue);
 }
 
-void XYFloat::eval1(XY* xy) {
+void XYFloat::eval1(shared_ptr<XY> const& xy) {
   xy->mX.push_back(shared_from_this());
 }
 
@@ -380,7 +388,7 @@ string XYInteger::toString(bool) const {
   return lexical_cast<string>(mValue);
 }
 
-void XYInteger::eval1(XY* xy) {
+void XYInteger::eval1(shared_ptr<XY> const& xy) {
   xy->mX.push_back(shared_from_this());
 }
 
@@ -424,7 +432,7 @@ string XYSymbol::toString(bool) const {
   return mValue;
 }
 
-void XYSymbol::eval1(XY* xy) {
+void XYSymbol::eval1(shared_ptr<XY> const& xy) {
   XYEnv::iterator it = xy->mP.find(mValue);
   if (it != xy->mP.end())
     // Primitive symbol, execute immediately
@@ -454,7 +462,7 @@ string XYString::toString(bool parse) const {
   return mValue;
 }
 
-void XYString::eval1(XY* xy) {
+void XYString::eval1(shared_ptr<XY> const& xy) {
   xy->mX.push_back(shared_from_this());
 }
 
@@ -481,8 +489,8 @@ string XYShuffle::toString(bool) const {
   return out.str();
 }
 
-void XYShuffle::eval1(XY* xy) {
-  assert(xy->mX.size() >= mBefore.size());
+void XYShuffle::eval1(shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= mBefore.size(), XYError::STACK_UNDERFLOW);
   map<char, shared_ptr<XYObject> > env;
   for(string::reverse_iterator it = mBefore.rbegin(); it != mBefore.rend(); ++it) {
     env[*it] = xy->mX.back();
@@ -550,7 +558,7 @@ string XYList::toString(bool parse) const {
   return s.str();
 }
 
-void XYList::eval1(XY* xy) {
+void XYList::eval1(shared_ptr<XY> const& xy) {
   xy->mX.push_back(shared_from_this());
 }
 
@@ -638,7 +646,7 @@ string XYSlice::toString(bool parse) const {
   return s.str();
 }
 
-void XYSlice::eval1(XY* xy) {
+void XYSlice::eval1(shared_ptr<XY> const& xy) {
   xy->mX.push_back(shared_from_this());
 }
 
@@ -721,7 +729,7 @@ string XYJoin::toString(bool parse) const {
   return s.str();
 }
 
-void XYJoin::eval1(XY* xy) {
+void XYJoin::eval1(shared_ptr<XY> const& xy) {
   xy->mX.push_back(shared_from_this());
 }
 
@@ -845,13 +853,13 @@ boost::shared_ptr<XYSequence> XYJoin::join(boost::shared_ptr<XYSequence> const& 
 }
 
 // XYPrimitive
-XYPrimitive::XYPrimitive(string n, void (*func)(XY*)) : mName(n), mFunc(func) { }
+XYPrimitive::XYPrimitive(string n, void (*func)(shared_ptr<XY> const&)) : mName(n), mFunc(func) { }
 
 string XYPrimitive::toString(bool) const {
   return mName;
 }
 
-void XYPrimitive::eval1(XY* xy) {
+void XYPrimitive::eval1(shared_ptr<XY> const& xy) {
   mFunc(xy);
 }
 
@@ -866,8 +874,8 @@ int XYPrimitive::compare(shared_ptr<XYObject> rhs) {
 // Primitive Implementations
 
 // + [X^lhs^rhs] Y] -> [X^lhs+rhs Y]
-static void primitive_addition(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_addition(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
   shared_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
@@ -880,8 +888,8 @@ static void primitive_addition(XY* xy) {
 }
 
 // - [X^lhs^rhs] Y] -> [X^lhs-rhs Y]
-static void primitive_subtraction(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_subtraction(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
   shared_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
@@ -894,8 +902,8 @@ static void primitive_subtraction(XY* xy) {
 }
 
 // * [X^lhs^rhs] Y] -> [X^lhs*rhs Y]
-static void primitive_multiplication(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_multiplication(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
   shared_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
@@ -908,8 +916,8 @@ static void primitive_multiplication(XY* xy) {
 }
 
 // % [X^lhs^rhs] Y] -> [X^lhs/rhs Y]
-static void primitive_division(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_division(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
   shared_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
@@ -922,8 +930,8 @@ static void primitive_division(XY* xy) {
 }
 
 // ^ [X^lhs^rhs] Y] -> [X^lhs**rhs Y]
-static void primitive_power(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_power(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
   shared_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
@@ -936,8 +944,8 @@ static void primitive_power(XY* xy) {
 }
 
 // _ floor [X^n] Y] -> [X^n Y]
-static void primitive_floor(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_floor(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(xy->mX.back());
   assert(n);
   xy->mX.pop_back();
@@ -946,8 +954,8 @@ static void primitive_floor(XY* xy) {
 }
 
 // set [X^value^name Y] -> [X Y] 
-static void primitive_set(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_set(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
   shared_ptr<XYSymbol> name = dynamic_pointer_cast<XYSymbol>(xy->mX.back());
   assert(name);
   xy->mX.pop_back();
@@ -959,8 +967,8 @@ static void primitive_set(XY* xy) {
 }
 
 // get [X^name Y] [X^value Y]
-static void primitive_get(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_get(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   shared_ptr<XYSymbol> name = dynamic_pointer_cast<XYSymbol>(xy->mX.back());
   assert(name);
   xy->mX.pop_back();
@@ -973,8 +981,8 @@ static void primitive_get(XY* xy) {
 }
 
 // . [X^{O1..On} Y] [X O1^..^On^Y]
-static void primitive_unquote(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_unquote(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   shared_ptr<XYObject> o = xy->mX.back();
   xy->mX.pop_back();
 
@@ -1005,8 +1013,8 @@ static void primitive_unquote(XY* xy) {
 }
 
 // ) [X^{pattern} Y] [X^result Y]
-static void primitive_pattern_ss(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_pattern_ss(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
   // Get the pattern from the stack
   shared_ptr<XYSequence> pattern = dynamic_pointer_cast<XYSequence>(xy->mX.back());
@@ -1034,8 +1042,8 @@ static void primitive_pattern_ss(XY* xy) {
 }
 
 // ( [X^{pattern} Y] [X result^Y]
-static void primitive_pattern_sq(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_pattern_sq(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
   // Get the pattern from the stack
   shared_ptr<XYSequence> pattern = dynamic_pointer_cast<XYSequence>(xy->mX.back());
@@ -1063,8 +1071,8 @@ static void primitive_pattern_sq(XY* xy) {
 }
 
 // ` dip [X^b^{a0..an} Y] [X a0..an^b^Y]
-static void primitive_dip(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_dip(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
   shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(list);
   xy->mX.pop_back();
@@ -1078,8 +1086,8 @@ static void primitive_dip(XY* xy) {
 }
 
 // | reverse [X^{a0..an} Y] [X^{an..a0} Y]
-static void primitive_reverse(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_reverse(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(list);
   xy->mX.pop_back();
@@ -1090,7 +1098,7 @@ static void primitive_reverse(XY* xy) {
 }
 
 // \ quote [X^o Y] [X^{o} Y]
-static void primitive_quote(XY* xy) {
+static void primitive_quote(boost::shared_ptr<XY> const& xy) {
   assert(xy->mY.size() >= 1);
   shared_ptr<XYObject> o = xy->mY.front();
   assert(o);
@@ -1102,8 +1110,8 @@ static void primitive_quote(XY* xy) {
 }
 
 // , join [X^a^b Y] [X^{...} Y]
-static void primitive_join(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_join(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
   shared_ptr<XYObject> rhs = xy->mX.back();
   assert(rhs);
   xy->mX.pop_back();
@@ -1154,8 +1162,8 @@ static void primitive_join(XY* xy) {
 // has stack effect ( stack queue -- stack queue ). $ will
 // call this program with X and Y on the stack, and replace
 // X and Y with the results.
-static void primitive_stack(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_stack(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   shared_ptr<XYSequence> list  = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(list);
   xy->mX.pop_back();
@@ -1171,8 +1179,8 @@ static void primitive_stack(XY* xy) {
 
 // $$ stackqueue - Helper word for '$'. Given a stack and queue on the
 // stack, replaces the existing stack and queue with them.
-static void primitive_stackqueue(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_stackqueue(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYSequence> queue = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(queue);
@@ -1187,8 +1195,8 @@ static void primitive_stackqueue(XY* xy) {
 }
 
 // = equals [X^a^b Y] [X^? Y] 
-static void primitive_equals(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_equals(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYObject> rhs = xy->mX.back();
   assert(rhs);
@@ -1205,8 +1213,8 @@ static void primitive_equals(XY* xy) {
 }
 
 // <  [X^a^b Y] [X^? Y] 
-static void primitive_lessThan(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_lessThan(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYObject> rhs = xy->mX.back();
   assert(rhs);
@@ -1223,8 +1231,8 @@ static void primitive_lessThan(XY* xy) {
 }
 
 // >  [X^a^b Y] [X^? Y] 
-static void primitive_greaterThan(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_greaterThan(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYObject> rhs = xy->mX.back();
   assert(rhs);
@@ -1241,8 +1249,8 @@ static void primitive_greaterThan(XY* xy) {
 }
 
 // <=  [X^a^b Y] [X^? Y] 
-static void primitive_lessThanEqual(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_lessThanEqual(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYObject> rhs = xy->mX.back();
   assert(rhs);
@@ -1259,8 +1267,8 @@ static void primitive_lessThanEqual(XY* xy) {
 }
 
 // >=  [X^a^b Y] [X^? Y] 
-static void primitive_greaterThanEqual(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_greaterThanEqual(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYObject> rhs = xy->mX.back();
   assert(rhs);
@@ -1278,8 +1286,8 @@ static void primitive_greaterThanEqual(XY* xy) {
 
 
 // not not [X^a Y] [X^? Y] 
-static void primitive_not(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_not(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYObject> o = xy->mX.back();
   assert(o);
@@ -1299,8 +1307,8 @@ static void primitive_not(XY* xy) {
 }
 
 // @ nth [X^n^{...} Y] [X^o Y] 
-static void primitive_nth(XY* xy) {
-  assert(xy->mX.size() >= 2);
+static void primitive_nth(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(list);
@@ -1392,8 +1400,8 @@ static void primitive_nth(XY* xy) {
 }
 
 // print [X^n Y] [X Y] 
-static void primitive_print(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_print(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYObject> o(xy->mX.back());
   assert(o);
@@ -1403,8 +1411,8 @@ static void primitive_print(XY* xy) {
 }
 
 // println [X^n Y] [X Y] 
-static void primitive_println(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_println(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYObject> o(xy->mX.back());
   assert(o);
@@ -1415,8 +1423,8 @@ static void primitive_println(XY* xy) {
 
 
 // write [X^n Y] [X Y] 
-static void primitive_write(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_write(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYObject> o(xy->mX.back());
   assert(o);
@@ -1428,8 +1436,8 @@ static void primitive_write(XY* xy) {
 // count [X^{...} Y] [X^n Y] 
 // Returns the length of any list. If the item at the top of the
 // stack is an atom, returns 1.
-static void primitive_count(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_count(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYObject> o(xy->mX.back());
   assert(o);
@@ -1453,8 +1461,8 @@ void tokenize(InputIterator first, InputIterator last, OutputIterator out);
 
 // tokenize [X^s Y] [X^{tokens} Y] 
 // Given a string, returns a list of cf tokens
-static void primitive_tokenize(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_tokenize(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYString> s(dynamic_pointer_cast<XYString>(xy->mX.back()));
   assert(s);
@@ -1472,8 +1480,8 @@ static void primitive_tokenize(XY* xy) {
 
 // parse [X^{tokens} Y] [X^{...} Y] 
 // Given a list of tokens, parses it and returns the program
-static void primitive_parse(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_parse(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
   shared_ptr<XYSequence> tokens(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   assert(tokens);
@@ -1493,7 +1501,7 @@ static void primitive_parse(XY* xy) {
 
 // getline [X Y] [X^".." Y] 
 // Get a line of input from the user
-static void primitive_getline(XY* xy) {
+static void primitive_getline(boost::shared_ptr<XY> const& xy) {
   assert(cin.good());
 
   string line;
@@ -1506,7 +1514,7 @@ static void primitive_getline(XY* xy) {
 // millis [X Y] [X^m Y]
 // Runs the number of milliseconds on the stack since
 // 1 Janary 1970.
-static void primitive_millis(XY* xy) {
+static void primitive_millis(boost::shared_ptr<XY> const& xy) {
   using namespace boost::posix_time;
   using namespace boost::gregorian;
 
@@ -1519,8 +1527,8 @@ static void primitive_millis(XY* xy) {
 }
 
 // enum [X^n Y] -> [X^{0..n} Y]
-static void primitive_enum(XY* xy) {
-  assert(xy->mX.size() >= 1);
+static void primitive_enum(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(xy->mX.back());
   assert(n);
   xy->mX.pop_back();
@@ -1533,10 +1541,10 @@ static void primitive_enum(XY* xy) {
 }
 
 // clone [X^o Y] -> [X^o Y]
-static void primitive_clone(XY* xy) {
+static void primitive_clone(boost::shared_ptr<XY> const& xy) {
   // TODO: Only works for sequences for now
   // Implemented to work around an XYJoin limitation
-  assert(xy->mX.size() >= 1);
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   shared_ptr<XYSequence> o = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   assert(o);
   xy->mX.pop_back();
@@ -1564,17 +1572,43 @@ bool XYTimeLimit::check(XY* xy) {
 // XYError
 XYError::XYError(shared_ptr<XY> const& xy, code c) :
   mXY(xy),
-  mCode(c)
+  mCode(c),
+  mLine(-1),
+  mFile(0)
+{
+}
+
+XYError::XYError(shared_ptr<XY> const& xy, code c, char const* file, int line) :
+  mXY(xy),
+  mCode(c),
+  mLine(line),
+  mFile(file)
 {
 }
 
 string XYError::message() {
+  ostringstream str;
   switch(mCode) {
   case LIMIT_REACHED:
-    return "Time limit to run code has been exceeded.";
+    str << "Time limit to run code has been exceeded";
+    break;
+
+  case STACK_UNDERFLOW:
+    str << "Stack underflow";
+    break;
+
   default:
-    return "Unknown error.";
+    return "Unknown error";
   }
+
+  if (mLine >= 0)
+    str << " at line " << mLine;
+
+  if (mFile)
+    str << " in file " << mFile;
+
+  str << ".";
+  return str.str();
 }
 
 // XY
@@ -1638,7 +1672,7 @@ void XY::eval1() {
   assert(o);
 
   mY.pop_front();
-  o->eval1(this);
+  o->eval1(shared_from_this());
 }
 
 void XY::eval() {
