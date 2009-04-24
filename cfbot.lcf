@@ -1,12 +1,14 @@
 Simple IRC Bot
 
 The channel, server, port and nickname words are used to configure where
-the bot lives:
+the bot lives. 'timelimit' is the maximum amount of time a eval request is
+allowed to run before it is aborted.
 
-> "irc.freenode.net" server   set
-> "6667"             port     set
-> "#doublec"         channel  set
-> "cfbot"            nickname set
+> "irc.freenode.net" server    set
+> "6667"             port      set
+> "#doublec"         channel   set
+> "cfbot"            nickname  set
+> 10000              timelimit set
 
 When connected to the server we deal with an 'ircbot' structure. This is
 a list containing the following elements:
@@ -84,7 +86,7 @@ Build the expression to evaluate on another thread:
 
 > [ [[b c] c [[[b channel;]]`unit.,eval,'.,say,'.,[drop.],]map. [b]`] ( ] build-thread-queue set
 
-> [ messages-to-eval.build-thread-queue.[[]swap.make-thread spawn]map.drop.] handle-messages set
+> [ messages-to-eval.build-thread-queue.[[]swap.timelimit;make-limited-thread spawn]map.drop.] handle-messages set
 > [ handle-messages.bot-loop. ] bot-loop set
 
 > [ bot-connect.bot-init. ] start-bot set

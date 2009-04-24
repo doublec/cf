@@ -1942,7 +1942,8 @@ void XY::stdioHandler(boost::system::error_code const& err) {
 void XY::evalHandler() {
   try {
     eval1();
-    checkLimits();
+    if (mY.size() != 0)
+      checkLimits();
     if (mY.size() == 0 && mRepl) {
       print();
       boost::asio::streambuf buffer;
