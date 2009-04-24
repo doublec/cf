@@ -9,6 +9,7 @@
 #include <boost/bind.hpp>
 #include "cf.h"
 #include "socket.h"
+#include "threads.h"
 
 using namespace std;
 using namespace boost;
@@ -80,6 +81,7 @@ int main(int argc, char* argv[]) {
 
   shared_ptr<XY> xy(new XY(io));
   install_socket_primitives(xy);
+  install_thread_primitives(xy);
 
   if (argc > 1) {
     // Load all files given on the command line in order

@@ -424,6 +424,9 @@ class XY  : public boost::enable_shared_from_this<XY> {
     // interpreter.
     XYLimits mLimits;
 
+    // True if we are a 'repl' based interpreter
+    bool mRepl;
+
   public:
     // Constructor installs any primitives into the
     // environment.

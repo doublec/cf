@@ -1858,7 +1858,8 @@ string XYError::message() {
 // XY
 XY::XY(boost::asio::io_service& service) :
   mService(service),
-  mInputStream(service, ::dup(STDIN_FILENO)) {
+  mInputStream(service, ::dup(STDIN_FILENO)),
+  mRepl(true) {
   mP["+"]   = msp(new XYPrimitive("+", primitive_addition));
   mP["-"]   = msp(new XYPrimitive("-", primitive_subtraction));
   mP["*"]   = msp(new XYPrimitive("*", primitive_multiplication));
@@ -1923,7 +1924,7 @@ void XY::stdioHandler(boost::system::error_code const& err) {
 void XY::evalHandler() {
   try {
     eval1();
-    if (mY.size() == 0) {
+    if (mY.size() == 0 && mRepl) {
       print();
       cout << "ok ";
       cout.flush();
@@ -1946,7 +1947,8 @@ void XY::evalHandler() {
       mY.clear();
       mX.push_back(stack);
       mX.push_back(queue);
-      mService.post(bind(&XY::evalHandler, shared_from_this()));
+      if (mRepl) 
+	mService.post(bind(&XY::evalHandler, shared_from_this()));
     }
   }
 }

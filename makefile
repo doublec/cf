@@ -10,14 +10,17 @@ all: cf testcf
 cf.o: cf.cpp cf.h
 	g++ $(INCLUDE) -g -c -o cf.o cf.cpp
 
-socket.o: socket.cpp cf.h
+socket.o: socket.cpp socket.h cf.h
 	g++ $(INCLUDE) -g -c -o socket.o socket.cpp
+
+threads.o: threads.cpp threads.h cf.h
+	g++ $(INCLUDE) -g -c -o threads.o threads.cpp
 
 main.o: main.cpp cf.h
 	g++ $(INCLUDE) -g -c -o main.o main.cpp
 
-cf: cf.o socket.o main.o
-	g++ $(INCLUDE) -g -o cf cf.o socket.o main.o $(LIB) -lgmp -lgmpxx -lboost_system -lpthread
+cf: cf.o socket.o threads.o main.o
+	g++ $(INCLUDE) -g -o cf cf.o socket.o threads.o main.o $(LIB) -lgmp -lgmpxx -lboost_system -lpthread
 
 testmain.o: testmain.cpp cf.h
 	g++ $(INCLUDE) -c -o testmain.o testmain.cpp
