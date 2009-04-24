@@ -1994,6 +1994,14 @@ void XY::evalHandler() {
       error->mList.push_back(stack);
       error->mList.push_back(queue);
       mX.push_back(error);
+      // We've completed. Inform waiting interpreters we're done.
+      if (!mRepl && mWaiting.size() > 0) {
+	for(vector<shared_ptr<XY> >::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
+	  (*it)->mService.post(bind(&XY::evalHandler, (*it)));
+	}
+	mWaiting.clear();
+      }
+
       if (mRepl) {
 	for(XYLimits::iterator it = mLimits.begin(); it != mLimits.end(); ++it) {
 	  (*it)->start(this);

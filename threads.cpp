@@ -148,7 +148,6 @@ static void primitive_thread_join(boost::shared_ptr<XY> const& xy) {
   shared_ptr<XYThread> thread(dynamic_pointer_cast<XYThread>(xy->mX.back()));
   xy_assert(thread, XYError::TYPE);
 
-  // Need a more efficient way of doing this.
   if (thread->mXY->mY.size() != 0) {
     xy->mY.push_front(msp(new XYPrimitive("thread-join", primitive_thread_join)));
     thread->mXY->mWaiting.push_back(xy);
