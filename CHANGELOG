@@ -1,3 +1,16 @@
+Changes since 522bd3
+====================
+1) Lots of new things that need to be document. I'll get to this in
+   time .
+2) foldl and foldr added as primitives.
+3) split, sdrop and stake added as primitives.
+4) Simple socket support.
+5) Simple thread support (non-native, lightweight threads).
+6) An irc bot example in cfbot.lcf
+7) Interpreters are evaluated using asynchronous event queues
+   provided by Boost. This is where we get the lightweight
+   threading from.
+
 Changes since d12443
 ====================
 1) The 'nth' primitive is now '@'.
