@@ -46,6 +46,10 @@
 ** [..][f]each **
 [[[]]`swap;unit.`,uncons;unit.`,while.drop.] each set
 
+** [...] [pred] filter **
+** [1 2 3] [2 <] filter => [1 2 3] [] [dup.[2 <].[swap.cons.][drop.]if ] foldl **
+[ [[s p] s [] [dup.p.[swap.cons.][drop.]if] foldl|] ( ] filter set
+
 ** repeat [X^n^o Y] [X^{o1..on} Y] **
 [ [ [n o] o n 1 - [ 0 = ] [drop.] [ o repeat. , ] cond. ] ( ] repeat set
  
