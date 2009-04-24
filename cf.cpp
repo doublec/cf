@@ -9,8 +9,6 @@
 #include <algorithm>
 #include <functional>
 #include <boost/lexical_cast.hpp>
-#include <boost/lambda/lambda.hpp>
-#include <boost/lambda/bind.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
@@ -24,7 +22,6 @@
 
 using namespace std;
 using namespace boost;
-using namespace boost::lambda;
 
 // Given an input string, unescape any special characters
 string unescape(string s) {
@@ -40,30 +37,6 @@ string escape(string s) {
   return r2;
 }
  
-// This lovely piece of code is to allow XY objects to be called within
-// Boost lambda expressions, even though they are actually shared_ptr
-// objects instead of XYObjects.
-namespace boost {
-  namespace lambda {
-    template <class R> struct function_adaptor< R (XYObject::*)() const >
-    {
-      template <class T> struct sig { typedef R type; };
-      template <class RET>
-       static string apply(R (XYObject::*func)() const, shared_ptr<XYObject>const & o) {
-          return (o.get()->*func)();
-        }
-    };
-    template <class R, class D> struct function_adaptor< R (XYObject::*)(D) const >
-    {
-      template <class T> struct sig { typedef R type; };
-      template <class RET>
-       static string apply(R (XYObject::*func)(D) const, shared_ptr<XYObject>const & o,D d) {
-          return (o.get()->*func)(d);
-        }
-    };
-  }
-}
-
 // Macro to implement double dispatch operations in class
 #define DD_IMPL(class, name)						\
   shared_ptr<XYObject> class::name(XYObject* rhs) { return rhs->name(this); } \
@@ -615,7 +588,8 @@ XYList::XYList(InputIterator first, InputIterator last) {
 string XYList::toString(bool parse) const {
   ostringstream s;
   s << "[ ";
-  for_each(mList.begin(), mList.end(), s << bind(&XYObject::toString, _1, parse) << " ");
+  for (XYSequence::const_iterator it = mList.begin(); it != mList.end(); ++it)
+    s << (*it)->toString(parse) << " ";
   s << "]";
   return s.str();
 }
@@ -1870,7 +1844,9 @@ string XYError::message() {
 }
 
 // XY
-XY::XY() {
+XY::XY(boost::asio::io_service& service) :
+  mService(service),
+  mInputStream(service, ::dup(STDIN_FILENO)) {
   mP["+"]   = msp(new XYPrimitive("+", primitive_addition));
   mP["-"]   = msp(new XYPrimitive("-", primitive_subtraction));
   mP["*"]   = msp(new XYPrimitive("*", primitive_multiplication));
@@ -1925,9 +1901,11 @@ void XY::checkLimits() {
 }
 
 void XY::print() {
-  for_each(mX.begin(), mX.end(), cout << bind(&XYObject::toString, _1, true) << " ");
+  for (XYStack::iterator it = mX.begin(); it != mX.end(); ++it)
+    cout << (*it)->toString(true) << " ";
   cout << " -> ";
-  for_each(mY.begin(), mY.end(), cout << bind(&XYObject::toString, _1, true) << " ");
+  for (XYQueue::iterator it = mY.begin(); it != mY.end(); ++it)
+    cout << (*it)->toString(true) << " ";
   cout << endl;
 }
 
@@ -2080,12 +2058,14 @@ bool is_shuffle_pattern(string s) {
 // Return regex for tokenizing integers
 boost::xpressive::sregex re_integer() {
   using namespace boost::xpressive;
+  using boost::xpressive::optional;
   return optional('-') >> +_d;
 }
 
 // Return regex for tokenizing floats
 boost::xpressive::sregex re_float() {
   using namespace boost::xpressive;
+  using boost::xpressive::optional;
   return optional('-') >> +_d >> '.' >> *_d;
 }
 

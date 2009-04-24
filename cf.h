@@ -10,6 +10,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/xpressive/xpressive.hpp>
+#include <boost/asio.hpp>
 #include <gmpxx.h>
 
 // Helper function for creating a shared pointer of a type.
@@ -390,6 +391,18 @@ typedef std::vector<boost::shared_ptr<XYLimit> > XYLimits;
 // the interpreter.
 class XY  : public boost::enable_shared_from_this<XY> {
   public:
+    // io service for handling asynchronous events
+    // The lifetime of the service is controlled by
+    // the owner of the XY object and should generally
+    // be around for the entire lifetime of the running program.
+    boost::asio::io_service& mService;
+
+    // Input stream, allow asyncronous reading of data from stdin.
+    boost::asio::posix::stream_descriptor mInputStream;
+
+    // Input buffer for stdio
+    boost::asio::streambuf mInputBuffer;
+
     // Environment holding mappings of names
     // to objects.
     XYEnv mEnv;
@@ -413,7 +426,7 @@ class XY  : public boost::enable_shared_from_this<XY> {
   public:
     // Constructor installs any primitives into the
     // environment.
-    XY();
+    XY(boost::asio::io_service& service);
     virtual ~XY() { }
 
     // Check limits. Throw the limit object if it has
@@ -491,7 +504,6 @@ void tokenize(InputIterator first, InputIterator last, OutputIterator out)
 template <class InputIterator, class OutputIterator>
 InputIterator parse(InputIterator first, InputIterator last, OutputIterator out) {
   using namespace std;
-  using namespace boost;
   using namespace boost::xpressive;
 
   while (first != last) {
@@ -509,7 +521,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
       *out++ = msp(new XYInteger(token));
     }
     else if(token == "[") {
-      shared_ptr<XYList> list(new XYList());
+      boost::shared_ptr<XYList> list(new XYList());
       first = parse(first, last, back_inserter(list->mList));
       *out++ = list;
     }

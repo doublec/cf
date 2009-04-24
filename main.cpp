@@ -6,14 +6,12 @@
 #include <iterator>
 #include <algorithm>
 #include <functional>
-#include <boost/lambda/lambda.hpp>
-#include <boost/lambda/bind.hpp>
+#include <boost/bind.hpp>
 #include "cf.h"
 #include "socket.h"
 
 using namespace std;
 using namespace boost;
-using namespace boost::lambda;
 
 // A literate file. See literate.lcf for details.
 void eval_literate_file(shared_ptr<XY> xy, char* filename) {
@@ -73,11 +71,40 @@ void eval_file(shared_ptr<XY> xy, char* filename) {
 
 template <class InputIterator>
 void eval_files(shared_ptr<XY> xy, InputIterator first, InputIterator last) {
-  for_each(first, last, bind(eval_file, xy, _1));
+  for(InputIterator it = first; it != last; ++it)
+    eval_file(xy, *it);
+}
+
+void inputHandler(shared_ptr<XY> const& xy, boost::system::error_code const& err);
+
+void evalHandler(shared_ptr<XY> const& xy) {
+  xy->eval();
+  xy->print();
+  cout << "ok ";
+  cout.flush();
+  boost::asio::async_read_until(xy->mInputStream,
+				xy->mInputBuffer,
+				"\n",
+				bind(inputHandler, xy, boost::asio::placeholders::error));
+}
+
+void inputHandler(shared_ptr<XY> const& xy, boost::system::error_code const& err) {
+  if (!err) {
+    istream stream(&xy->mInputBuffer);
+    string input;
+    std::getline(stream, input);
+    parse(input, back_inserter(xy->mY));
+    xy->mService.post(bind(&evalHandler, xy));
+  }
+  else if (err != boost::asio::error::eof) {
+    cout << "Input error: " << err << endl;
+  }
 }
 
 int main(int argc, char* argv[]) {
-  shared_ptr<XY> xy(new BoostXY());
+  boost::asio::io_service io;
+
+  shared_ptr<XY> xy(new XY(io));
   install_socket_primitives(xy);
 
   if (argc > 1) {
@@ -87,7 +114,7 @@ int main(int argc, char* argv[]) {
     }
     catch(XYError& error) {
       cout << error.message() << endl;
-      xy.reset(new XY());
+      xy.reset(new XY(io));
     }
   }
 
@@ -95,21 +122,17 @@ int main(int argc, char* argv[]) {
   // longer than this time period to run then a
   // limit exception is thrown.
   //xy->mLimits.push_back(msp(new XYTimeLimit(10000)));
+  xy->print();
+  cout << "ok ";
+  cout.flush();
+  while (true) {
+    boost::asio::async_read_until(xy->mInputStream,
+				  xy->mInputBuffer,
+				  "\n",
+				  bind(inputHandler, xy, boost::asio::placeholders::error));
 
-  while (cin.good()) {
-    try {
-      string input;
-      xy->print();
-      cout << "ok ";
-      getline(cin, input);
-      if (cin.good()) {
-	parse(input, back_inserter(xy->mY));
-	xy->eval();
-      }
-    }
-    catch(XYError& error) {
-      cout << error.message() << endl;
-    }
+    xy->mService.run();
+    xy->mService.reset();
   }
 
   return 0;

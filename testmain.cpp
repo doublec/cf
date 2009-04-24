@@ -21,6 +21,7 @@ using namespace boost;
 using namespace boost::lambda;
 
 void testParse() {
+  boost::asio::io_service io;
   {
     // Simple number parsing
     XYStack x;
@@ -95,7 +96,7 @@ void testParse() {
 
   {
     // Addition
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("1 2 +", back_inserter(xy->mY));
     BOOST_CHECK(xy->mY.size() == 3);
 
@@ -109,7 +110,7 @@ void testParse() {
 
   {
     // Set/Get
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("[5 +] add5 set", back_inserter(xy->mY));
     BOOST_CHECK(xy->mY.size() == 3);
 
@@ -134,7 +135,7 @@ void testParse() {
 
   {
     // Pattern deconstruction
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("1 2 3 [[a b c] c b a]", back_inserter(xy->mX));
     BOOST_CHECK(xy->mX.size() == 4);
 
@@ -152,7 +153,7 @@ void testParse() {
 
   {
     // Pattern deconstruction 2
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("1 [2 [3]] [[a [b [c]]] c b a]", back_inserter(xy->mX));
     BOOST_CHECK(xy->mX.size() == 3);
 
@@ -169,7 +170,7 @@ void testParse() {
   }
   {
     // Pattern deconstruction 2
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("foo [a a]", back_inserter(xy->mX));
     BOOST_CHECK(xy->mX.size() == 2);
 
@@ -194,7 +195,7 @@ void testParse() {
     list->mList.push_back(msp(new XYSymbol("a")));
 
     shared_ptr<XYList> out(new XYList());
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     xy->replacePattern(env, list, back_inserter(out->mList));
     BOOST_CHECK(out->mList.size() > 0);
     shared_ptr<XYList> result(dynamic_pointer_cast<XYList>(out->mList[0]));
@@ -214,7 +215,7 @@ void testParse() {
     parse("[a [ b a ] a c]", back_inserter(list->mList));
 
     shared_ptr<XYList> out(new XYList());
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     xy->replacePattern(env, list, back_inserter(out->mList));
     BOOST_CHECK(out->mList.size() > 0);
     shared_ptr<XYList> result(dynamic_pointer_cast<XYList>(out->mList[0]));
@@ -224,7 +225,7 @@ void testParse() {
   }
   {
     // Pattern 1 - Stack to Stack
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("1 2 [[a b] b a])", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
@@ -237,7 +238,7 @@ void testParse() {
   }
   {
     // Pattern 2 - Stack to Stack
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("1 2 [[a b] a b [ c [ b ] ]])", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
@@ -250,7 +251,7 @@ void testParse() {
   }
   {
     // Pattern 3 - Stack to Queue
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("[ [a a a +] ] double set 2 double.( 0", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
@@ -263,7 +264,7 @@ void testParse() {
   }
   {
     // Pattern 4 - Stack to Queue - with list deconstruction
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("[1 2 3] [[[a A]] a A] (", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
@@ -276,7 +277,7 @@ void testParse() {
   }
   {
     // Pattern 5 - Stack to Queue - with list to short
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("[1] [[[a A]] a A] (", back_inserter(xy->mY));
     xy->eval();
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
@@ -297,7 +298,7 @@ void testParse() {
   }
   {
     // Shuffle pattern test 2
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("1 2 a-", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
@@ -310,7 +311,7 @@ void testParse() {
   }
   {
     // Shuffle pattern test 3
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("1 2 a-aa", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
@@ -323,7 +324,7 @@ void testParse() {
   }
   {
     // Shuffle pattern test 4
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("1 2 ab-aba", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
@@ -336,7 +337,7 @@ void testParse() {
   }
   {
     // Shuffle pattern test 5
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("1 2 foo-bar", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
@@ -349,7 +350,7 @@ void testParse() {
   }
   {
     // Dip test 1
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("1 2 hello [ + ] ` 4", back_inserter(xy->mY));
     xy->eval();
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
@@ -357,7 +358,7 @@ void testParse() {
   }
   {
     // Join test 1
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("1 2, [ 1 2 ] 2, 2 [1 2], [1 2] [3 4],", back_inserter(xy->mY));
     xy->eval();
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
@@ -365,7 +366,7 @@ void testParse() {
   }
   {
     // stackqueue test 1
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("1 2 [4 5] [ 6 7 ] $$ 9 10 11", back_inserter(xy->mY));
     xy->eval();
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
@@ -373,7 +374,7 @@ void testParse() {
   }
   {
     // stack test 1
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("1 2 [ [3,]`12, ] $ 9 10 11", back_inserter(xy->mY));
     xy->eval();
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
@@ -381,7 +382,7 @@ void testParse() {
   }
   {
     // count test 1
-    shared_ptr<XY> xy(new XY());
+    shared_ptr<XY> xy(new XY(io));
     parse("[1 2 3] count [] count 1 count \"abc\" count \"\" count", back_inserter(xy->mY));
     xy->eval();
     shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));

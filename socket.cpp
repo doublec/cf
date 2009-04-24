@@ -162,10 +162,7 @@ static void primitive_socket(boost::shared_ptr<XY> const& xy) {
   xy_assert(host, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<BoostXY> bxy(dynamic_pointer_cast<BoostXY>(xy));
-  xy_assert(bxy, XYError::TYPE);
-
-  shared_ptr<XYSocket> socket(new XYSocket(bxy->mService));
+  shared_ptr<XYSocket> socket(new XYSocket(xy->mService));
   socket->connect(host->mValue, port->toString(false));
   xy->mX.push_back(socket);
 }
@@ -215,11 +212,9 @@ static void primitive_line_channel_get(boost::shared_ptr<XY> const& xy) {
   xy_assert(channel, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<BoostXY> bxy(dynamic_pointer_cast<BoostXY>(xy));
-  xy_assert(bxy, XYError::TYPE);
-
-  while (channel->mLines.size() == 0)
-    bxy->mService.run_one();
+  while (channel->mLines.size() == 0) {
+    xy->mService.run_one();
+  }
   
   shared_ptr<XYString> line(dynamic_pointer_cast<XYString>(channel->mLines.front()));
   xy_assert(line, XYError::TYPE);
@@ -235,12 +230,10 @@ static void primitive_line_channel_getall(boost::shared_ptr<XY> const& xy) {
   xy_assert(channel, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<BoostXY> bxy(dynamic_pointer_cast<BoostXY>(xy));
-  xy_assert(bxy, XYError::TYPE);
-
   // Block to ensure we get at least one message
-  while (channel->mLines.size() == 0)
-    bxy->mService.run_one();
+  while (channel->mLines.size() == 0) {
+    xy->mService.run_one();
+  }
 
   shared_ptr<XYList> list(new XYList());
   while (channel->mLines.size() != 0) {
@@ -271,16 +264,6 @@ void install_socket_primitives(shared_ptr<XY> const& xy) {
   xy->mP["line-channel-get"] = msp(new XYPrimitive("line-channel-get", primitive_line_channel_get));
   xy->mP["line-channel-getall"] = msp(new XYPrimitive("line-channel-getall", primitive_line_channel_getall));
   xy->mP["line-channel-count"] = msp(new XYPrimitive("line-channel-count", primitive_line_channel_count));
-}
-
-// BoostXY
-BoostXY::BoostXY() {
-}
-
-void BoostXY::eval1() {
-  XY::eval1();
-  mService.poll_one();
-  mService.reset();
 }
 
 // Copyright (C) 2009 Chris Double. All Rights Reserved.

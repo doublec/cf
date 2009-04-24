@@ -23,7 +23,7 @@ testmain.o: testmain.cpp cf.h
 	g++ $(INCLUDE) -c -o testmain.o testmain.cpp
 
 testcf: cf.o testmain.o
-	g++ $(INCLUDE) -o testcf cf.o testmain.o $(LIB) -lgmp -lgmpxx
+	g++ $(INCLUDE) -o testcf cf.o testmain.o $(LIB) -lgmp -lgmpxx  -lboost_system -lpthread
 
 clean: 
 	rm *.o

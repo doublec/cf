@@ -8,21 +8,6 @@
 
 void install_socket_primitives(boost::shared_ptr<XY> const& xy);
 
-// An XY interpreter than has an event loop for handling
-// Boost asynchronous i/o events.
-class BoostXY : public XY {
- public:
-  boost::asio::io_service mService;
-  bool mHasEvents;
-
- public:
-  BoostXY();
-
-  // Runs one step, and processes one event in the Boost
-  // Asynchronous I/O service.
-  virtual void eval1();
-};
-
 #endif // socket_h
 // Copyright (C) 2009 Chris Double. All Rights Reserved.
 // The original author of this code can be contacted at: chris.double@double.co.nz
