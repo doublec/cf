@@ -293,15 +293,24 @@ the translation looks like:
 
 Troubleshooting
 ===============
-There is very little error handling. I have assertions in place 
-but this causes the program to exit when you get types wrong
-or get stack underflows. I'm still thinking of ways of handling
-errors.
+Error handling started of as being C++ assertions so a lot of
+error handling still aborts with a fatal error. 
 
-Currently I'm thinking of capturing the continuation at the time
-of the error and dropping to a debugger allowing inspecting the
-state, changing it, etc. This should allow a very 'programming
-in the debugger' feel to it.
+Most errors that occur as a result of interpreting (programming
+errors, stack underflows, type errors, etc) cause the interpreter drop
+back to the repl with an error object on the stack. The error object
+has the following elements:
+
+  1: The 'error' symbol
+  2. The error message
+  3. The stack at the time of the error
+  4. The queue at the time of the error
+
+From the repl you can manually examine the stacks, modify them
+and restart execution. The following can be used to restart
+given the stack and queue:
+
+  ok [ ab- ] $
 
 Why?
 ====

@@ -1939,15 +1939,26 @@ void XY::evalHandler() {
   }
   catch(XYError& e) {
     if (e.mCode != XYError::WAITING_FOR_ASYNC_EVENT) {
+      // When an error occurs, create a list to hold:
+      // 1: The 'error' symbol
+      // 2. The error message
+      // 3. The stack at the time of the error
+      // 4. The queue at the time of the error
+      // Empty the stack and queue of the current interpreter
+      // and leave the error result on the stack.
       cout << "Error: " << e.message() << endl;
       shared_ptr<XYList> stack(new XYList(mX.begin(), mX.end()));
       shared_ptr<XYList> queue(new XYList(mY.begin(), mY.end()));
-      
+      shared_ptr<XYList> error(new XYList());
+
       mX.clear();
       mY.clear();
-      mX.push_back(msp(new XYString(e.message())));
-      mX.push_back(stack);
-      mX.push_back(queue);
+
+      error->mList.push_back(msp(new XYSymbol("error")));
+      error->mList.push_back(msp(new XYString(e.message())));
+      error->mList.push_back(stack);
+      error->mList.push_back(queue);
+      mX.push_back(error);
       if (mRepl) 
 	mService.post(bind(&XY::evalHandler, shared_from_this()));
     }
