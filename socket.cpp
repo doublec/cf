@@ -223,8 +223,9 @@ static void primitive_line_channel_get(boost::shared_ptr<XY> const& xy) {
   xy_assert(channel, XYError::TYPE);
 
   if (channel->mLines.size() == 0) {
+    channel->mWaiting.push_back(xy);
     xy->mY.push_front(msp(new XYPrimitive("line-channel-get", primitive_line_channel_get)));
-    xy->yield();
+    throw XYError(xy, XYError::WAITING_FOR_ASYNC_EVENT);
   }
     
   xy->mX.pop_back();

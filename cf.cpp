@@ -1955,6 +1955,15 @@ void XY::evalHandler() {
 				    "\n",
 				    bind(&XY::stdioHandler, shared_from_this(), boost::asio::placeholders::error));
     }
+    else if(mY.size() == 0 && !mRepl) {
+      // We've completed. Inform waiting interpreters we're done.
+      if (mWaiting.size() > 0) {
+	for(vector<shared_ptr<XY> >::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
+	  (*it)->mService.post(bind(&XY::evalHandler, (*it)));
+	}
+	mWaiting.clear();
+      }
+    }
     else {
       mService.post(bind(&XY::evalHandler, shared_from_this()));
     }

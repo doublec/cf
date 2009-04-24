@@ -407,6 +407,10 @@ class XY  : public boost::enable_shared_from_this<XY> {
     // Input buffer for stdio
     boost::asio::streambuf mInputBuffer;
 
+    // Set to interpreters that are waiting for
+    // this interpreter to complete (via thread join).
+    std::vector<boost::shared_ptr<XY> > mWaiting;
+
     // Environment holding mappings of names
     // to objects.
     XYEnv mEnv;

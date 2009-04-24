@@ -151,7 +151,8 @@ static void primitive_thread_join(boost::shared_ptr<XY> const& xy) {
   // Need a more efficient way of doing this.
   if (thread->mXY->mY.size() != 0) {
     xy->mY.push_front(msp(new XYPrimitive("thread-join", primitive_thread_join)));
-    xy->yield();
+    thread->mXY->mWaiting.push_back(xy);
+    throw XYError(xy, XYError::WAITING_FOR_ASYNC_EVENT);
   }
 
   xy->mX.pop_back();
