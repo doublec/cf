@@ -9,6 +9,7 @@ allowed to run before it is aborted.
 > "#doublec"         channel   set
 > "cfbot"            nickname  set
 > 10000              timelimit set
+> 200                textlimit set
 
 When connected to the server we deal with an 'ircbot' structure. This is
 a list containing the following elements:
@@ -50,10 +51,7 @@ responses have yet been received.
 Utility words to evaluate cf code. These should probably be in the
 prelude:
 
-> [ 
->   [[c]stack.[[]unstack.c.stack.[[]unstack.]`]`swap.unit.,unstack.] (
-> ] infra set
-> [ tokenize parse infra. to-string 2 sdrop dup. count 2 - stake ] eval set
+> [ tokenize parse [[]]` timelimit;make-limited-thread spawn thread-join to-string 2 sdrop dup. count 2 - stake ] eval set
 
 The following words operate on responses from the server. 
 
@@ -84,9 +82,8 @@ Get all responses, filter for the messages we want
 
 Build the expression to evaluate on another thread:
 
-> [ [[b c] c [[[b channel;]]`unit.,eval,'.,say,'.,[drop.],]map. [b]`] ( ] build-thread-queue set
-
-> [ messages-to-eval.build-thread-queue.[[]swap.timelimit;make-limited-thread spawn]map.drop.] handle-messages set
+> [ dup.count textlimit; < [ ] [ textlimit; stake "...", ] if ] limit-string set
+> [ messages-to-eval.[eval.limit-string.]map.[channel; abc-bca say.drop.][over.unit.]`,each.] handle-messages set
 > [ handle-messages.bot-loop. ] bot-loop set
 
 > [ bot-connect.bot-init. ] start-bot set
