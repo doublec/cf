@@ -1920,6 +1920,12 @@ void XY::stdioHandler(boost::system::error_code const& err) {
     string input;
     std::getline(stream, input);
     parse(input, back_inserter(mY));
+
+    // Start the limit counting here for stdio/repl based code
+    for(XYLimits::iterator it = mLimits.begin(); it != mLimits.end(); ++it) {
+      (*it)->start(this);
+    }
+
     mService.post(bind(&XY::evalHandler, shared_from_this()));
   }
   else if (err != boost::asio::error::eof) {
@@ -1936,6 +1942,7 @@ void XY::stdioHandler(boost::system::error_code const& err) {
 void XY::evalHandler() {
   try {
     eval1();
+    checkLimits();
     if (mY.size() == 0 && mRepl) {
       print();
       boost::asio::streambuf buffer;
@@ -1977,8 +1984,13 @@ void XY::evalHandler() {
       error->mList.push_back(stack);
       error->mList.push_back(queue);
       mX.push_back(error);
-      if (mRepl) 
+      if (mRepl) {
+	for(XYLimits::iterator it = mLimits.begin(); it != mLimits.end(); ++it) {
+	  (*it)->start(this);
+	}
+
 	mService.post(bind(&XY::evalHandler, shared_from_this()));
+      }
     }
   }
 }
