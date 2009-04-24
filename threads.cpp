@@ -70,6 +70,7 @@ static void primitive_make_thread(boost::shared_ptr<XY> const& xy) {
   child->mY.insert(child->mY.begin(), temp.begin(), temp.end());
 
   child->mEnv = xy->mEnv;
+  child->mP = xy->mP;
 
   shared_ptr<XYThread> thread(new XYThread(child, xy));
 

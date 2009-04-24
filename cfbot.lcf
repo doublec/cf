@@ -1,6 +1,6 @@
 Simple IRC Bot
 
-> [ "#doublec" ] channel set
+> [ "#concatenative" ] channel set
 
 > [ ab-aba socket-writeln ] irc-write set
 > [ "NICK cfbot" irc-write. ] nick set
@@ -30,3 +30,8 @@ Simple IRC Bot
 
 > [ cflines. to-eval. channel. swap. say-all. ] eval-messages  set
 > [ eval-messages. eval-loop. ] eval-loop set
+
+> [ cflines. [maybe-eval.]map.[]filter.[[a b c] c [[[a b channel.]]`unit.,eval,'.,say,'.,[ab-],]map. [a b]`] ( ] to-eval2 set
+
+> [ to-eval2. [ [] swap. make-thread spawn ] map. drop. ] eval-messages2 set
+> [ eval-messages2. eval-loop2. ] eval-loop2 set

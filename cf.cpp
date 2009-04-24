@@ -1945,6 +1945,7 @@ void XY::evalHandler() {
       
       mX.clear();
       mY.clear();
+      mX.push_back(msp(new XYString(e.message())));
       mX.push_back(stack);
       mX.push_back(queue);
       if (mRepl) 
