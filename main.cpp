@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
   // Limit test. If any line input by the user takes
   // longer than this time period to run then a
   // limit exception is thrown.
-  xy->mLimits.push_back(msp(new XYTimeLimit(10000)));
+  //xy->mLimits.push_back(msp(new XYTimeLimit(10000)));
 
   while (cin.good()) {
     try {

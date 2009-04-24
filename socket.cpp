@@ -228,6 +228,31 @@ static void primitive_line_channel_get(boost::shared_ptr<XY> const& xy) {
   xy->mX.push_back(line);		     
 }
 
+// line-channel-getall [X^channel Y] -> [X^seq Y]
+static void primitive_line_channel_getall(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
+  shared_ptr<XYLineChannel> channel(dynamic_pointer_cast<XYLineChannel>(xy->mX.back()));
+  xy_assert(channel, XYError::TYPE);
+  xy->mX.pop_back();
+
+  shared_ptr<BoostXY> bxy(dynamic_pointer_cast<BoostXY>(xy));
+  xy_assert(bxy, XYError::TYPE);
+
+  // Block to ensure we get at least one message
+  while (channel->mLines.size() == 0)
+    bxy->mService.run_one();
+
+  shared_ptr<XYList> list(new XYList());
+  while (channel->mLines.size() != 0) {
+    shared_ptr<XYString> line(dynamic_pointer_cast<XYString>(channel->mLines.front()));
+    xy_assert(line, XYError::TYPE);
+    channel->mLines.pop_front();
+    list->mList.push_back(line);
+  }
+  
+  xy->mX.push_back(list);		     
+}
+
 // line-channel-count [X^channel Y] -> [X^n Y]
 static void primitive_line_channel_count(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
@@ -244,6 +269,7 @@ void install_socket_primitives(shared_ptr<XY> const& xy) {
   xy->mP["socket-close"] = msp(new XYPrimitive("socket-close", primitive_socket_close));
   xy->mP["line-channel"] = msp(new XYPrimitive("line-channel", primitive_line_channel));
   xy->mP["line-channel-get"] = msp(new XYPrimitive("line-channel-get", primitive_line_channel_get));
+  xy->mP["line-channel-getall"] = msp(new XYPrimitive("line-channel-getall", primitive_line_channel_getall));
   xy->mP["line-channel-count"] = msp(new XYPrimitive("line-channel-count", primitive_line_channel_count));
 }
 

@@ -1,5 +1,7 @@
 Simple IRC Bot
 
+> [ "#concatenative" ] channel set
+
 > [ ab-aba socket-writeln ] irc-write set
 > [ "NICK cfbot" irc-write. ] nick set
 > [ "USER cfbot +iw cfbot :$0" irc-write. ] status set
@@ -7,10 +9,24 @@ Simple IRC Bot
 > [ [[c m] "PRIVMSG " c , " :" , m , ] ( irc-write. ] say set 
 > [ "irc.freenode.net" "6667" socket a-aa line-channel ab-ba nick. status. ] cfbot set
 > [ ab-aba line-channel-get println ] cfline set
-> [ ab-abaa [line-channel-count]`[ line-channel-get println ] , do. ] cflines set
-
+> [ ab-aba line-channel-getall ] cflines set
+> [ cflines. [println] each. ] pcflines set
 > [ 
 >   [[c]stack.[[]unstack.c.stack.[[]unstack.]`]`swap.unit.,unstack.] (
 > ] infra set
 
 > [ tokenize parse infra. to-string ] eval set
+
+> [ dup. 32 ? sdrop " PRIVMSG" swap. head?. ] privmsg? set
+> [ dup. 32 ? 1 + sdrop dup. 32 ? 1 + sdrop dup. 32 ? stake ] msg-channel set
+> [ dup. 32 ? 1 + sdrop dup. 32 ? 1 + sdrop dup. 32 ? 2 + sdrop ] msg-text set
+> [ swap.msg-channel.= ] channel? set
+> [ msg-text. "cfbot," swap. head?. ] for-bot? set
+
+> [ dup. privmsg?. [ dup. channel. channel?. [ dup. for-bot?. [ msg-text. "cfbot," count sdrop ] [ drop. 0 ] if ] [ drop. 0 ] if ] [ drop. 0 ] if ] maybe-eval set
+
+> [ [maybe-eval.]map2.[] filter.[eval.]map2.] to-eval set
+> [ [ [s c m] m [ "PRIVMSG " c , " :" , swap. , s socket-writeln ] each. s ] ( ] say-all set
+
+> [ cflines. to-eval. channel. swap. say-all. ] eval-messages  set
+> [ eval-messages. eval-loop. ] eval-loop set
