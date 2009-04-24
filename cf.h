@@ -358,6 +358,7 @@ class XYError {
     STACK_UNDERFLOW,
     SYMBOL_NOT_FOUND,
     TYPE,
+    WAITING_FOR_ASYNC_EVENT,
     LIMIT_REACHED
   };
 
@@ -428,6 +429,12 @@ class XY  : public boost::enable_shared_from_this<XY> {
     // environment.
     XY(boost::asio::io_service& service);
     virtual ~XY() { }
+
+    // Handler for asynchronous i/o events
+    void stdioHandler(boost::system::error_code const& err);
+
+    // Handler for asynchronous evaluation events
+    void evalHandler();
 
     // Check limits. Throw the limit object if it has
     // been exceeded.

@@ -12,6 +12,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/bind.hpp>
 #include "cf.h"
 
 // If defined, compiles as a test applicatation that tests
@@ -1443,6 +1444,7 @@ static void primitive_write(boost::shared_ptr<XY> const& xy) {
   xy->mX.pop_back();
 
   cout << o->toString(false);
+  cout.flush();
 }
 
 // count [X^{...} Y] [X^n Y] 
@@ -1583,17 +1585,27 @@ static void primitive_parse(boost::shared_ptr<XY> const& xy) {
   xy->mX.push_back(result);
 }
 
+// Asynchronous handler for getline
+static void getlineHandler(shared_ptr<XY> const& xy, boost::system::error_code const& err) {
+  if (!err) {
+    istream stream(&xy->mInputBuffer);
+    string input;
+    std::getline(stream, input);
+    xy->mX.push_back(msp(new XYString(input)));
+    xy->mService.post(bind(&XY::evalHandler, xy));
+  }
+}
+
 // getline [X Y] [X^".." Y] 
 // Get a line of input from the user
 static void primitive_getline(boost::shared_ptr<XY> const& xy) {
-  assert(cin.good());
-
-  string line;
-  getline(cin, line);
-  assert(cin.good());
-
-  xy->mX.push_back(msp(new XYString(line)));
-}
+  boost::asio::async_read_until(xy->mInputStream,
+				xy->mInputBuffer,
+				"\n",
+				bind(getlineHandler, xy, boost::asio::placeholders::error));
+  
+  throw XYError(xy, XYError::WAITING_FOR_ASYNC_EVENT);
+} 
 
 // millis [X Y] [X^m Y]
 // Runs the number of milliseconds on the stack since
@@ -1891,6 +1903,45 @@ XY::XY(boost::asio::io_service& service) :
   mP["?"] = msp(new XYPrimitive("?", primitive_find));
 }
 
+void XY::stdioHandler(boost::system::error_code const& err) {
+  if (!err) {
+    istream stream(&mInputBuffer);
+    string input;
+    std::getline(stream, input);
+    parse(input, back_inserter(mY));
+    mService.post(bind(&XY::evalHandler, shared_from_this()));
+  }
+  else if (err != boost::asio::error::eof) {
+    cout << "Input error: " << err << endl;
+  }
+  else {
+    cout << "eof" << endl;
+    mService.stop();
+  }
+}
+
+void XY::evalHandler() {
+  try {
+    eval1();
+    if (mY.size() == 0) {
+      print();
+      cout << "ok ";
+      cout.flush();
+      boost::asio::async_read_until(mInputStream,
+				    mInputBuffer,
+				    "\n",
+				    bind(&XY::stdioHandler, shared_from_this(), boost::asio::placeholders::error));
+    }
+    else {
+      mService.post(bind(&XY::evalHandler, shared_from_this()));
+    }
+  }
+  catch(XYError& e) {
+    if (e.mCode != XYError::WAITING_FOR_ASYNC_EVENT)
+      throw e;
+  }
+}
+
 void XY::checkLimits() {
   for(XYLimits::iterator it = mLimits.begin(); it != mLimits.end(); ++it) {
     if ((*it)->check(this)) {
@@ -1910,7 +1961,8 @@ void XY::print() {
 }
 
 void XY::eval1() {
-  assert(mY.size() > 0);
+  if (mY.size() == 0)
+    return;
 
   shared_ptr<XYObject> o = mY.front();
   assert(o);

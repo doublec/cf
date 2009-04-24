@@ -75,32 +75,6 @@ void eval_files(shared_ptr<XY> xy, InputIterator first, InputIterator last) {
     eval_file(xy, *it);
 }
 
-void inputHandler(shared_ptr<XY> const& xy, boost::system::error_code const& err);
-
-void evalHandler(shared_ptr<XY> const& xy) {
-  xy->eval();
-  xy->print();
-  cout << "ok ";
-  cout.flush();
-  boost::asio::async_read_until(xy->mInputStream,
-				xy->mInputBuffer,
-				"\n",
-				bind(inputHandler, xy, boost::asio::placeholders::error));
-}
-
-void inputHandler(shared_ptr<XY> const& xy, boost::system::error_code const& err) {
-  if (!err) {
-    istream stream(&xy->mInputBuffer);
-    string input;
-    std::getline(stream, input);
-    parse(input, back_inserter(xy->mY));
-    xy->mService.post(bind(&evalHandler, xy));
-  }
-  else if (err != boost::asio::error::eof) {
-    cout << "Input error: " << err << endl;
-  }
-}
-
 int main(int argc, char* argv[]) {
   boost::asio::io_service io;
 
@@ -129,7 +103,7 @@ int main(int argc, char* argv[]) {
     boost::asio::async_read_until(xy->mInputStream,
 				  xy->mInputBuffer,
 				  "\n",
-				  bind(inputHandler, xy, boost::asio::placeholders::error));
+				  bind(&XY::stdioHandler, xy, boost::asio::placeholders::error));
 
     xy->mService.run();
     xy->mService.reset();
