@@ -1420,7 +1420,11 @@ static void primitive_print(boost::shared_ptr<XY> const& xy) {
   assert(o);
   xy->mX.pop_back();
 
-  cout << o->toString(true);
+  boost::asio::streambuf buffer;
+  ostream stream(&buffer);
+  stream << o->toString(true);
+
+  boost::asio::write(xy->mOutputStream, buffer);
 }
 
 // println [X^n Y] [X Y] 
@@ -1431,7 +1435,10 @@ static void primitive_println(boost::shared_ptr<XY> const& xy) {
   assert(o);
   xy->mX.pop_back();
 
-  cout << o->toString(true) << endl;
+  boost::asio::streambuf buffer;
+  ostream stream(&buffer);
+  stream << o->toString(true) << endl;
+  boost::asio::write(xy->mOutputStream, buffer);
 }
 
 
@@ -1443,8 +1450,10 @@ static void primitive_write(boost::shared_ptr<XY> const& xy) {
   assert(o);
   xy->mX.pop_back();
 
-  cout << o->toString(false);
-  cout.flush();
+  boost::asio::streambuf buffer;
+  ostream stream(&buffer);
+  stream << o->toString(false);
+  boost::asio::write(xy->mOutputStream, buffer);
 }
 
 // count [X^{...} Y] [X^n Y] 
@@ -1859,6 +1868,7 @@ string XYError::message() {
 XY::XY(boost::asio::io_service& service) :
   mService(service),
   mInputStream(service, ::dup(STDIN_FILENO)),
+  mOutputStream(service, ::dup(STDOUT_FILENO)),
   mRepl(true) {
   mP["+"]   = msp(new XYPrimitive("+", primitive_addition));
   mP["-"]   = msp(new XYPrimitive("-", primitive_subtraction));
@@ -1913,10 +1923,12 @@ void XY::stdioHandler(boost::system::error_code const& err) {
     mService.post(bind(&XY::evalHandler, shared_from_this()));
   }
   else if (err != boost::asio::error::eof) {
-    cout << "Input error: " << err << endl;
+    boost::asio::streambuf buffer;
+    ostream stream(&buffer);
+    stream << "Input error: " << err << endl;
+    boost::asio::write(mOutputStream, buffer);
   }
   else {
-    cout << "eof" << endl;
     mService.stop();
   }
 }
@@ -1926,8 +1938,10 @@ void XY::evalHandler() {
     eval1();
     if (mY.size() == 0 && mRepl) {
       print();
-      cout << "ok ";
-      cout.flush();
+      boost::asio::streambuf buffer;
+      ostream stream(&buffer);
+      stream << "ok ";
+      boost::asio::write(mOutputStream, buffer);
       boost::asio::async_read_until(mInputStream,
 				    mInputBuffer,
 				    "\n",
@@ -1946,7 +1960,11 @@ void XY::evalHandler() {
       // 4. The queue at the time of the error
       // Empty the stack and queue of the current interpreter
       // and leave the error result on the stack.
-      cout << "Error: " << e.message() << endl;
+      boost::asio::streambuf buffer;
+      ostream stream(&buffer);
+      stream << "Error: " << e.message() << endl;
+      boost::asio::write(mOutputStream, buffer);
+
       shared_ptr<XYList> stack(new XYList(mX.begin(), mX.end()));
       shared_ptr<XYList> queue(new XYList(mY.begin(), mY.end()));
       shared_ptr<XYList> error(new XYList());
@@ -1980,12 +1998,16 @@ void XY::checkLimits() {
 }
 
 void XY::print() {
+  boost::asio::streambuf buffer;
+  ostream stream(&buffer);
+
   for (XYStack::iterator it = mX.begin(); it != mX.end(); ++it)
-    cout << (*it)->toString(true) << " ";
-  cout << " -> ";
+    stream << (*it)->toString(true) << " ";
+  stream << " -> ";
   for (XYQueue::iterator it = mY.begin(); it != mY.end(); ++it)
-    cout << (*it)->toString(true) << " ";
-  cout << endl;
+    stream << (*it)->toString(true) << " ";
+  stream << endl;
+  boost::asio::write(mOutputStream, buffer);
 }
 
 void XY::eval1() {

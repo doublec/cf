@@ -401,6 +401,9 @@ class XY  : public boost::enable_shared_from_this<XY> {
     // Input stream, allow asyncronous reading of data from stdin.
     boost::asio::posix::stream_descriptor mInputStream;
 
+    // Output stream, allow asyncronous writing of data to stdout.
+    boost::asio::posix::stream_descriptor mOutputStream;
+
     // Input buffer for stdio
     boost::asio::streambuf mInputBuffer;
 
