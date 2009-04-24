@@ -138,10 +138,32 @@ static void primitive_thread_stacks(boost::shared_ptr<XY> const& xy) {
   xy->mX.push_back(queue);
 }
 
+// thread-join [X^thread Y] -> [X^stack Y]
+// Block current thread until the given thread has completed, leaving
+// its stack on the current thread's stack.
+static void primitive_thread_join(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
+  shared_ptr<XYThread> thread(dynamic_pointer_cast<XYThread>(xy->mX.back()));
+  xy_assert(thread, XYError::TYPE);
+
+  // Need a more efficient way of doing this.
+  if (thread->mXY->mY.size() != 0) {
+    xy->mY.push_front(msp(new XYPrimitive("thread-join", primitive_thread_join)));
+    xy->yield();
+  }
+
+  xy->mX.pop_back();
+
+  shared_ptr<XYList> stack(new XYList(thread->mXY->mX.begin(), thread->mXY->mX.end()));
+
+  xy->mX.push_back(stack);
+}
+
 void install_thread_primitives(shared_ptr<XY> const& xy) {
   xy->mP["make-limited-thread"] = msp(new XYPrimitive("make-limited-thread", primitive_make_limited_thread));
   xy->mP["make-thread"] = msp(new XYPrimitive("make-thread", primitive_make_thread));
   xy->mP["thread-stacks"] = msp(new XYPrimitive("thread-stacks", primitive_thread_stacks));
+  xy->mP["thread-join"] = msp(new XYPrimitive("thread-join", primitive_thread_join));
   xy->mP["spawn"] = msp(new XYPrimitive("spawn", primitive_spawn));
 }
 
