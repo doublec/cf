@@ -75,6 +75,7 @@ static void primitive_make_thread(boost::shared_ptr<XY> const& xy) {
 
   child->mEnv = xy->mEnv;
   child->mP = xy->mP;
+  child->mLimits = xy->mLimits;
 
   shared_ptr<XYThread> thread(new XYThread(child, xy));
 
@@ -107,6 +108,7 @@ static void primitive_make_limited_thread(boost::shared_ptr<XY> const& xy) {
 
   child->mEnv = xy->mEnv;
   child->mP = xy->mP;
+  child->mLimits = xy->mLimits;
 
   child->mLimits.push_back(msp(new XYTimeLimit(ms->as_uint())));
 
