@@ -51,7 +51,7 @@ prelude:
 > [ 
 >   [[c]stack.[[]unstack.c.stack.[[]unstack.]`]`swap.unit.,unstack.] (
 > ] infra set
-> [ tokenize parse infra. to-string ] eval set
+> [ tokenize parse infra. to-string 2 sdrop dup. count 2 - stake ] eval set
 
 The following words operate on responses from the server. 
 
