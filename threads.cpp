@@ -32,6 +32,10 @@ XYThread::XYThread(shared_ptr<XY> const& xy, boost::shared_ptr<XY> const& parent
 
 void XYThread::spawn() {
   mXY->mRepl = false;
+  for(XYLimits::iterator it = mXY->mLimits.begin(); it != mXY->mLimits.end(); ++it) {
+    (*it)->start(mXY.get());
+  }
+
   mXY->mService.post(bind(&XY::evalHandler, mXY));
 }
 
@@ -77,6 +81,40 @@ static void primitive_make_thread(boost::shared_ptr<XY> const& xy) {
   xy->mX.push_back(thread);
 }
 
+// make-limited-thread [X^stack^queue^ms Y] -> [X^thread Y]
+// If the thread takes longer to execute than the given milliseconds
+// then it is aborted.
+static void primitive_make_limited_thread(boost::shared_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
+  shared_ptr<XYNumber> ms(dynamic_pointer_cast<XYNumber>(xy->mX.back()));
+  xy_assert(ms, XYError::TYPE);
+  xy->mX.pop_back();
+
+  shared_ptr<XYSequence> queue(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  xy_assert(queue, XYError::TYPE);
+  xy->mX.pop_back();
+
+  shared_ptr<XYSequence> stack(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  xy_assert(stack, XYError::TYPE);
+  xy->mX.pop_back();
+
+  shared_ptr<XY> child(new XY(xy->mService));
+  stack->pushBackInto(child->mX);
+
+  XYSequence::List temp;
+  queue->pushBackInto(temp);
+  child->mY.insert(child->mY.begin(), temp.begin(), temp.end());
+
+  child->mEnv = xy->mEnv;
+  child->mP = xy->mP;
+
+  child->mLimits.push_back(msp(new XYTimeLimit(ms->as_uint())));
+
+  shared_ptr<XYThread> thread(new XYThread(child, xy));
+
+  xy->mX.push_back(thread);
+}
+
 // spawn [X^thread Y] -> [X^thread Y]
 static void primitive_spawn(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
@@ -101,6 +139,7 @@ static void primitive_thread_stacks(boost::shared_ptr<XY> const& xy) {
 }
 
 void install_thread_primitives(shared_ptr<XY> const& xy) {
+  xy->mP["make-limited-thread"] = msp(new XYPrimitive("make-limited-thread", primitive_make_limited_thread));
   xy->mP["make-thread"] = msp(new XYPrimitive("make-thread", primitive_make_thread));
   xy->mP["thread-stacks"] = msp(new XYPrimitive("thread-stacks", primitive_thread_stacks));
   xy->mP["spawn"] = msp(new XYPrimitive("spawn", primitive_spawn));
