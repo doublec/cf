@@ -1,11 +1,11 @@
 Simple IRC Bot
 
-> [ "#concatenative" ] channel set
+> [ "#doublec" ] channel set
 
 > [ ab-aba socket-writeln ] irc-write set
 > [ "NICK cfbot" irc-write. ] nick set
 > [ "USER cfbot +iw cfbot :$0" irc-write. ] status set
-> [ "JOIN #concatenative" irc-write. ] join set
+> [ "JOIN " channel., irc-write. ] join set
 > [ [[c m] "PRIVMSG " c , " :" , m , ] ( irc-write. ] say set 
 > [ "irc.freenode.net" "6667" socket a-aa line-channel ab-ba nick. status. ] cfbot set
 > [ ab-aba line-channel-get println ] cfline set
@@ -25,7 +25,7 @@ Simple IRC Bot
 
 > [ dup. privmsg?. [ dup. channel. channel?. [ dup. for-bot?. [ msg-text. "cfbot," count sdrop ] [ drop. 0 ] if ] [ drop. 0 ] if ] [ drop. 0 ] if ] maybe-eval set
 
-> [ [maybe-eval.]map2.[] filter.[eval.]map2.] to-eval set
+> [ [maybe-eval.]map.[] filter.[eval.]map.] to-eval set
 > [ [ [s c m] m [ "PRIVMSG " c , " :" , swap. , s socket-writeln ] each. s ] ( ] say-all set
 
 > [ cflines. to-eval. channel. swap. say-all. ] eval-messages  set

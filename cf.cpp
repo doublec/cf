@@ -1603,7 +1603,7 @@ static void primitive_getline(boost::shared_ptr<XY> const& xy) {
 				xy->mInputBuffer,
 				"\n",
 				bind(getlineHandler, xy, boost::asio::placeholders::error));
-  
+
   throw XYError(xy, XYError::WAITING_FOR_ASYNC_EVENT);
 } 
 
@@ -1937,9 +1937,23 @@ void XY::evalHandler() {
     }
   }
   catch(XYError& e) {
-    if (e.mCode != XYError::WAITING_FOR_ASYNC_EVENT)
-      throw e;
+    if (e.mCode != XYError::WAITING_FOR_ASYNC_EVENT) {
+      cout << "Error: " << e.message() << endl;
+      shared_ptr<XYList> stack(new XYList(mX.begin(), mX.end()));
+      shared_ptr<XYList> queue(new XYList(mY.begin(), mY.end()));
+      
+      mX.clear();
+      mY.clear();
+      mX.push_back(stack);
+      mX.push_back(queue);
+      mService.post(bind(&XY::evalHandler, shared_from_this()));
+    }
   }
+}
+
+void XY::yield() {
+  mService.post(bind(&XY::evalHandler, shared_from_this()));
+  throw XYError(shared_from_this(), XYError::WAITING_FOR_ASYNC_EVENT);
 }
 
 void XY::checkLimits() {
@@ -1968,6 +1982,7 @@ void XY::eval1() {
   assert(o);
 
   mY.pop_front();
+
   o->eval1(shared_from_this());
 }
 

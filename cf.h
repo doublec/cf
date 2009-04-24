@@ -436,6 +436,10 @@ class XY  : public boost::enable_shared_from_this<XY> {
     // Handler for asynchronous evaluation events
     void evalHandler();
 
+    // A primitive can yield a timeslice by calling this to
+    // post back to the eval handler.
+    void yield();
+
     // Check limits. Throw the limit object if it has
     // been exceeded.
     void checkLimits();

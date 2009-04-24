@@ -113,7 +113,7 @@ XYLineChannel::XYLineChannel(shared_ptr<XYSocket> const& socket) :
 
 void XYLineChannel::handleRead(boost::system::error_code const& err) {
   if (!err) {
-    cout << "Got some data" << endl;
+    //    cout << "Got some data" << endl;
     istream stream(&mResponse);
     string result;
     std::getline(stream, result);
@@ -208,13 +208,16 @@ static void primitive_line_channel(boost::shared_ptr<XY> const& xy) {
 // line-channel-get [X^channel Y] -> [X^str Y]
 static void primitive_line_channel_get(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
+
   shared_ptr<XYLineChannel> channel(dynamic_pointer_cast<XYLineChannel>(xy->mX.back()));
   xy_assert(channel, XYError::TYPE);
-  xy->mX.pop_back();
 
-  while (channel->mLines.size() == 0) {
-    xy->mService.run_one();
+  if (channel->mLines.size() == 0) {
+    xy->mY.push_front(msp(new XYPrimitive("line-channel-get", primitive_line_channel_get)));
+    xy->yield();
   }
+    
+  xy->mX.pop_back();
   
   shared_ptr<XYString> line(dynamic_pointer_cast<XYString>(channel->mLines.front()));
   xy_assert(line, XYError::TYPE);
@@ -226,14 +229,16 @@ static void primitive_line_channel_get(boost::shared_ptr<XY> const& xy) {
 // line-channel-getall [X^channel Y] -> [X^seq Y]
 static void primitive_line_channel_getall(boost::shared_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
+
   shared_ptr<XYLineChannel> channel(dynamic_pointer_cast<XYLineChannel>(xy->mX.back()));
   xy_assert(channel, XYError::TYPE);
-  xy->mX.pop_back();
 
-  // Block to ensure we get at least one message
-  while (channel->mLines.size() == 0) {
-    xy->mService.run_one();
+  if (channel->mLines.size() == 0) {
+    xy->mY.push_front(msp(new XYPrimitive("line-channel-getall", primitive_line_channel_getall)));
+    xy->yield();
   }
+
+  xy->mX.pop_back();
 
   shared_ptr<XYList> list(new XYList());
   while (channel->mLines.size() != 0) {
