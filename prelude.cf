@@ -39,16 +39,14 @@
 [unit.[1 -]swap.,'`,[]swap.while.drop.] do set ** n[f]do **
 
 ** Combinators **
-[[a-aa count[]abc-cab]` ab-ba
- [[uncons.]` a-aa abc-cab[cons..first. ab-ba cons.]dipd.]
- do. ab- |] map set ** [..][f]map **
-
 ** [..][f]each **
 [[[]]`swap;unit.`,uncons;unit.`,while.drop.] each set
 
 ** [...] [pred] filter **
 ** [1 2 3] [2 <] filter => [1 2 3] [] [dup.[2 <].[swap.cons.][drop.]if ] foldl **
 [ [[s p] s [] [dup.p.[swap.cons.][drop.]if] foldl|] ( ] filter set
+
+[ [[s q] s [] [q.swap.cons.] foldl|] ( ] map set
 
 ** repeat [X^n^o Y] [X^{o1..on} Y] **
 [ [ [n o] o n 1 - [ 0 = ] [drop.] [ o repeat. , ] cond. ] ( ] repeat set
