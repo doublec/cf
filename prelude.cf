@@ -4,6 +4,7 @@
 [a-] drop set
 [ab-ba] swap set
 [a-aa] dup set
+[ab-aba] over set
 
 ** Lists **
 [ [[[a A]] a A] )] uncons set

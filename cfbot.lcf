@@ -1,37 +1,91 @@
 Simple IRC Bot
 
-> [ "#concatenative" ] channel set
+The channel, server, port and nickname words are used to configure where
+the bot lives:
 
-> [ ab-aba socket-writeln ] irc-write set
-> [ "NICK cfbot" irc-write. ] nick set
-> [ "USER cfbot +iw cfbot :$0" irc-write. ] status set
-> [ "JOIN " channel., irc-write. ] join set
-> [ [[c m] "PRIVMSG " c , " :" , m , ] ( irc-write. ] say set 
-> [ "irc.freenode.net" "6667" socket a-aa line-channel ab-ba nick. status. ] cfbot set
-> [ ab-aba line-channel-get println ] cfline set
-> [ ab-aba line-channel-getall ] cflines set
-> [ cflines. [println] each. ] pcflines set
+> "irc.freenode.net" server   set
+> "6667"             port     set
+> "#doublec"         channel  set
+> "cfbot"            nickname set
+
+When connected to the server we deal with an 'ircbot' structure. This is
+a list containing the following elements:
+
+  1. The line-channel used to read server responses
+  2. The socket used to write requests
+
+These helper words are used to extract this information:
+
+> [ '0`@ ] bot-line-channel set
+> [ '1`@ ] bot-socket       set
+
+Send a string to the server
+
+> [ bot-socket.socket-writeln ] irc-write set
+
+Connect to the server, returning the bot structure
+
+> [ server;port;socket dup.'line-channel`, ] bot-connect set
+
+Initializes the connection by setting the nickname, and other IRC
+required setup.
+
+> [ "NICK " nickname;,over.irc-write. ] set-nick set
+> [ "USER "nickname;," +iw ",nickname;," :",nickname;,over.irc-write. ] set-status set
+> [ "JOIN " channel;,over.irc-write. ] join-channel set
+> [ set-nick.set-status.join-channel. ] bot-init set
+
+Send a message to the channel:
+
+> [ [[c m] "PRIVMSG " c , " :" , m , ] ( over.irc-write. ] say set 
+
+Return the list of responses received from the server. Blocks if not
+responses have yet been received.
+
+> [ dup.bot-line-channel.line-channel-getall ] bot-responses set
+
+
+Utility words to evaluate cf code. These should probably be in the
+prelude:
+
 > [ 
 >   [[c]stack.[[]unstack.c.stack.[[]unstack.]`]`swap.unit.,unstack.] (
 > ] infra set
-
 > [ tokenize parse infra. to-string ] eval set
 
-> [ dup. 32 ? sdrop " PRIVMSG" swap. head?. ] privmsg? set
-> [ dup. 32 ? 1 + sdrop dup. 32 ? 1 + sdrop dup. 32 ? stake ] msg-channel set
-> [ dup. 32 ? 1 + sdrop dup. 32 ? 1 + sdrop dup. 32 ? 2 + sdrop ] msg-text set
-> [ swap.msg-channel.= ] channel? set
-> [ msg-text. "cfbot," swap. head?. ] for-bot? set
+The following words operate on responses from the server. 
 
-> [ dup. privmsg?. [ dup. channel. channel?. [ dup. for-bot?. [ msg-text. "cfbot," count sdrop ] [ drop. 0 ] if ] [ drop. 0 ] if ] [ drop. 0 ] if ] maybe-eval set
 
-> [ [maybe-eval.]map.[] filter.[eval.]map.] to-eval set
-> [ [ [s c m] m [ "PRIVMSG " c , " :" , swap. , s socket-writeln ] each. s ] ( ] say-all set
+> [ dup. 32 ? 1 + sdrop dup. 32 ? stake ] response-type set
+> [ dup. 32 ? 1 + sdrop dup. 32 ? 1 + sdrop dup. 32 ? stake ] response-channel set
+> [ dup. 32 ? 1 + sdrop dup. 32 ? 1 + sdrop dup. 32 ? 2 + sdrop ] response-text set
 
-> [ cflines. to-eval. channel. swap. say-all. ] eval-messages  set
-> [ eval-messages. eval-loop. ] eval-loop set
+Is it a private message?
 
-> [ cflines. [maybe-eval.]map.[]filter.[[a b c] c [[[a b channel.]]`unit.,eval,'.,say,'.,[ab-],]map. [a b]`] ( ] to-eval2 set
+> [ response-type. "PRIVMSG" swap. = ] privmsg? set
 
-> [ to-eval2. [ [] swap. make-thread spawn ] map. drop. ] eval-messages2 set
-> [ eval-messages2. eval-loop2. ] eval-loop2 set
+Is it for the channel we are monitoring?
+
+> [ [response-channel.]`= ] channel? set
+
+Is it for us?
+
+> [ response-text. nickname; ",", swap. head?. ] for-bot? set
+
+Map expression used to pick up the responses we are interested in. Anything
+we aren't interested in results in a 0 which is later filtered out.
+
+> [ dup.privmsg?.[dup.channel;channel?.[dup.for-bot?.[response-text.nickname;count 1 + sdrop][drop.0]if][drop.0]if][drop.0]if] wanted-messages set
+
+Get all responses, filter for the messages we want
+> [bot-responses.[wanted-messages.]map.[]filter.] messages-to-eval set
+
+Build the expression to evaluate on another thread:
+
+> [ [[b c] c [[[b channel;]]`unit.,eval,'.,say,'.,[drop.],]map. [b]`] ( ] build-thread-queue set
+
+> [ messages-to-eval.build-thread-queue.[[]swap.make-thread spawn]map.drop.] handle-messages set
+> [ handle-messages.bot-loop. ] bot-loop set
+
+> [ bot-connect.bot-init. ] start-bot set
+> [ dup.unit. [ bot-loop. ] make-thread spawn ] bot-daemonize set
