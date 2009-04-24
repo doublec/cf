@@ -37,6 +37,10 @@ public:
   boost::asio::streambuf mResponse;
   shared_ptr<XYSocket> mSocket;
 
+  // Set to interpreters that are waiting for
+  // lines to appear.
+  vector<shared_ptr<XY> > mWaiting;
+
 public:
   XYLineChannel(shared_ptr<XYSocket> const& socket);
 
@@ -120,7 +124,13 @@ void XYLineChannel::handleRead(boost::system::error_code const& err) {
     if (result[result.size()-1] == 13)
       result = result.substr(0, result.size()-1);
     mLines.push_back(msp(new XYString(result)));
-    
+    if (mWaiting.size() > 0) {
+      for(vector<shared_ptr<XY> >::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
+	(*it)->mService.post(bind(&XY::evalHandler, (*it)));
+      }
+      mWaiting.clear();
+    }
+
     // read lines until EOF.
     boost::asio::async_read_until(mSocket->mSocket, 
 				  mResponse,
@@ -234,8 +244,9 @@ static void primitive_line_channel_getall(boost::shared_ptr<XY> const& xy) {
   xy_assert(channel, XYError::TYPE);
 
   if (channel->mLines.size() == 0) {
+    channel->mWaiting.push_back(xy);
     xy->mY.push_front(msp(new XYPrimitive("line-channel-getall", primitive_line_channel_getall)));
-    xy->yield();
+    throw XYError(xy, XYError::WAITING_FOR_ASYNC_EVENT);
   }
 
   xy->mX.pop_back();
