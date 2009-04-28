@@ -6,7 +6,7 @@
 #include "cf.h"
 #include <boost/asio.hpp>
 
-void install_socket_primitives(boost::shared_ptr<XY> const& xy);
+void install_socket_primitives(boost::intrusive_ptr<XY> const& xy);
 
 #endif // socket_h
 // Copyright (C) 2009 Chris Double. All Rights Reserved.

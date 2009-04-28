@@ -7,18 +7,17 @@
 #include <map>
 #include <vector>
 #include <deque>
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
+#include <boost/intrusive_ptr.hpp>
 #include <boost/xpressive/xpressive.hpp>
 #include <boost/asio.hpp>
 #include <gmpxx.h>
 
-// Helper function for creating a shared pointer of a type.
-// Replace: shared_ptr<T> x = new shared_ptr<T>(new T());
-// With:    shared_ptr<T> x = msp(new T());   
-template <class T> boost::shared_ptr<T> msp(T* o)
+// Helper function for creating a smart pointer for a type.
+// Replace: intrusive_ptr<T> x = new intrusive_ptr<T>(new T());
+// With:    intrusive_ptr<T> x = msp(new T());   
+template <class T> boost::intrusive_ptr<T> msp(T* o)
 {
-  return boost::shared_ptr<T>(o);
+  return boost::intrusive_ptr<T>(o);
 }
 
 // XY is the object that contains the state of the running
@@ -33,46 +32,82 @@ class XYSequence;
 
 // Macros to declare double dispatched math operators
 #define DD(name) \
-    virtual boost::shared_ptr<XYObject> name(XYObject* rhs);   \
-    virtual boost::shared_ptr<XYObject> name(XYFloat* lhs);    \
-    virtual boost::shared_ptr<XYObject> name(XYInteger* lhs);  \
-    virtual boost::shared_ptr<XYObject> name(XYSequence* lhs)
+    virtual boost::intrusive_ptr<XYObject> name(XYObject* rhs);   \
+    virtual boost::intrusive_ptr<XYObject> name(XYFloat* lhs);    \
+    virtual boost::intrusive_ptr<XYObject> name(XYInteger* lhs);  \
+    virtual boost::intrusive_ptr<XYObject> name(XYSequence* lhs)
+
+// Objects in XY are reference counted. When holding a reference
+// to an XY object you must call 'increment' to increase the
+// reference count. When no longer holding a reference call
+// 'decrement' to decrease the reference count. boost::intrusive_ptr
+// can also be used and it will manage the internal reference count.
+//
+// Object cycles are not currently collected. So if object A has a
+// reference to object B, and object B has a reference to object A,
+// then this will cause a memory leak. 
+class XYReference 
+{
+ public:
+  // Count of the number of objects that hold a reference to this
+  // object. Used for the reference counting garbage collection.
+  int mReferences;
+
+ public:
+  XYReference();
+  virtual ~XYReference() { }
+
+  // Increment/Decrement reference counts. After calling decrement
+  // the object will be deleted if the reference count reaches zero.
+  void increment();
+  void decrement();
+};
+
+// Definitions to allow boost::intrusive_ptr to work with the
+// internal reference counting scheme.
+namespace boost {
+  inline void intrusive_ptr_add_ref(XYReference* ptr) {
+    ptr->increment();
+  }
+
+  inline void intrusive_ptr_release(XYReference* ptr) {
+    ptr->decrement();
+  }
+}
 
 // Base class for all objects in the XY system. Anything
 // stored on the stack, in the queue, in the the environment
 // must be derived from this.
-//
-// Memory allocation and freeing is handled via the shared_ptr
-// class. This means all allocation via 'new' must be assigned
-// to a shared_ptr.
-class XYObject : public boost::enable_shared_from_this<XYObject>
+class XYObject : public XYReference
 {
-  public:
-    // Ensure virtual destructors for base classes
-    virtual ~XYObject() { }
+ public:
+  XYObject();
 
-    // Call when the object has been removed from the XY
-    // queue and some action needs to be taken. For
-    // literal objects (numbers, strings, etc) this 
-    // involves pushing the object on the stack.
-    virtual void eval1(boost::shared_ptr<XY> const& xy) = 0;
+  // Ensure virtual destructors for base classes
+  virtual ~XYObject() { }
 
-    // Convert the object into a string repesentation for
-    // printing. if 'parse' is true then the output
-    // should be able to be read back in by the cf parser.
-    virtual std::string toString(bool parse) const = 0;
+  // Call when the object has been removed from the XY
+  // queue and some action needs to be taken. For
+  // literal objects (numbers, strings, etc) this 
+  // involves pushing the object on the stack.
+  virtual void eval1(boost::intrusive_ptr<XY> const& xy) = 0;
 
-    // Return a negative number if this object is less than
-    // the rhs object. Return 0 if they are equal. Returns
-    // a positive number if it is greater.
-    virtual int compare(boost::shared_ptr<XYObject> rhs) = 0;
+  // Convert the object into a string repesentation for
+  // printing. if 'parse' is true then the output
+  // should be able to be read back in by the cf parser.
+  virtual std::string toString(bool parse) const = 0;
 
-    // Math Operators
-    DD(add);
-    DD(subtract);
-    DD(multiply);
-    DD(divide);
-    DD(power);
+  // Return a negative number if this object is less than
+  // the rhs object. Return 0 if they are equal. Returns
+  // a positive number if it is greater.
+  virtual int compare(boost::intrusive_ptr<XYObject> rhs) = 0;
+
+  // Math Operators
+  DD(add);
+  DD(subtract);
+  DD(multiply);
+  DD(divide);
+  DD(power);
 };
 
 // All number objects are derived from this class.
@@ -92,11 +127,11 @@ class XYNumber : public XYObject
     // Returns true if the number is zero
     virtual bool is_zero() const = 0;
     virtual unsigned int as_uint() const = 0;
-    virtual boost::shared_ptr<XYInteger> as_integer() = 0;
-    virtual boost::shared_ptr<XYFloat> as_float() = 0;
+    virtual boost::intrusive_ptr<XYInteger> as_integer() = 0;
+    virtual boost::intrusive_ptr<XYFloat> as_float() = 0;
 
     // Math Operators
-    virtual boost::shared_ptr<XYNumber> floor() = 0;
+    virtual boost::intrusive_ptr<XYNumber> floor() = 0;
 };
 
 // Floating point numbers
@@ -111,8 +146,8 @@ class XYFloat : public XYNumber
     XYFloat(std::string v);
     XYFloat(mpf_class const& v);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(boost::shared_ptr<XY> const& xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs);
+    virtual void eval1(boost::intrusive_ptr<XY> const& xy);
+    virtual int compare(boost::intrusive_ptr<XYObject> rhs);
     DD(add);
     DD(subtract);
     DD(multiply);
@@ -120,9 +155,9 @@ class XYFloat : public XYNumber
     DD(power);
     virtual bool is_zero() const;
     virtual unsigned int as_uint() const;
-    virtual boost::shared_ptr<XYInteger> as_integer();
-    virtual boost::shared_ptr<XYFloat> as_float();
-    virtual boost::shared_ptr<XYNumber> floor();
+    virtual boost::intrusive_ptr<XYInteger> as_integer();
+    virtual boost::intrusive_ptr<XYFloat> as_float();
+    virtual boost::intrusive_ptr<XYNumber> floor();
 };
 
 // Integer numbers
@@ -136,8 +171,8 @@ class XYInteger : public XYNumber
     XYInteger(std::string v);
     XYInteger(mpz_class const& v);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(boost::shared_ptr<XY> const& xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs);
+    virtual void eval1(boost::intrusive_ptr<XY> const& xy);
+    virtual int compare(boost::intrusive_ptr<XYObject> rhs);
     DD(add);
     DD(subtract);
     DD(multiply);
@@ -145,9 +180,9 @@ class XYInteger : public XYNumber
     DD(power);
     virtual bool is_zero() const;
     virtual unsigned int as_uint() const;
-    virtual boost::shared_ptr<XYInteger> as_integer();
-    virtual boost::shared_ptr<XYFloat> as_float();
-    virtual boost::shared_ptr<XYNumber> floor();
+    virtual boost::intrusive_ptr<XYInteger> as_integer();
+    virtual boost::intrusive_ptr<XYFloat> as_float();
+    virtual boost::intrusive_ptr<XYNumber> floor();
 };
 
 // A symbol is an unquoted string.
@@ -159,8 +194,8 @@ class XYSymbol : public XYObject
   public:
     XYSymbol(std::string v);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(boost::shared_ptr<XY> const& xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs);
+    virtual void eval1(boost::intrusive_ptr<XY> const& xy);
+    virtual int compare(boost::intrusive_ptr<XYObject> rhs);
 };
 
 // A shuffle symbol describes pattern to rearrange the stack.
@@ -173,20 +208,20 @@ class XYShuffle : public XYObject
   public:
     XYShuffle(std::string v);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(boost::shared_ptr<XY> const& xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs);
+    virtual void eval1(boost::intrusive_ptr<XY> const& xy);
+    virtual int compare(boost::intrusive_ptr<XYObject> rhs);
 };
 
 // A base class for a sequence of XYObject's
 class XYSequence : public XYObject
 {
   public:
-    typedef std::vector< boost::shared_ptr<XYObject> > List;
+    typedef std::vector< boost::intrusive_ptr<XYObject> > List;
     typedef List::iterator iterator;
     typedef List::const_iterator const_iterator;
 
   public:
-    virtual int compare(boost::shared_ptr<XYObject> rhs);
+    virtual int compare(boost::intrusive_ptr<XYObject> rhs);
     DD(add);
     DD(subtract);
     DD(multiply);
@@ -200,16 +235,16 @@ class XYSequence : public XYObject
     virtual void pushBackInto(List& list) = 0;
 
     // Returns the element at index 'n'
-    virtual boost::shared_ptr<XYObject> at(size_t n) = 0;
+    virtual boost::intrusive_ptr<XYObject> at(size_t n) = 0;
 
     // Returns the head of a sequence (the first item).
-    virtual boost::shared_ptr<XYObject> head() = 0;
+    virtual boost::intrusive_ptr<XYObject> head() = 0;
 
     // Returns the tail of a sequence (all but the first item)
-    virtual boost::shared_ptr<XYSequence> tail() = 0;
+    virtual boost::intrusive_ptr<XYSequence> tail() = 0;
 
     // Concatenate two sequences
-    virtual boost::shared_ptr<XYSequence> join(boost::shared_ptr<XYSequence> const& rhs) = 0;
+    virtual boost::intrusive_ptr<XYSequence> join(boost::intrusive_ptr<XYSequence> const& rhs) = 0;
 };
 
 // A string
@@ -221,14 +256,14 @@ class XYString : public XYSequence
   public:
     XYString(std::string v);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(boost::shared_ptr<XY> const& xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs);
+    virtual void eval1(boost::intrusive_ptr<XY> const& xy);
+    virtual int compare(boost::intrusive_ptr<XYObject> rhs);
     virtual size_t size();
     virtual void pushBackInto(List& list);
-    virtual boost::shared_ptr<XYObject> at(size_t n);
-    virtual boost::shared_ptr<XYObject> head();
-    virtual boost::shared_ptr<XYSequence> tail();
-    virtual boost::shared_ptr<XYSequence> join(boost::shared_ptr<XYSequence> const& rhs);
+    virtual boost::intrusive_ptr<XYObject> at(size_t n);
+    virtual boost::intrusive_ptr<XYObject> head();
+    virtual boost::intrusive_ptr<XYSequence> tail();
+    virtual boost::intrusive_ptr<XYSequence> join(boost::intrusive_ptr<XYSequence> const& rhs);
 };
 
 // A list of objects. Can include other nested
@@ -243,13 +278,13 @@ class XYList : public XYSequence
     XYList();
     template <class InputIterator> XYList(InputIterator first, InputIterator last);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(boost::shared_ptr<XY> const& xy);
+    virtual void eval1(boost::intrusive_ptr<XY> const& xy);
     virtual size_t size();
     virtual void pushBackInto(List& list);
-    virtual boost::shared_ptr<XYObject> at(size_t n);
-    virtual boost::shared_ptr<XYObject> head();
-    virtual boost::shared_ptr<XYSequence> tail();
-    virtual boost::shared_ptr<XYSequence> join(boost::shared_ptr<XYSequence> const& rhs);
+    virtual boost::intrusive_ptr<XYObject> at(size_t n);
+    virtual boost::intrusive_ptr<XYObject> head();
+    virtual boost::intrusive_ptr<XYSequence> tail();
+    virtual boost::intrusive_ptr<XYSequence> join(boost::intrusive_ptr<XYSequence> const& rhs);
 };
 
 // A slice is a virtual subsequence of an existing list.
@@ -257,7 +292,7 @@ class XYSlice : public XYSequence
 {
   public:
     // The original sequence we are a slice of
-    boost::shared_ptr<XYSequence> mOriginal;
+    boost::intrusive_ptr<XYSequence> mOriginal;
 
     // The start of the slice. 
     int mBegin;
@@ -266,17 +301,17 @@ class XYSlice : public XYSequence
     int mEnd;
 
   public:
-    XYSlice(boost::shared_ptr<XYSequence> original, 
+    XYSlice(boost::intrusive_ptr<XYSequence> original, 
             int start, 
             int end);
     virtual std::string toString(bool parse) const;
-    virtual void eval1(boost::shared_ptr<XY> const& xy);
+    virtual void eval1(boost::intrusive_ptr<XY> const& xy);
     virtual size_t size();
     virtual void pushBackInto(List& list);
-    virtual boost::shared_ptr<XYObject> at(size_t n);
-    virtual boost::shared_ptr<XYObject> head();
-    virtual boost::shared_ptr<XYSequence> tail();
-    virtual boost::shared_ptr<XYSequence> join(boost::shared_ptr<XYSequence> const& rhs);
+    virtual boost::intrusive_ptr<XYObject> at(size_t n);
+    virtual boost::intrusive_ptr<XYObject> head();
+    virtual boost::intrusive_ptr<XYSequence> tail();
+    virtual boost::intrusive_ptr<XYSequence> join(boost::intrusive_ptr<XYSequence> const& rhs);
 };
 
 // A join is a virtual sequence composed of two other
@@ -286,7 +321,7 @@ class XYJoin : public XYSequence
 {
   public:
     // The original sequences we join.
-    typedef std::deque<boost::shared_ptr<XYSequence> > Vector;
+    typedef std::deque<boost::intrusive_ptr<XYSequence> > Vector;
     typedef Vector::iterator iterator;
     typedef Vector::const_iterator const_iterator;
 
@@ -294,16 +329,16 @@ class XYJoin : public XYSequence
 
   public:
     XYJoin() { }
-    XYJoin(boost::shared_ptr<XYSequence> first,
-           boost::shared_ptr<XYSequence> second); 
+    XYJoin(boost::intrusive_ptr<XYSequence> first,
+           boost::intrusive_ptr<XYSequence> second); 
     virtual std::string toString(bool parse) const;
-    virtual void eval1(boost::shared_ptr<XY> const& xy);
+    virtual void eval1(boost::intrusive_ptr<XY> const& xy);
     virtual size_t size();
     virtual void pushBackInto(List& list);
-    virtual boost::shared_ptr<XYObject> at(size_t n);
-    virtual boost::shared_ptr<XYObject> head();
-    virtual boost::shared_ptr<XYSequence> tail();
-    virtual boost::shared_ptr<XYSequence> join(boost::shared_ptr<XYSequence> const& rhs);
+    virtual boost::intrusive_ptr<XYObject> at(size_t n);
+    virtual boost::intrusive_ptr<XYObject> head();
+    virtual boost::intrusive_ptr<XYSequence> tail();
+    virtual boost::intrusive_ptr<XYSequence> join(boost::intrusive_ptr<XYSequence> const& rhs);
 };
 
 // A primitive is the implementation of a core function.
@@ -313,20 +348,20 @@ class XYPrimitive : public XYObject
 {
   public:
     std::string mName;
-    void (*mFunc)(boost::shared_ptr<XY> const&);
+    void (*mFunc)(boost::intrusive_ptr<XY> const&);
 
   public:
-    XYPrimitive(std::string name, void (*func)(boost::shared_ptr<XY> const&));
+    XYPrimitive(std::string name, void (*func)(boost::intrusive_ptr<XY> const&));
     virtual std::string toString(bool parse) const;
-    virtual void eval1(boost::shared_ptr<XY> const& xy);
-    virtual int compare(boost::shared_ptr<XYObject> rhs);
+    virtual void eval1(boost::intrusive_ptr<XY> const& xy);
+    virtual int compare(boost::intrusive_ptr<XYObject> rhs);
 };
 
 // Base class to to provide limits to the executing
 // XY program. Limit examples might be a requirement to run
 // within a certain number of ticks, time period or
 // memory size.
-class XYLimit {
+class XYLimit : public XYReference {
  public:
   // Called when execution starts so the limit checker can
   // initialize things like initial start time or tick count.
@@ -363,7 +398,7 @@ class XYError {
   };
 
   // The interpreter state at the time of the error
-  boost::shared_ptr<XY> mXY;
+  boost::intrusive_ptr<XY> mXY;
 
   // What error occurred
   code mCode;
@@ -373,24 +408,24 @@ class XYError {
   char const* mFile;
   
  public:
-  XYError(boost::shared_ptr<XY> const& xy, code c);
-  XYError(boost::shared_ptr<XY> const& xy, code c, char const* file, int line);
+  XYError(boost::intrusive_ptr<XY> const& xy, code c);
+  XYError(boost::intrusive_ptr<XY> const& xy, code c, char const* file, int line);
 
   // A textual representation of the error
   std::string message();
 };
 
 // The environment maps names to objects
-typedef std::map<std::string, boost::shared_ptr<XYObject> > XYEnv;
-typedef std::vector<boost::shared_ptr<XYObject> > XYStack;
-typedef std::deque<boost::shared_ptr<XYObject> > XYQueue;
-typedef std::vector<boost::shared_ptr<XYLimit> > XYLimits;
+typedef std::map<std::string, boost::intrusive_ptr<XYObject> > XYEnv;
+typedef std::vector<boost::intrusive_ptr<XYObject> > XYStack;
+typedef std::deque<boost::intrusive_ptr<XYObject> > XYQueue;
+typedef std::vector<boost::intrusive_ptr<XYLimit> > XYLimits;
 
 // The state of the runtime interpreter.
 // Holds the environment, stack and queue
 // and provides methods to step through or run
 // the interpreter.
-class XY  : public boost::enable_shared_from_this<XY> {
+class XY : public XYReference {
   public:
     // io service for handling asynchronous events
     // The lifetime of the service is controlled by
@@ -409,7 +444,7 @@ class XY  : public boost::enable_shared_from_this<XY> {
 
     // Set to interpreters that are waiting for
     // this interpreter to complete (via thread join).
-    std::vector<boost::shared_ptr<XY> > mWaiting;
+    std::vector<boost::intrusive_ptr<XY> > mWaiting;
 
     // Environment holding mappings of names
     // to objects.
@@ -468,9 +503,9 @@ class XY  : public boost::enable_shared_from_this<XY> {
     // in the given stack.
     template <class OutputIterator>
     void match(OutputIterator out, 
-               boost::shared_ptr<XYObject> object,
-               boost::shared_ptr<XYObject> pattern,
-               boost::shared_ptr<XYSequence> sequence,
+               boost::intrusive_ptr<XYObject> object,
+               boost::intrusive_ptr<XYObject> pattern,
+               boost::intrusive_ptr<XYSequence> sequence,
                int i);
 
     // Given a pattern list of symbols (which can contain
@@ -478,13 +513,13 @@ class XY  : public boost::enable_shared_from_this<XY> {
     // a mapping of symbol name to value from the stack.
     // This operation destructures within lists on the stack.
     template <class OutputIterator>
-    void getPatternValues(boost::shared_ptr<XYObject> symbols, OutputIterator out);
+    void getPatternValues(boost::intrusive_ptr<XYObject> symbols, OutputIterator out);
 
     // Given a mapping of names to values in 'env', replaces symbols in 'object'
     // that have the name with the given value. Store the newly created list
     // in 'out'.
     template <class OutputIterator>
-    void replacePattern(XYEnv const& env, boost::shared_ptr<XYObject> object, OutputIterator out);
+    void replacePattern(XYEnv const& env, boost::intrusive_ptr<XYObject> object, OutputIterator out);
 };
 
 // Return regex for tokenizing
@@ -542,7 +577,7 @@ InputIterator parse(InputIterator first, InputIterator last, OutputIterator out)
       *out++ = msp(new XYInteger(token));
     }
     else if(token == "[") {
-      boost::shared_ptr<XYList> list(new XYList());
+      boost::intrusive_ptr<XYList> list(new XYList());
       first = parse(first, last, back_inserter(list->mList));
       *out++ = list;
     }
@@ -578,7 +613,7 @@ void parse(std::string s, OutputIterator out) {
 
 inline void xy_assert_impl(bool condition, 
 			   XYError::code c, 
-			   boost::shared_ptr<XY> const& xy, 
+			   boost::intrusive_ptr<XY> const& xy, 
 			   char const* file, 
 			   int line) {
   if (!condition)

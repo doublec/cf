@@ -10,21 +10,21 @@ using namespace boost;
 
 class XYThread : public XYObject {
 public:
-  shared_ptr<XY> mXY;
-  shared_ptr<XY> mParent;
+  intrusive_ptr<XY> mXY;
+  intrusive_ptr<XY> mParent;
 
 public:
-  XYThread(boost::shared_ptr<XY> const& xy, boost::shared_ptr<XY> const& parent);
+  XYThread(boost::intrusive_ptr<XY> const& xy, boost::intrusive_ptr<XY> const& parent);
 
   void spawn();
 
   virtual std::string toString(bool parse) const;
-  virtual void eval1(boost::shared_ptr<XY> const& xy);
-  virtual int compare(boost::shared_ptr<XYObject> rhs);
+  virtual void eval1(boost::intrusive_ptr<XY> const& xy);
+  virtual int compare(boost::intrusive_ptr<XYObject> rhs);
 };
 
 // XYThread
-XYThread::XYThread(shared_ptr<XY> const& xy, boost::shared_ptr<XY> const& parent) :
+XYThread::XYThread(intrusive_ptr<XY> const& xy, boost::intrusive_ptr<XY> const& parent) :
   mXY(xy),
   mParent(parent)
 {
@@ -43,11 +43,11 @@ std::string XYThread::toString(bool parse) const {
   return "thread";
 }
 
-void XYThread::eval1(shared_ptr<XY> const& xy) {
-  xy->mX.push_back(shared_from_this());
+void XYThread::eval1(intrusive_ptr<XY> const& xy) {
+  xy->mX.push_back(msp(this));
 }
 
-int XYThread::compare(shared_ptr<XYObject> rhs) {
+int XYThread::compare(intrusive_ptr<XYObject> rhs) {
   if (rhs.get() == this)
     return 0;
 
@@ -56,17 +56,17 @@ int XYThread::compare(shared_ptr<XYObject> rhs) {
 
 
 // make-thread [X^stack^queue Y] -> [X^thread Y]
-static void primitive_make_thread(boost::shared_ptr<XY> const& xy) {
+static void primitive_make_thread(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYSequence> queue(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYSequence> queue(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(queue, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYSequence> stack(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYSequence> stack(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(stack, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XY> child(new XY(xy->mService));
+  intrusive_ptr<XY> child(new XY(xy->mService));
   stack->pushBackInto(child->mX);
 
   XYSequence::List temp;
@@ -77,7 +77,7 @@ static void primitive_make_thread(boost::shared_ptr<XY> const& xy) {
   child->mP = xy->mP;
   child->mLimits = xy->mLimits;
 
-  shared_ptr<XYThread> thread(new XYThread(child, xy));
+  intrusive_ptr<XYThread> thread(new XYThread(child, xy));
 
   xy->mX.push_back(thread);
 }
@@ -85,21 +85,21 @@ static void primitive_make_thread(boost::shared_ptr<XY> const& xy) {
 // make-limited-thread [X^stack^queue^ms Y] -> [X^thread Y]
 // If the thread takes longer to execute than the given milliseconds
 // then it is aborted.
-static void primitive_make_limited_thread(boost::shared_ptr<XY> const& xy) {
+static void primitive_make_limited_thread(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYNumber> ms(dynamic_pointer_cast<XYNumber>(xy->mX.back()));
+  intrusive_ptr<XYNumber> ms(dynamic_pointer_cast<XYNumber>(xy->mX.back()));
   xy_assert(ms, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYSequence> queue(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYSequence> queue(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(queue, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYSequence> stack(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYSequence> stack(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(stack, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XY> child(new XY(xy->mService));
+  intrusive_ptr<XY> child(new XY(xy->mService));
   stack->pushBackInto(child->mX);
 
   XYSequence::List temp;
@@ -112,29 +112,29 @@ static void primitive_make_limited_thread(boost::shared_ptr<XY> const& xy) {
 
   child->mLimits.push_back(msp(new XYTimeLimit(ms->as_uint())));
 
-  shared_ptr<XYThread> thread(new XYThread(child, xy));
+  intrusive_ptr<XYThread> thread(new XYThread(child, xy));
 
   xy->mX.push_back(thread);
 }
 
 // spawn [X^thread Y] -> [X^thread Y]
-static void primitive_spawn(boost::shared_ptr<XY> const& xy) {
+static void primitive_spawn(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYThread> thread(dynamic_pointer_cast<XYThread>(xy->mX.back()));
+  intrusive_ptr<XYThread> thread(dynamic_pointer_cast<XYThread>(xy->mX.back()));
   xy_assert(thread, XYError::TYPE);
 
   thread->spawn();
 }
 
 // thread-stacks [X^thread Y] -> [X^stack^queue Y]
-static void primitive_thread_stacks(boost::shared_ptr<XY> const& xy) {
+static void primitive_thread_stacks(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYThread> thread(dynamic_pointer_cast<XYThread>(xy->mX.back()));
+  intrusive_ptr<XYThread> thread(dynamic_pointer_cast<XYThread>(xy->mX.back()));
   xy_assert(thread, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYList> stack(new XYList(thread->mXY->mX.begin(), thread->mXY->mX.end()));
-  shared_ptr<XYList> queue(new XYList(thread->mXY->mY.begin(), thread->mXY->mY.end()));
+  intrusive_ptr<XYList> stack(new XYList(thread->mXY->mX.begin(), thread->mXY->mX.end()));
+  intrusive_ptr<XYList> queue(new XYList(thread->mXY->mY.begin(), thread->mXY->mY.end()));
 
   xy->mX.push_back(stack);
   xy->mX.push_back(queue);
@@ -143,9 +143,9 @@ static void primitive_thread_stacks(boost::shared_ptr<XY> const& xy) {
 // thread-join [X^thread Y] -> [X^stack Y]
 // Block current thread until the given thread has completed, leaving
 // its stack on the current thread's stack.
-static void primitive_thread_join(boost::shared_ptr<XY> const& xy) {
+static void primitive_thread_join(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYThread> thread(dynamic_pointer_cast<XYThread>(xy->mX.back()));
+  intrusive_ptr<XYThread> thread(dynamic_pointer_cast<XYThread>(xy->mX.back()));
   xy_assert(thread, XYError::TYPE);
 
   if (thread->mXY->mY.size() != 0) {
@@ -156,12 +156,12 @@ static void primitive_thread_join(boost::shared_ptr<XY> const& xy) {
 
   xy->mX.pop_back();
 
-  shared_ptr<XYList> stack(new XYList(thread->mXY->mX.begin(), thread->mXY->mX.end()));
+  intrusive_ptr<XYList> stack(new XYList(thread->mXY->mX.begin(), thread->mXY->mX.end()));
 
   xy->mX.push_back(stack);
 }
 
-void install_thread_primitives(shared_ptr<XY> const& xy) {
+void install_thread_primitives(intrusive_ptr<XY> const& xy) {
   xy->mP["make-limited-thread"] = msp(new XYPrimitive("make-limited-thread", primitive_make_limited_thread));
   xy->mP["make-thread"] = msp(new XYPrimitive("make-thread", primitive_make_thread));
   xy->mP["thread-stacks"] = msp(new XYPrimitive("thread-stacks", primitive_thread_stacks));

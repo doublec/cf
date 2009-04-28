@@ -22,33 +22,33 @@ public:
   XYSocket(boost::asio::io_service& service);
 
   void connect(string const& host, std::string const& port);
-  void writeln(shared_ptr<XYString> const& seq);
-  void writeln(shared_ptr<XYSequence> const& seq);
+  void writeln(intrusive_ptr<XYString> const& seq);
+  void writeln(intrusive_ptr<XYSequence> const& seq);
   void close();
 
   virtual std::string toString(bool parse) const;
-  virtual void eval1(boost::shared_ptr<XY> const& xy);
-  virtual int compare(boost::shared_ptr<XYObject> rhs);
+  virtual void eval1(boost::intrusive_ptr<XY> const& xy);
+  virtual int compare(boost::intrusive_ptr<XYObject> rhs);
 };
 
 class XYLineChannel : public XYObject {
 public:
   XYQueue mLines;
   boost::asio::streambuf mResponse;
-  shared_ptr<XYSocket> mSocket;
+  intrusive_ptr<XYSocket> mSocket;
 
   // Set to interpreters that are waiting for
   // lines to appear.
-  vector<shared_ptr<XY> > mWaiting;
+  vector<intrusive_ptr<XY> > mWaiting;
 
 public:
-  XYLineChannel(shared_ptr<XYSocket> const& socket);
+  XYLineChannel(intrusive_ptr<XYSocket> const& socket);
 
   void handleRead(boost::system::error_code const& err);
 
   virtual std::string toString(bool parse) const;
-  virtual void eval1(boost::shared_ptr<XY> const& xy);
-  virtual int compare(boost::shared_ptr<XYObject> rhs);
+  virtual void eval1(boost::intrusive_ptr<XY> const& xy);
+  virtual int compare(boost::intrusive_ptr<XYObject> rhs);
 };
 
 // XYSocket
@@ -65,18 +65,18 @@ void XYSocket::connect(string const& host, std::string const& port) {
   mSocket.connect(*iterator);
 }
 
-void XYSocket::writeln(shared_ptr<XYString> const& str) {
+void XYSocket::writeln(intrusive_ptr<XYString> const& str) {
   boost::asio::streambuf request;
   std::ostream request_stream(&request);
   request_stream << str->mValue << "\r\n";
   boost::asio::write(mSocket, request);
 }
 
-void XYSocket::writeln(shared_ptr<XYSequence> const& seq) {
+void XYSocket::writeln(intrusive_ptr<XYSequence> const& seq) {
   boost::asio::streambuf request;
   std::ostream request_stream(&request);
   for(int i=0; i < seq->size(); ++i) {
-    shared_ptr<XYInteger> n(dynamic_pointer_cast<XYInteger>(seq->at(i)));
+    intrusive_ptr<XYInteger> n(dynamic_pointer_cast<XYInteger>(seq->at(i)));
     assert(n);
     request_stream << (char)(n->as_uint());
   }
@@ -92,11 +92,11 @@ std::string XYSocket::toString(bool parse) const {
   return "socket";
 }
 
-void XYSocket::eval1(shared_ptr<XY> const& xy) {
-  xy->mX.push_back(shared_from_this());
+void XYSocket::eval1(intrusive_ptr<XY> const& xy) {
+  xy->mX.push_back(msp(this));
 }
 
-int XYSocket::compare(shared_ptr<XYObject> rhs) {
+int XYSocket::compare(intrusive_ptr<XYObject> rhs) {
   if (rhs.get() == this)
     return 0;
 
@@ -104,7 +104,7 @@ int XYSocket::compare(shared_ptr<XYObject> rhs) {
 }
 
 // XYLineChannel
-XYLineChannel::XYLineChannel(shared_ptr<XYSocket> const& socket) :
+XYLineChannel::XYLineChannel(intrusive_ptr<XYSocket> const& socket) :
   mSocket(socket) {
   // read lines until EOF.
   boost::asio::async_read_until(mSocket->mSocket, 
@@ -125,7 +125,7 @@ void XYLineChannel::handleRead(boost::system::error_code const& err) {
       result = result.substr(0, result.size()-1);
     mLines.push_back(msp(new XYString(result)));
     if (mWaiting.size() > 0) {
-      for(vector<shared_ptr<XY> >::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
+      for(vector<intrusive_ptr<XY> >::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
 	(*it)->mService.post(bind(&XY::evalHandler, (*it)));
       }
       mWaiting.clear();
@@ -150,11 +150,11 @@ std::string XYLineChannel::toString(bool parse) const {
   return str.str();
 }
 
-void XYLineChannel::eval1(shared_ptr<XY> const& xy) {
-  xy->mX.push_back(shared_from_this());
+void XYLineChannel::eval1(intrusive_ptr<XY> const& xy) {
+  xy->mX.push_back(msp(this));
 }
 
-int XYLineChannel::compare(shared_ptr<XYObject> rhs) {
+int XYLineChannel::compare(intrusive_ptr<XYObject> rhs) {
   if (rhs.get() == this)
     return 0;
 
@@ -163,24 +163,24 @@ int XYLineChannel::compare(shared_ptr<XYObject> rhs) {
 
 
 // socket [X^host^port Y] -> [X^socket Y]
-static void primitive_socket(boost::shared_ptr<XY> const& xy) {
+static void primitive_socket(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYObject> port(xy->mX.back());
+  intrusive_ptr<XYObject> port(xy->mX.back());
   xy->mX.pop_back();
 
-  shared_ptr<XYString> host(dynamic_pointer_cast<XYString>(xy->mX.back()));
+  intrusive_ptr<XYString> host(dynamic_pointer_cast<XYString>(xy->mX.back()));
   xy_assert(host, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYSocket> socket(new XYSocket(xy->mService));
+  intrusive_ptr<XYSocket> socket(new XYSocket(xy->mService));
   socket->connect(host->mValue, port->toString(false));
   xy->mX.push_back(socket);
 }
 
 // socket-close [X^socket Y] -> [X Y]
-static void primitive_socket_close(boost::shared_ptr<XY> const& xy) {
+static void primitive_socket_close(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYSocket> socket(dynamic_pointer_cast<XYSocket>(xy->mX.back()));
+  intrusive_ptr<XYSocket> socket(dynamic_pointer_cast<XYSocket>(xy->mX.back()));
   xy_assert(socket, XYError::TYPE);
   xy->mX.pop_back();
 
@@ -188,14 +188,14 @@ static void primitive_socket_close(boost::shared_ptr<XY> const& xy) {
 }
 
 // socket-writeln [X^string^socket Y] -> [X Y]
-static void primitive_socket_writeln(boost::shared_ptr<XY> const& xy) {
+static void primitive_socket_writeln(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYSocket> socket(dynamic_pointer_cast<XYSocket>(xy->mX.back()));
+  intrusive_ptr<XYSocket> socket(dynamic_pointer_cast<XYSocket>(xy->mX.back()));
   xy_assert(socket, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYString> str(dynamic_pointer_cast<XYString>(xy->mX.back()));
-  shared_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYString> str(dynamic_pointer_cast<XYString>(xy->mX.back()));
+  intrusive_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(str || seq, XYError::TYPE);
   xy->mX.pop_back();
   
@@ -206,9 +206,9 @@ static void primitive_socket_writeln(boost::shared_ptr<XY> const& xy) {
 }
 
 // line-channel [X^socket Y] -> [X^channel Y]
-static void primitive_line_channel(boost::shared_ptr<XY> const& xy) {
+static void primitive_line_channel(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYSocket> socket(dynamic_pointer_cast<XYSocket>(xy->mX.back()));
+  intrusive_ptr<XYSocket> socket(dynamic_pointer_cast<XYSocket>(xy->mX.back()));
   xy_assert(socket, XYError::TYPE);
   xy->mX.pop_back();
 
@@ -216,10 +216,10 @@ static void primitive_line_channel(boost::shared_ptr<XY> const& xy) {
 }
 
 // line-channel-get [X^channel Y] -> [X^str Y]
-static void primitive_line_channel_get(boost::shared_ptr<XY> const& xy) {
+static void primitive_line_channel_get(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYLineChannel> channel(dynamic_pointer_cast<XYLineChannel>(xy->mX.back()));
+  intrusive_ptr<XYLineChannel> channel(dynamic_pointer_cast<XYLineChannel>(xy->mX.back()));
   xy_assert(channel, XYError::TYPE);
 
   if (channel->mLines.size() == 0) {
@@ -230,7 +230,7 @@ static void primitive_line_channel_get(boost::shared_ptr<XY> const& xy) {
     
   xy->mX.pop_back();
   
-  shared_ptr<XYString> line(dynamic_pointer_cast<XYString>(channel->mLines.front()));
+  intrusive_ptr<XYString> line(dynamic_pointer_cast<XYString>(channel->mLines.front()));
   xy_assert(line, XYError::TYPE);
   channel->mLines.pop_front();
 
@@ -238,10 +238,10 @@ static void primitive_line_channel_get(boost::shared_ptr<XY> const& xy) {
 }
 
 // line-channel-getall [X^channel Y] -> [X^seq Y]
-static void primitive_line_channel_getall(boost::shared_ptr<XY> const& xy) {
+static void primitive_line_channel_getall(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYLineChannel> channel(dynamic_pointer_cast<XYLineChannel>(xy->mX.back()));
+  intrusive_ptr<XYLineChannel> channel(dynamic_pointer_cast<XYLineChannel>(xy->mX.back()));
   xy_assert(channel, XYError::TYPE);
 
   if (channel->mLines.size() == 0) {
@@ -252,9 +252,9 @@ static void primitive_line_channel_getall(boost::shared_ptr<XY> const& xy) {
 
   xy->mX.pop_back();
 
-  shared_ptr<XYList> list(new XYList());
+  intrusive_ptr<XYList> list(new XYList());
   while (channel->mLines.size() != 0) {
-    shared_ptr<XYString> line(dynamic_pointer_cast<XYString>(channel->mLines.front()));
+    intrusive_ptr<XYString> line(dynamic_pointer_cast<XYString>(channel->mLines.front()));
     xy_assert(line, XYError::TYPE);
     channel->mLines.pop_front();
     list->mList.push_back(line);
@@ -264,16 +264,16 @@ static void primitive_line_channel_getall(boost::shared_ptr<XY> const& xy) {
 }
 
 // line-channel-count [X^channel Y] -> [X^n Y]
-static void primitive_line_channel_count(boost::shared_ptr<XY> const& xy) {
+static void primitive_line_channel_count(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYLineChannel> channel(dynamic_pointer_cast<XYLineChannel>(xy->mX.back()));
+  intrusive_ptr<XYLineChannel> channel(dynamic_pointer_cast<XYLineChannel>(xy->mX.back()));
   xy_assert(channel, XYError::TYPE);
   xy->mX.pop_back();
 
   xy->mX.push_back(msp(new XYInteger(channel->mLines.size())));		     
 }
 
-void install_socket_primitives(shared_ptr<XY> const& xy) {
+void install_socket_primitives(intrusive_ptr<XY> const& xy) {
   xy->mP["socket"] = msp(new XYPrimitive("socket", primitive_socket));
   xy->mP["socket-writeln"] = msp(new XYPrimitive("socket-writeln", primitive_socket_writeln));
   xy->mP["socket-close"] = msp(new XYPrimitive("socket-close", primitive_socket_close));

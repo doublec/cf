@@ -27,10 +27,10 @@ void testParse() {
     XYStack x;
     parse("1 20 300 -400", back_inserter(x));
     BOOST_CHECK(x.size() == 4);
-    shared_ptr<XYInteger> n1(dynamic_pointer_cast<XYInteger>(x[0]));
-    shared_ptr<XYInteger> n2(dynamic_pointer_cast<XYInteger>(x[1]));
-    shared_ptr<XYInteger> n3(dynamic_pointer_cast<XYInteger>(x[2]));
-    shared_ptr<XYInteger> n4(dynamic_pointer_cast<XYInteger>(x[3]));
+    intrusive_ptr<XYInteger> n1(dynamic_pointer_cast<XYInteger>(x[0]));
+    intrusive_ptr<XYInteger> n2(dynamic_pointer_cast<XYInteger>(x[1]));
+    intrusive_ptr<XYInteger> n3(dynamic_pointer_cast<XYInteger>(x[2]));
+    intrusive_ptr<XYInteger> n4(dynamic_pointer_cast<XYInteger>(x[3]));
 
     BOOST_CHECK(n1 && n1->mValue == 1);
     BOOST_CHECK(n2 && n2->mValue == 20);
@@ -43,11 +43,11 @@ void testParse() {
     XYStack x;
     parse("a abc 2ab ab2 ab34cd", back_inserter(x));
     BOOST_CHECK(x.size() == 5);
-    shared_ptr<XYSymbol> s1(dynamic_pointer_cast<XYSymbol>(x[0]));
-    shared_ptr<XYSymbol> s2(dynamic_pointer_cast<XYSymbol>(x[1]));
-    shared_ptr<XYSymbol> s3(dynamic_pointer_cast<XYSymbol>(x[2]));
-    shared_ptr<XYSymbol> s4(dynamic_pointer_cast<XYSymbol>(x[3]));
-    shared_ptr<XYSymbol> s5(dynamic_pointer_cast<XYSymbol>(x[4]));
+    intrusive_ptr<XYSymbol> s1(dynamic_pointer_cast<XYSymbol>(x[0]));
+    intrusive_ptr<XYSymbol> s2(dynamic_pointer_cast<XYSymbol>(x[1]));
+    intrusive_ptr<XYSymbol> s3(dynamic_pointer_cast<XYSymbol>(x[2]));
+    intrusive_ptr<XYSymbol> s4(dynamic_pointer_cast<XYSymbol>(x[3]));
+    intrusive_ptr<XYSymbol> s5(dynamic_pointer_cast<XYSymbol>(x[4]));
 
     BOOST_CHECK(s1 && s1->mValue == "a");
     BOOST_CHECK(s2 && s2->mValue == "abc");
@@ -62,16 +62,16 @@ void testParse() {
     parse("[ 1 2 [ 3 4 ] [ 5 6 [ 7 ] ] ]", back_inserter(x));
     BOOST_CHECK(x.size() == 1);
 
-    shared_ptr<XYList> l1(dynamic_pointer_cast<XYList>(x[0]));
+    intrusive_ptr<XYList> l1(dynamic_pointer_cast<XYList>(x[0]));
     BOOST_CHECK(l1 && l1->mList.size() == 4);
     
-    shared_ptr<XYList> l2(dynamic_pointer_cast<XYList>(l1->mList[2]));
+    intrusive_ptr<XYList> l2(dynamic_pointer_cast<XYList>(l1->mList[2]));
     BOOST_CHECK(l2 && l2->mList.size() == 2);
 
-    shared_ptr<XYList> l3(dynamic_pointer_cast<XYList>(l1->mList[3]));
+    intrusive_ptr<XYList> l3(dynamic_pointer_cast<XYList>(l1->mList[3]));
     BOOST_CHECK(l3 && l3->mList.size() == 3);
 
-    shared_ptr<XYList> l4(dynamic_pointer_cast<XYList>(l3->mList[2]));
+    intrusive_ptr<XYList> l4(dynamic_pointer_cast<XYList>(l3->mList[2]));
     BOOST_CHECK(l4 && l4->mList.size() == 1);
   }
 
@@ -81,36 +81,36 @@ void testParse() {
     parse("[1 2[3 4] [5 6[7]]]", back_inserter(x));
     BOOST_CHECK(x.size() == 1);
 
-    shared_ptr<XYList> l1(dynamic_pointer_cast<XYList>(x[0]));
+    intrusive_ptr<XYList> l1(dynamic_pointer_cast<XYList>(x[0]));
     BOOST_CHECK(l1 && l1->mList.size() == 4);
     
-    shared_ptr<XYList> l2(dynamic_pointer_cast<XYList>(l1->mList[2]));
+    intrusive_ptr<XYList> l2(dynamic_pointer_cast<XYList>(l1->mList[2]));
     BOOST_CHECK(l2 && l2->mList.size() == 2);
 
-    shared_ptr<XYList> l3(dynamic_pointer_cast<XYList>(l1->mList[3]));
+    intrusive_ptr<XYList> l3(dynamic_pointer_cast<XYList>(l1->mList[3]));
     BOOST_CHECK(l3 && l3->mList.size() == 3);
 
-    shared_ptr<XYList> l4(dynamic_pointer_cast<XYList>(l3->mList[2]));
+    intrusive_ptr<XYList> l4(dynamic_pointer_cast<XYList>(l3->mList[2]));
     BOOST_CHECK(l4 && l4->mList.size() == 1);
   }
 
   {
     // Addition
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("1 2 +", back_inserter(xy->mY));
     BOOST_CHECK(xy->mY.size() == 3);
 
     while(xy->mY.size() > 0) {
       xy->eval1();
     }
-    shared_ptr<XYInteger> n1(dynamic_pointer_cast<XYInteger>(xy->mX[0]));
+    intrusive_ptr<XYInteger> n1(dynamic_pointer_cast<XYInteger>(xy->mX[0]));
 
     BOOST_CHECK(n1 && n1->mValue == 3);
   }
 
   {
     // Set/Get
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("[5 +] add5 set", back_inserter(xy->mY));
     BOOST_CHECK(xy->mY.size() == 3);
 
@@ -120,7 +120,7 @@ void testParse() {
 
     XYEnv::iterator it = xy->mEnv.find("add5");
     BOOST_CHECK(it != xy->mEnv.end());
-    shared_ptr<XYList> o1(dynamic_pointer_cast<XYList>((*it).second));
+    intrusive_ptr<XYList> o1(dynamic_pointer_cast<XYList>((*it).second));
     BOOST_CHECK(o1 && o1->mList.size() == 2);
 
     parse("2 add5.", back_inserter(xy->mY));
@@ -129,17 +129,17 @@ void testParse() {
     }
     
     BOOST_CHECK(xy->mX.size() == 1);
-    shared_ptr<XYInteger> o2(dynamic_pointer_cast<XYInteger>(xy->mX.back()));
+    intrusive_ptr<XYInteger> o2(dynamic_pointer_cast<XYInteger>(xy->mX.back()));
     BOOST_CHECK(o2 && o2->mValue == 7);
   }
 
   {
     // Pattern deconstruction
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("1 2 3 [[a b c] c b a]", back_inserter(xy->mX));
     BOOST_CHECK(xy->mX.size() == 4);
 
-    shared_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
+    intrusive_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
     BOOST_CHECK(pattern && pattern->mList.size() == 4);
     xy->mX.pop_back();
 
@@ -153,11 +153,11 @@ void testParse() {
 
   {
     // Pattern deconstruction 2
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("1 [2 [3]] [[a [b [c]]] c b a]", back_inserter(xy->mX));
     BOOST_CHECK(xy->mX.size() == 3);
 
-    shared_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
+    intrusive_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
     BOOST_CHECK(pattern && pattern->mList.size() == 4);
     xy->mX.pop_back();
 
@@ -170,11 +170,11 @@ void testParse() {
   }
   {
     // Pattern deconstruction 2
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("foo [a a]", back_inserter(xy->mX));
     BOOST_CHECK(xy->mX.size() == 2);
 
-    shared_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
+    intrusive_ptr<XYList> pattern = dynamic_pointer_cast<XYList>(xy->mX.back());
     BOOST_CHECK(pattern && pattern->mList.size() == 2);
     xy->mX.pop_back();
 
@@ -189,16 +189,16 @@ void testParse() {
     env["a"] = msp(new XYInteger(1));
     env["b"] = msp(new XYInteger(2));
 
-    shared_ptr<XYList> list(new XYList());
+    intrusive_ptr<XYList> list(new XYList());
     list->mList.push_back(msp(new XYInteger(42)));
     list->mList.push_back(msp(new XYSymbol("b")));
     list->mList.push_back(msp(new XYSymbol("a")));
 
-    shared_ptr<XYList> out(new XYList());
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XYList> out(new XYList());
+    intrusive_ptr<XY> xy(new XY(io));
     xy->replacePattern(env, list, back_inserter(out->mList));
     BOOST_CHECK(out->mList.size() > 0);
-    shared_ptr<XYList> result(dynamic_pointer_cast<XYList>(out->mList[0]));
+    intrusive_ptr<XYList> result(dynamic_pointer_cast<XYList>(out->mList[0]));
     BOOST_CHECK(result);
     BOOST_CHECK(result->mList.size() == 3);
     BOOST_CHECK(result->mList[0]->toString(true) == "42");
@@ -211,76 +211,76 @@ void testParse() {
     env["a"] = msp(new XYInteger(1));
     env["b"] = msp(new XYInteger(2));
 
-    shared_ptr<XYList> list(new XYList());
+    intrusive_ptr<XYList> list(new XYList());
     parse("[a [ b a ] a c]", back_inserter(list->mList));
 
-    shared_ptr<XYList> out(new XYList());
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XYList> out(new XYList());
+    intrusive_ptr<XY> xy(new XY(io));
     xy->replacePattern(env, list, back_inserter(out->mList));
     BOOST_CHECK(out->mList.size() > 0);
-    shared_ptr<XYList> result(dynamic_pointer_cast<XYList>(out->mList[0]));
+    intrusive_ptr<XYList> result(dynamic_pointer_cast<XYList>(out->mList[0]));
     BOOST_CHECK(result);
     BOOST_CHECK(result->mList.size() == 1);
     BOOST_CHECK(result->toString(true) == "[ [ 1 [ 2 1 ] 1 c ] ]");
   }
   {
     // Pattern 1 - Stack to Stack
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("1 2 [[a b] b a])", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
       xy->eval1();
     }
 
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
     BOOST_CHECK(n1->toString(true) == "[ 2 1 ]");
   }
   {
     // Pattern 2 - Stack to Stack
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("1 2 [[a b] a b [ c [ b ] ]])", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
       xy->eval1();
     }
 
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
     BOOST_CHECK(n1->toString(true) == "[ 1 2 [ c [ 2 ] ] ]");
   }
   {
     // Pattern 3 - Stack to Queue
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("[ [a a a +] ] double set 2 double.( 0", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
       xy->eval1();
     }
 
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
     BOOST_CHECK(n1->toString(true) == "[ 4 0 ]");
   }
   {
     // Pattern 4 - Stack to Queue - with list deconstruction
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("[1 2 3] [[[a A]] a A] (", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
       xy->eval1();
     }
 
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
     BOOST_CHECK(n1->toString(true) == "[ 1 [ 2 3 ] ]");
   }
   {
     // Pattern 5 - Stack to Queue - with list to short
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("[1] [[[a A]] a A] (", back_inserter(xy->mY));
     xy->eval();
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
     BOOST_CHECK(n1->toString(true) == "[ 1 [ ] ]");
   }
 
@@ -298,94 +298,94 @@ void testParse() {
   }
   {
     // Shuffle pattern test 2
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("1 2 a-", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
       xy->eval1();
     }
 
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
     BOOST_CHECK(n1->toString(true) == "[ 1 ]");
   }
   {
     // Shuffle pattern test 3
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("1 2 a-aa", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
       xy->eval1();
     }
 
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
     BOOST_CHECK(n1->toString(true) == "[ 1 2 2 ]");
   }
   {
     // Shuffle pattern test 4
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("1 2 ab-aba", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
       xy->eval1();
     }
 
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
     BOOST_CHECK(n1->toString(true) == "[ 1 2 1 ]");
   }
   {
     // Shuffle pattern test 5
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("1 2 foo-bar", back_inserter(xy->mY));
 
     while(xy->mY.size() > 0) {
       xy->eval1();
     }
 
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
 
     BOOST_CHECK(n1->toString(true) == "[ 1 2 foo-bar ]");
   }
   {
     // Dip test 1
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("1 2 hello [ + ] ` 4", back_inserter(xy->mY));
     xy->eval();
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
     BOOST_CHECK(n1->toString(true) == "[ 3 hello 4 ]");
   }
   {
     // Join test 1
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("1 2, [ 1 2 ] 2, 2 [1 2], [1 2] [3 4],", back_inserter(xy->mY));
     xy->eval();
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
     BOOST_CHECK(n1->toString(true) == "[ [ 1 2 ] [ 1 2 2 ] [ 2 1 2 ] [ 1 2 3 4 ] ]");
   }
   {
     // stackqueue test 1
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("1 2 [4 5] [ 6 7 ] $$ 9 10 11", back_inserter(xy->mY));
     xy->eval();
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
     BOOST_CHECK(n1->toString(true) == "[ 4 5 6 7 ]");
   }
   {
     // stack test 1
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("1 2 [ [3,]`12, ] $ 9 10 11", back_inserter(xy->mY));
     xy->eval();
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
     BOOST_CHECK(n1->toString(true) == "[ 1 2 3 9 10 11 12 ]");
   }
   {
     // count test 1
-    shared_ptr<XY> xy(new XY(io));
+    intrusive_ptr<XY> xy(new XY(io));
     parse("[1 2 3] count [] count 1 count \"abc\" count \"\" count", back_inserter(xy->mY));
     xy->eval();
-    shared_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
+    intrusive_ptr<XYList> n1(new XYList(xy->mX.begin(), xy->mX.end()));
     BOOST_CHECK(n1->toString(true) == "[ 3 0 1 3 0 ]");
   }
 

@@ -40,55 +40,55 @@ string escape(string s) {
  
 // Macro to implement double dispatch operations in class
 #define DD_IMPL(class, name)						\
-  shared_ptr<XYObject> class::name(XYObject* rhs) { return rhs->name(this); } \
-  shared_ptr<XYObject> class::name(XYFloat* lhs) { return dd_##name(lhs, this); } \
-  shared_ptr<XYObject> class::name(XYInteger* lhs) { return dd_##name(lhs, this); } \
-  shared_ptr<XYObject> class::name(XYSequence* lhs) { return dd_##name(lhs, this); }
+  intrusive_ptr<XYObject> class::name(XYObject* rhs) { return rhs->name(this); } \
+  intrusive_ptr<XYObject> class::name(XYFloat* lhs) { return dd_##name(lhs, this); } \
+  intrusive_ptr<XYObject> class::name(XYInteger* lhs) { return dd_##name(lhs, this); } \
+  intrusive_ptr<XYObject> class::name(XYSequence* lhs) { return dd_##name(lhs, this); }
 
 #define DD_IMPL2(name, op) \
-static shared_ptr<XYObject> dd_##name(XYFloat* lhs, XYFloat* rhs) { \
+static intrusive_ptr<XYObject> dd_##name(XYFloat* lhs, XYFloat* rhs) { \
   return msp(new XYFloat(lhs->mValue op rhs->mValue)); \
 } \
 \
-static shared_ptr<XYObject> dd_##name(XYFloat* lhs, XYInteger* rhs) { \
+static intrusive_ptr<XYObject> dd_##name(XYFloat* lhs, XYInteger* rhs) { \
   return msp(new XYFloat(lhs->mValue op rhs->as_float()->mValue)); \
 } \
 \
-static shared_ptr<XYObject> dd_##name(XYFloat* lhs, XYSequence* rhs) { \
-  shared_ptr<XYList> list(new XYList()); \
+static intrusive_ptr<XYObject> dd_##name(XYFloat* lhs, XYSequence* rhs) { \
+  intrusive_ptr<XYList> list(new XYList()); \
   size_t len = rhs->size();\
   for(int i=0; i < len; ++i)\
     list->mList.push_back(lhs->name(rhs->at(i).get()));	\
   return list; \
 }\
 \
-static shared_ptr<XYObject> dd_##name(XYInteger* lhs, XYFloat* rhs) { \
+static intrusive_ptr<XYObject> dd_##name(XYInteger* lhs, XYFloat* rhs) { \
   return msp(new XYFloat(lhs->as_float()->mValue op rhs->mValue)); \
 } \
 \
-static shared_ptr<XYObject> dd_##name(XYInteger* lhs, XYInteger* rhs) { \
+static intrusive_ptr<XYObject> dd_##name(XYInteger* lhs, XYInteger* rhs) { \
   return msp(new XYInteger(lhs->mValue op rhs->mValue)); \
 } \
 \
-static shared_ptr<XYObject> dd_##name(XYInteger* lhs, XYSequence* rhs) { \
-  shared_ptr<XYList> list(new XYList()); \
+static intrusive_ptr<XYObject> dd_##name(XYInteger* lhs, XYSequence* rhs) { \
+  intrusive_ptr<XYList> list(new XYList()); \
   size_t len = rhs->size();\
   for(int i=0; i < len; ++i)\
     list->mList.push_back(lhs->name(rhs->at(i).get()));	\
   return list; \
 } \
 \
-static shared_ptr<XYObject> dd_##name(XYSequence* lhs, XYObject* rhs) { \
-  shared_ptr<XYList> list(new XYList()); \
+static intrusive_ptr<XYObject> dd_##name(XYSequence* lhs, XYObject* rhs) { \
+  intrusive_ptr<XYList> list(new XYList()); \
   size_t len = lhs->size();\
   for(int i=0; i < len; ++i)\
     list->mList.push_back(lhs->at(i)->name(rhs));	\
   return list; \
 } \
 \
-static shared_ptr<XYObject> dd_##name(XYSequence* lhs, XYSequence* rhs) { \
+static intrusive_ptr<XYObject> dd_##name(XYSequence* lhs, XYSequence* rhs) { \
   assert(lhs->size() == rhs->size()); \
-  shared_ptr<XYList> list(new XYList()); \
+  intrusive_ptr<XYList> list(new XYList()); \
   size_t lhs_len = lhs->size();\
   size_t rhs_len = rhs->size();\
   for(int li = 0, ri = 0; li < lhs_len && ri < rhs_len; ++li, ++ri)\
@@ -100,40 +100,40 @@ DD_IMPL2(add, +)
 DD_IMPL2(subtract, -)
 DD_IMPL2(multiply, *)
 
-static shared_ptr<XYObject> dd_divide(XYFloat* lhs, XYFloat* rhs) {
+static intrusive_ptr<XYObject> dd_divide(XYFloat* lhs, XYFloat* rhs) {
   return msp(new XYFloat(lhs->mValue / rhs->mValue));
 }
 
-static shared_ptr<XYObject> dd_divide(XYFloat* lhs, XYInteger* rhs) {
+static intrusive_ptr<XYObject> dd_divide(XYFloat* lhs, XYInteger* rhs) {
   return msp(new XYFloat(lhs->mValue / rhs->as_float()->mValue));
 }
 
-static shared_ptr<XYObject> dd_divide(XYFloat* lhs, XYSequence* rhs) { 
-  shared_ptr<XYList> list(new XYList());
+static intrusive_ptr<XYObject> dd_divide(XYFloat* lhs, XYSequence* rhs) { 
+  intrusive_ptr<XYList> list(new XYList());
   size_t len = rhs->size();
   for (int i=0; i < len; ++i)
     list->mList.push_back(lhs->divide(rhs->at(i).get()));
   return list;
 }
 
-static shared_ptr<XYObject> dd_divide(XYInteger* lhs, XYFloat* rhs) {
+static intrusive_ptr<XYObject> dd_divide(XYInteger* lhs, XYFloat* rhs) {
   return msp(new XYFloat(lhs->as_float()->mValue / rhs->mValue));
 }
 
-static shared_ptr<XYObject> dd_divide(XYInteger* lhs, XYInteger* rhs) {
+static intrusive_ptr<XYObject> dd_divide(XYInteger* lhs, XYInteger* rhs) {
   return msp(new XYFloat(lhs->as_float()->mValue / rhs->as_float()->mValue));
 }
 
-static shared_ptr<XYObject> dd_divide(XYInteger* lhs, XYSequence* rhs) {
-  shared_ptr<XYList> list(new XYList());
+static intrusive_ptr<XYObject> dd_divide(XYInteger* lhs, XYSequence* rhs) {
+  intrusive_ptr<XYList> list(new XYList());
   size_t len = rhs->size();
   for (int i=0; i < len; ++i)
     list->mList.push_back(lhs->divide(rhs->at(i).get()));
   return list;
 }
 
-static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYObject* rhs) {
-  shared_ptr<XYList> list(new XYList());
+static intrusive_ptr<XYObject> dd_divide(XYSequence* lhs, XYObject* rhs) {
+  intrusive_ptr<XYList> list(new XYList());
   size_t len = lhs->size();
   for (int i=0; i < len; ++i)
     list->mList.push_back(lhs->at(i)->divide(rhs));
@@ -141,9 +141,9 @@ static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYObject* rhs) {
 }
 
 
-static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYSequence* rhs) {
+static intrusive_ptr<XYObject> dd_divide(XYSequence* lhs, XYSequence* rhs) {
   assert(lhs->size() == rhs->size());
-  shared_ptr<XYList> list(new XYList());
+  intrusive_ptr<XYList> list(new XYList());
   size_t lhs_len = lhs->size();
   size_t rhs_len = rhs->size();
   for(int li=0, ri=0; li < lhs_len && ri < rhs_len; ++li, ++ri)
@@ -151,46 +151,46 @@ static shared_ptr<XYObject> dd_divide(XYSequence* lhs, XYSequence* rhs) {
   return list; 
 }
 
-static shared_ptr<XYObject> dd_power(XYFloat* lhs, XYFloat* rhs) {
+static intrusive_ptr<XYObject> dd_power(XYFloat* lhs, XYFloat* rhs) {
   return msp(new XYFloat(pow(static_cast<double>(lhs->mValue.get_d()), 
 			     static_cast<double>(rhs->mValue.get_d()))));
 }
 
-static shared_ptr<XYObject> dd_power(XYFloat* lhs, XYInteger* rhs) {
-  shared_ptr<XYFloat> result(new XYFloat(lhs->mValue));
+static intrusive_ptr<XYObject> dd_power(XYFloat* lhs, XYInteger* rhs) {
+  intrusive_ptr<XYFloat> result(new XYFloat(lhs->mValue));
   mpf_pow_ui(result->mValue.get_mpf_t(), lhs->mValue.get_mpf_t(), rhs->as_uint());
   return result;
 }
 
-static shared_ptr<XYObject> dd_power(XYFloat* lhs, XYSequence* rhs) {
-  shared_ptr<XYList> list(new XYList());
+static intrusive_ptr<XYObject> dd_power(XYFloat* lhs, XYSequence* rhs) {
+  intrusive_ptr<XYList> list(new XYList());
   size_t len = rhs->size();
   for (int i=0; i < len; ++i)
     list->mList.push_back(lhs->power(rhs->at(i).get()));
   return list;
 }
 
-static shared_ptr<XYObject> dd_power(XYInteger* lhs, XYFloat* rhs) {
+static intrusive_ptr<XYObject> dd_power(XYInteger* lhs, XYFloat* rhs) {
   return msp(new XYFloat(pow(static_cast<double>(lhs->mValue.get_d()), 
 			     static_cast<double>(rhs->mValue.get_d()))));
 }
 
-static shared_ptr<XYObject> dd_power(XYInteger* lhs, XYInteger* rhs) {
-  shared_ptr<XYInteger> result(new XYInteger(lhs->mValue));
+static intrusive_ptr<XYObject> dd_power(XYInteger* lhs, XYInteger* rhs) {
+  intrusive_ptr<XYInteger> result(new XYInteger(lhs->mValue));
   mpz_pow_ui(result->mValue.get_mpz_t(), lhs->mValue.get_mpz_t(), rhs->as_uint());
   return result;
 }
 
-static shared_ptr<XYObject> dd_power(XYInteger* lhs, XYSequence* rhs) {
-  shared_ptr<XYList> list(new XYList());
+static intrusive_ptr<XYObject> dd_power(XYInteger* lhs, XYSequence* rhs) {
+  intrusive_ptr<XYList> list(new XYList());
   size_t len = rhs->size();
   for (int i=0; i < len; ++i)
     list->mList.push_back(lhs->power(rhs->at(i).get()));
   return list;
 }
 
-static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYObject* rhs) {
-  shared_ptr<XYList> list(new XYList());
+static intrusive_ptr<XYObject> dd_power(XYSequence* lhs, XYObject* rhs) {
+  intrusive_ptr<XYList> list(new XYList());
   size_t len = lhs->size();
   for (int i=0; i < len; ++i)
     list->mList.push_back(lhs->at(i)->power(rhs));
@@ -198,9 +198,9 @@ static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYObject* rhs) {
 }
 
 
-static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYSequence* rhs) {
+static intrusive_ptr<XYObject> dd_power(XYSequence* lhs, XYSequence* rhs) {
   assert(lhs->size() == rhs->size());
-  shared_ptr<XYList> list(new XYList());
+  intrusive_ptr<XYList> list(new XYList());
   size_t lhs_len = lhs->size();
   size_t rhs_len = rhs->size();
   for (int li=0, ri=0; li < lhs_len && ri < rhs_len; ++li, ++ri)
@@ -208,84 +208,101 @@ static shared_ptr<XYObject> dd_power(XYSequence* lhs, XYSequence* rhs) {
   return list;
 }
 
+// XYReference
+XYReference::XYReference() :
+  mReferences(0) {
+}
+
+void XYReference::increment() {
+  ++mReferences;
+}
+
+void XYReference::decrement() {
+  --mReferences;
+  if (mReferences == 0)
+    delete this;
+}
+
 // XYObject
-shared_ptr<XYObject> XYObject::add(XYObject* rhs) {
+XYObject::XYObject() { }
+
+intrusive_ptr<XYObject> XYObject::add(XYObject* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::add(XYFloat* rhs) {
+intrusive_ptr<XYObject> XYObject::add(XYFloat* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::add(XYInteger* rhs) {
+intrusive_ptr<XYObject> XYObject::add(XYInteger* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::add(XYSequence* rhs) {
+intrusive_ptr<XYObject> XYObject::add(XYSequence* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::subtract(XYObject* rhs) {
+intrusive_ptr<XYObject> XYObject::subtract(XYObject* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::subtract(XYFloat* rhs) {
+intrusive_ptr<XYObject> XYObject::subtract(XYFloat* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::subtract(XYInteger* rhs) {
+intrusive_ptr<XYObject> XYObject::subtract(XYInteger* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::subtract(XYSequence* rhs) {
+intrusive_ptr<XYObject> XYObject::subtract(XYSequence* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::multiply(XYObject* rhs) {
+intrusive_ptr<XYObject> XYObject::multiply(XYObject* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::multiply(XYFloat* rhs) {
+intrusive_ptr<XYObject> XYObject::multiply(XYFloat* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::multiply(XYInteger* rhs) {
+intrusive_ptr<XYObject> XYObject::multiply(XYInteger* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::multiply(XYSequence* rhs) {
+intrusive_ptr<XYObject> XYObject::multiply(XYSequence* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::divide(XYObject* rhs) {
+intrusive_ptr<XYObject> XYObject::divide(XYObject* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::divide(XYFloat* rhs) {
+intrusive_ptr<XYObject> XYObject::divide(XYFloat* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::divide(XYInteger* rhs) {
+intrusive_ptr<XYObject> XYObject::divide(XYInteger* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::divide(XYSequence* rhs) {
+intrusive_ptr<XYObject> XYObject::divide(XYSequence* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::power(XYObject* rhs) {
+intrusive_ptr<XYObject> XYObject::power(XYObject* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::power(XYFloat* rhs) {
+intrusive_ptr<XYObject> XYObject::power(XYFloat* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::power(XYInteger* rhs) {
+intrusive_ptr<XYObject> XYObject::power(XYInteger* rhs) {
   assert(1==0);
 }
 
-shared_ptr<XYObject> XYObject::power(XYSequence* rhs) {
+intrusive_ptr<XYObject> XYObject::power(XYSequence* rhs) {
   assert(1==0);
 }
 
@@ -308,14 +325,14 @@ string XYFloat::toString(bool) const {
   return lexical_cast<string>(mValue);
 }
 
-void XYFloat::eval1(shared_ptr<XY> const& xy) {
-  xy->mX.push_back(shared_from_this());
+void XYFloat::eval1(intrusive_ptr<XY> const& xy) {
+  xy->mX.push_back(msp(this));
 }
 
-int XYFloat::compare(shared_ptr<XYObject> rhs) {
-  shared_ptr<XYFloat> o = dynamic_pointer_cast<XYFloat>(rhs);
+int XYFloat::compare(intrusive_ptr<XYObject> rhs) {
+  intrusive_ptr<XYFloat> o = dynamic_pointer_cast<XYFloat>(rhs);
   if (!o) {
-    shared_ptr<XYInteger> i = dynamic_pointer_cast<XYInteger>(rhs);
+    intrusive_ptr<XYInteger> i = dynamic_pointer_cast<XYInteger>(rhs);
     if (i)
       return cmp(mValue, i->mValue);
     else
@@ -333,16 +350,16 @@ unsigned int XYFloat::as_uint() const {
   return mValue.get_ui();
 }
 
-shared_ptr<XYInteger> XYFloat::as_integer() {
+intrusive_ptr<XYInteger> XYFloat::as_integer() {
   return msp(new XYInteger(mValue));
 }
 
-shared_ptr<XYFloat> XYFloat::as_float() {
-  return dynamic_pointer_cast<XYFloat>(shared_from_this());
+intrusive_ptr<XYFloat> XYFloat::as_float() {
+  return dynamic_pointer_cast<XYFloat>(msp(this));
 }
 
-shared_ptr<XYNumber> XYFloat::floor() {
-  shared_ptr<XYFloat> result(new XYFloat(::floor(mValue)));
+intrusive_ptr<XYNumber> XYFloat::floor() {
+  intrusive_ptr<XYFloat> result(new XYFloat(::floor(mValue)));
   return result;
 }
 
@@ -360,14 +377,14 @@ string XYInteger::toString(bool) const {
   return lexical_cast<string>(mValue);
 }
 
-void XYInteger::eval1(shared_ptr<XY> const& xy) {
-  xy->mX.push_back(shared_from_this());
+void XYInteger::eval1(intrusive_ptr<XY> const& xy) {
+  xy->mX.push_back(msp(this));
 }
 
-int XYInteger::compare(shared_ptr<XYObject> rhs) {
-  shared_ptr<XYInteger> o = dynamic_pointer_cast<XYInteger>(rhs);
+int XYInteger::compare(intrusive_ptr<XYObject> rhs) {
+  intrusive_ptr<XYInteger> o = dynamic_pointer_cast<XYInteger>(rhs);
   if (!o) {
-    shared_ptr<XYFloat> f = dynamic_pointer_cast<XYFloat>(rhs);
+    intrusive_ptr<XYFloat> f = dynamic_pointer_cast<XYFloat>(rhs);
     if (f)
       return cmp(mValue, f->mValue);
     else
@@ -385,16 +402,16 @@ unsigned int XYInteger::as_uint() const {
   return mValue.get_ui();
 }
 
-shared_ptr<XYInteger> XYInteger::as_integer() {
-  return dynamic_pointer_cast<XYInteger>(shared_from_this());
+intrusive_ptr<XYInteger> XYInteger::as_integer() {
+  return dynamic_pointer_cast<XYInteger>(msp(this));
 }
 
-shared_ptr<XYFloat> XYInteger::as_float() {
+intrusive_ptr<XYFloat> XYInteger::as_float() {
   return msp(new XYFloat(mValue));
 }
 
-shared_ptr<XYNumber> XYInteger::floor() {
-  return dynamic_pointer_cast<XYNumber>(shared_from_this());
+intrusive_ptr<XYNumber> XYInteger::floor() {
+  return dynamic_pointer_cast<XYNumber>(msp(this));
 }
 
 // XYSymbol
@@ -404,17 +421,17 @@ string XYSymbol::toString(bool) const {
   return mValue;
 }
 
-void XYSymbol::eval1(shared_ptr<XY> const& xy) {
+void XYSymbol::eval1(intrusive_ptr<XY> const& xy) {
   XYEnv::iterator it = xy->mP.find(mValue);
   if (it != xy->mP.end())
     // Primitive symbol, execute immediately
     (*it).second->eval1(xy);
   else
-    xy->mX.push_back(shared_from_this());
+    xy->mX.push_back(msp(this));
 }
 
-int XYSymbol::compare(shared_ptr<XYObject> rhs) {
-  shared_ptr<XYSymbol> o = dynamic_pointer_cast<XYSymbol>(rhs);
+int XYSymbol::compare(intrusive_ptr<XYObject> rhs) {
+  intrusive_ptr<XYSymbol> o = dynamic_pointer_cast<XYSymbol>(rhs);
   if (!o)
     return toString(true).compare(rhs->toString(true));
 
@@ -434,12 +451,12 @@ string XYString::toString(bool parse) const {
   return mValue;
 }
 
-void XYString::eval1(shared_ptr<XY> const& xy) {
-  xy->mX.push_back(shared_from_this());
+void XYString::eval1(intrusive_ptr<XY> const& xy) {
+  xy->mX.push_back(msp(this));
 }
 
-int XYString::compare(shared_ptr<XYObject> rhs) {
-  shared_ptr<XYString> o = dynamic_pointer_cast<XYString>(rhs);
+int XYString::compare(intrusive_ptr<XYObject> rhs) {
+  intrusive_ptr<XYString> o = dynamic_pointer_cast<XYString>(rhs);
   if (!o)
     return toString(true).compare(rhs->toString(true));
 
@@ -456,18 +473,18 @@ void XYString::pushBackInto(List& list) {
     list.push_back(msp(new XYInteger(*it)));
 }
 
-shared_ptr<XYObject> XYString::at(size_t n)
+intrusive_ptr<XYObject> XYString::at(size_t n)
 {
   return msp(new XYInteger(mValue[n]));
 }
 
-shared_ptr<XYObject> XYString::head()
+intrusive_ptr<XYObject> XYString::head()
 {
   assert(mValue.size() > 0);
   return msp(new XYInteger(mValue[0]));
 }
 
-shared_ptr<XYSequence> XYString::tail()
+intrusive_ptr<XYSequence> XYString::tail()
 {
   if (mValue.size() <= 1) 
     return msp(new XYString(""));
@@ -475,31 +492,31 @@ shared_ptr<XYSequence> XYString::tail()
   return msp(new XYString(mValue.substr(1)));
 }
 
-boost::shared_ptr<XYSequence> XYString::join(boost::shared_ptr<XYSequence> const& rhs)
+boost::intrusive_ptr<XYSequence> XYString::join(boost::intrusive_ptr<XYSequence> const& rhs)
 {
   XYString const* rhs_string = dynamic_cast<XYString const*>(rhs.get());
   if (rhs_string) {
-    if (this->shared_from_this().use_count() == 2) {
+    if (this->mReferences == 2) {
       mValue += rhs_string->mValue;
-      return dynamic_pointer_cast<XYSequence>(this->shared_from_this());
+      return dynamic_pointer_cast<XYSequence>(msp(this));
     }
 
     return msp(new XYString(mValue + rhs_string->mValue));
   }
 
-  shared_ptr<XYSequence> self(dynamic_pointer_cast<XYSequence>(shared_from_this()));
+  intrusive_ptr<XYSequence> self(dynamic_pointer_cast<XYSequence>(msp(this)));
 
   if (dynamic_cast<XYJoin const*>(rhs.get())) {
     // If the reference to rhs is unique then we can modify the object itself.
-    if (rhs.unique()) {    
-      shared_ptr<XYJoin> result(dynamic_pointer_cast<XYJoin>(rhs));
+    if (rhs->mReferences == 1) {    
+      intrusive_ptr<XYJoin> result(dynamic_pointer_cast<XYJoin>(rhs));
       result->mSequences.push_front(self);
       return result;
     }
     else {
       // Pointer is shared, we have to copy the data
-      shared_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
-      shared_ptr<XYJoin> result(new XYJoin());
+      intrusive_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
+      intrusive_ptr<XYJoin> result(new XYJoin());
       result->mSequences.push_back(self);
       result->mSequences.insert(result->mSequences.end(), 
 		  	        join_rhs->mSequences.begin(), join_rhs->mSequences.end());
@@ -525,9 +542,9 @@ string XYShuffle::toString(bool) const {
   return out.str();
 }
 
-void XYShuffle::eval1(shared_ptr<XY> const& xy) {
+void XYShuffle::eval1(intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= mBefore.size(), XYError::STACK_UNDERFLOW);
-  map<char, shared_ptr<XYObject> > env;
+  map<char, intrusive_ptr<XYObject> > env;
   for(string::reverse_iterator it = mBefore.rbegin(); it != mBefore.rend(); ++it) {
     env[*it] = xy->mX.back();
     xy->mX.pop_back();
@@ -539,8 +556,8 @@ void XYShuffle::eval1(shared_ptr<XY> const& xy) {
   }
 }
 
-int XYShuffle::compare(shared_ptr<XYObject> rhs) {
-  shared_ptr<XYShuffle> o = dynamic_pointer_cast<XYShuffle>(rhs);
+int XYShuffle::compare(intrusive_ptr<XYObject> rhs) {
+  intrusive_ptr<XYShuffle> o = dynamic_pointer_cast<XYShuffle>(rhs);
   if (!o)
     return toString(true).compare(rhs->toString(true));
 
@@ -553,8 +570,8 @@ DD_IMPL(XYSequence, subtract)
 DD_IMPL(XYSequence, multiply)
 DD_IMPL(XYSequence, divide)
 DD_IMPL(XYSequence, power)
-int XYSequence::compare(shared_ptr<XYObject> rhs) {
-  shared_ptr<XYSequence> o = dynamic_pointer_cast<XYSequence>(rhs);
+int XYSequence::compare(intrusive_ptr<XYObject> rhs) {
+  intrusive_ptr<XYSequence> o = dynamic_pointer_cast<XYSequence>(rhs);
   if (!o)
     return toString(true).compare(rhs->toString(true));
 
@@ -595,8 +612,8 @@ string XYList::toString(bool parse) const {
   return s.str();
 }
 
-void XYList::eval1(shared_ptr<XY> const& xy) {
-  xy->mX.push_back(shared_from_this());
+void XYList::eval1(intrusive_ptr<XY> const& xy) {
+  xy->mX.push_back(msp(this));
 }
 
 size_t XYList::size()
@@ -609,40 +626,40 @@ void XYList::pushBackInto(List& list) {
     list.push_back(*it);
 }
 
-shared_ptr<XYObject> XYList::at(size_t n)
+intrusive_ptr<XYObject> XYList::at(size_t n)
 {
   return mList[n];
 }
 
-shared_ptr<XYObject> XYList::head()
+intrusive_ptr<XYObject> XYList::head()
 {
   assert(mList.size() > 0);
   return mList[0];
 }
 
-shared_ptr<XYSequence> XYList::tail()
+intrusive_ptr<XYSequence> XYList::tail()
 {
   if (mList.size() <= 1) 
     return msp(new XYList());
 
-  return msp(new XYSlice(dynamic_pointer_cast<XYSequence>(shared_from_this()), 1, mList.size()));
+  return msp(new XYSlice(dynamic_pointer_cast<XYSequence>(msp(this)), 1, mList.size()));
 }
 
-boost::shared_ptr<XYSequence> XYList::join(boost::shared_ptr<XYSequence> const& rhs)
+boost::intrusive_ptr<XYSequence> XYList::join(boost::intrusive_ptr<XYSequence> const& rhs)
 {
-  shared_ptr<XYSequence> self(dynamic_pointer_cast<XYSequence>(shared_from_this()));
+  intrusive_ptr<XYSequence> self(dynamic_pointer_cast<XYSequence>(msp(this)));
 
   if (dynamic_cast<XYJoin const*>(rhs.get())) {
     // If the reference to rhs is unique then we can modify the object itself.
-    if (rhs.unique()) {    
-      shared_ptr<XYJoin> result(dynamic_pointer_cast<XYJoin>(rhs));
+    if (rhs->mReferences == 1) {    
+      intrusive_ptr<XYJoin> result(dynamic_pointer_cast<XYJoin>(rhs));
       result->mSequences.push_front(self);
       return result;
     }
     else {
       // Pointer is shared, we have to copy the data
-      shared_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
-      shared_ptr<XYJoin> result(new XYJoin());
+      intrusive_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
+      intrusive_ptr<XYJoin> result(new XYJoin());
       result->mSequences.push_back(self);
       result->mSequences.insert(result->mSequences.end(), 
 		  	        join_rhs->mSequences.begin(), join_rhs->mSequences.end());
@@ -654,14 +671,14 @@ boost::shared_ptr<XYSequence> XYList::join(boost::shared_ptr<XYSequence> const& 
 }
 
 // XYSlice
-XYSlice::XYSlice(shared_ptr<XYSequence> original,
+XYSlice::XYSlice(intrusive_ptr<XYSequence> original,
                  int begin,
 		 int end)  :
   mOriginal(original),
   mBegin(begin),
   mEnd(end)
 {
-  shared_ptr<XYSlice> slice;
+  intrusive_ptr<XYSlice> slice;
   while ((slice = dynamic_pointer_cast<XYSlice>(mOriginal))) {
     // Find the original, non-slice sequence. Without this we can
     // corrupt the C stack due to too much recursion when destroying
@@ -681,8 +698,8 @@ string XYSlice::toString(bool parse) const {
   return s.str();
 }
 
-void XYSlice::eval1(shared_ptr<XY> const& xy) {
-  xy->mX.push_back(shared_from_this());
+void XYSlice::eval1(intrusive_ptr<XY> const& xy) {
+  xy->mX.push_back(msp(this));
 }
 
 size_t XYSlice::size()
@@ -695,19 +712,19 @@ void XYSlice::pushBackInto(List& list) {
     list.push_back(mOriginal->at(i));
 }
 
-shared_ptr<XYObject> XYSlice::at(size_t n)
+intrusive_ptr<XYObject> XYSlice::at(size_t n)
 {
   assert(mBegin + n < mEnd);
   return mOriginal->at(mBegin + n);
 }
 
-shared_ptr<XYObject> XYSlice::head()
+intrusive_ptr<XYObject> XYSlice::head()
 {
   assert(mBegin != mEnd);
   return mOriginal->at(mBegin);
 }
 
-shared_ptr<XYSequence> XYSlice::tail()
+intrusive_ptr<XYSequence> XYSlice::tail()
 {
   if (size() <= 1)
     return msp(new XYList());
@@ -715,21 +732,21 @@ shared_ptr<XYSequence> XYSlice::tail()
   return msp(new XYSlice(mOriginal, mBegin+1, mEnd));
 }
 
-boost::shared_ptr<XYSequence> XYSlice::join(boost::shared_ptr<XYSequence> const& rhs)
+boost::intrusive_ptr<XYSequence> XYSlice::join(boost::intrusive_ptr<XYSequence> const& rhs)
 {
-  shared_ptr<XYSequence> self(dynamic_pointer_cast<XYSequence>(shared_from_this()));
+  intrusive_ptr<XYSequence> self(dynamic_pointer_cast<XYSequence>(msp(this)));
 
   if (dynamic_cast<XYJoin const*>(rhs.get())) {
     // If the reference to rhs is unique then we can modify the object itself.
-    if (rhs.unique()) {    
-      shared_ptr<XYJoin> result(dynamic_pointer_cast<XYJoin>(rhs));
+    if (rhs->mReferences == 1) {    
+      intrusive_ptr<XYJoin> result(dynamic_pointer_cast<XYJoin>(rhs));
       result->mSequences.push_front(self);
       return result;
     }
     else {
       // Pointer is shared, we have to copy the data
-      shared_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
-      shared_ptr<XYJoin> result(new XYJoin());
+      intrusive_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
+      intrusive_ptr<XYJoin> result(new XYJoin());
       result->mSequences.push_back(self);
       result->mSequences.insert(result->mSequences.end(), 
 		  	        join_rhs->mSequences.begin(), join_rhs->mSequences.end());
@@ -741,8 +758,8 @@ boost::shared_ptr<XYSequence> XYSlice::join(boost::shared_ptr<XYSequence> const&
 }
 
 // XYJoin
-XYJoin::XYJoin(shared_ptr<XYSequence> first,
-               shared_ptr<XYSequence> second)
+XYJoin::XYJoin(intrusive_ptr<XYSequence> first,
+               intrusive_ptr<XYSequence> second)
 { 
   mSequences.push_back(first);
   mSequences.push_back(second);
@@ -759,8 +776,8 @@ string XYJoin::toString(bool parse) const {
   return s.str();
 }
 
-void XYJoin::eval1(shared_ptr<XY> const& xy) {
-  xy->mX.push_back(shared_from_this());
+void XYJoin::eval1(intrusive_ptr<XY> const& xy) {
+  xy->mX.push_back(msp(this));
 }
 
 size_t XYJoin::size()
@@ -772,7 +789,7 @@ size_t XYJoin::size()
   return s;
 }
 
-shared_ptr<XYObject> XYJoin::at(size_t n)
+intrusive_ptr<XYObject> XYJoin::at(size_t n)
 {
   assert(n < size());
   size_t s = 0;
@@ -793,41 +810,41 @@ void XYJoin::pushBackInto(List& list)
   }
 }
 
-shared_ptr<XYObject> XYJoin::head()
+intrusive_ptr<XYObject> XYJoin::head()
 {
   return at(0);
 }
 
-shared_ptr<XYSequence> XYJoin::tail()
+intrusive_ptr<XYSequence> XYJoin::tail()
 {
   if (size() <= 1)
     return msp(new XYList());
 
-  return msp(new XYSlice(dynamic_pointer_cast<XYSequence>(shared_from_this()), 1, size()));
+  return msp(new XYSlice(dynamic_pointer_cast<XYSequence>(msp(this)), 1, size()));
 }
 
-boost::shared_ptr<XYSequence> XYJoin::join(boost::shared_ptr<XYSequence> const& rhs)
+boost::intrusive_ptr<XYSequence> XYJoin::join(boost::intrusive_ptr<XYSequence> const& rhs)
 {
-  shared_ptr<XYJoin> self(dynamic_pointer_cast<XYJoin>(shared_from_this()));
+  intrusive_ptr<XYJoin> self(dynamic_pointer_cast<XYJoin>(msp(this)));
 
   if (dynamic_cast<XYJoin const*>(rhs.get())) {
     // If the reference to rhs is unique then we can modify the object itself.
-    if (rhs.unique()) {    
-      shared_ptr<XYJoin> result(dynamic_pointer_cast<XYJoin>(rhs));
+    if (rhs->mReferences == 1) {    
+      intrusive_ptr<XYJoin> result(dynamic_pointer_cast<XYJoin>(rhs));
       result->mSequences.insert(result->mSequences.begin(), 
 				mSequences.begin(), mSequences.end());
       return result;
     }
-    else if (self.use_count() == 2) { // to account for the 1 reference we are holding
-      shared_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
+    else if (self->mReferences == 2) { // to account for the 1 reference we are holding
+      intrusive_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
       mSequences.insert(mSequences.end(), 
 			join_rhs->mSequences.begin(), join_rhs->mSequences.end());
       return self;
     }
     else {
       // Pointer is shared, we have to copy the data
-      shared_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
-      shared_ptr<XYJoin> result(new XYJoin());
+      intrusive_ptr<XYJoin> join_rhs(dynamic_pointer_cast<XYJoin>(rhs));
+      intrusive_ptr<XYJoin> result(new XYJoin());
       result->mSequences.insert(result->mSequences.end(), 
 				mSequences.begin(), mSequences.end());
       result->mSequences.insert(result->mSequences.end(), 
@@ -837,13 +854,13 @@ boost::shared_ptr<XYSequence> XYJoin::join(boost::shared_ptr<XYSequence> const& 
   }
 
   // rhs is not a join
-  if (self.use_count() == 2) { // to account for the 1 reference we are holding
+  if (self->mReferences == 2) { // to account for the 1 reference we are holding
     mSequences.push_back(rhs);
     return self;
   }
   
   // rhs is not a join and we can't modify ourselves
-  shared_ptr<XYJoin> result(new XYJoin());
+  intrusive_ptr<XYJoin> result(new XYJoin());
   result->mSequences.insert(result->mSequences.end(), 
 			    mSequences.begin(), mSequences.end());
   result->mSequences.push_back(rhs);
@@ -851,18 +868,18 @@ boost::shared_ptr<XYSequence> XYJoin::join(boost::shared_ptr<XYSequence> const& 
 }
 
 // XYPrimitive
-XYPrimitive::XYPrimitive(string n, void (*func)(shared_ptr<XY> const&)) : mName(n), mFunc(func) { }
+XYPrimitive::XYPrimitive(string n, void (*func)(intrusive_ptr<XY> const&)) : mName(n), mFunc(func) { }
 
 string XYPrimitive::toString(bool) const {
   return mName;
 }
 
-void XYPrimitive::eval1(shared_ptr<XY> const& xy) {
+void XYPrimitive::eval1(intrusive_ptr<XY> const& xy) {
   mFunc(xy);
 }
 
-int XYPrimitive::compare(shared_ptr<XYObject> rhs) {
-  shared_ptr<XYPrimitive> o = dynamic_pointer_cast<XYPrimitive>(rhs);
+int XYPrimitive::compare(intrusive_ptr<XYObject> rhs) {
+  intrusive_ptr<XYPrimitive> o = dynamic_pointer_cast<XYPrimitive>(rhs);
   if (!o)
     return toString(true).compare(rhs->toString(true));
 
@@ -872,13 +889,13 @@ int XYPrimitive::compare(shared_ptr<XYObject> rhs) {
 // Primitive Implementations
 
 // + [X^lhs^rhs] Y] -> [X^lhs+rhs Y]
-static void primitive_addition(boost::shared_ptr<XY> const& xy) {
+static void primitive_addition(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYObject> rhs(xy->mX.back());
+  intrusive_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> lhs(xy->mX.back());
+  intrusive_ptr<XYObject> lhs(xy->mX.back());
   assert(lhs);
   xy->mX.pop_back();
 
@@ -886,13 +903,13 @@ static void primitive_addition(boost::shared_ptr<XY> const& xy) {
 }
 
 // - [X^lhs^rhs] Y] -> [X^lhs-rhs Y]
-static void primitive_subtraction(boost::shared_ptr<XY> const& xy) {
+static void primitive_subtraction(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYObject> rhs(xy->mX.back());
+  intrusive_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> lhs(xy->mX.back());
+  intrusive_ptr<XYObject> lhs(xy->mX.back());
   assert(lhs);
   xy->mX.pop_back();
 
@@ -900,13 +917,13 @@ static void primitive_subtraction(boost::shared_ptr<XY> const& xy) {
 }
 
 // * [X^lhs^rhs] Y] -> [X^lhs*rhs Y]
-static void primitive_multiplication(boost::shared_ptr<XY> const& xy) {
+static void primitive_multiplication(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYObject> rhs(xy->mX.back());
+  intrusive_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> lhs(xy->mX.back());
+  intrusive_ptr<XYObject> lhs(xy->mX.back());
   assert(lhs);
   xy->mX.pop_back();
 
@@ -914,13 +931,13 @@ static void primitive_multiplication(boost::shared_ptr<XY> const& xy) {
 }
 
 // % [X^lhs^rhs] Y] -> [X^lhs/rhs Y]
-static void primitive_division(boost::shared_ptr<XY> const& xy) {
+static void primitive_division(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYObject> rhs(xy->mX.back());
+  intrusive_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> lhs(xy->mX.back());
+  intrusive_ptr<XYObject> lhs(xy->mX.back());
   assert(lhs);
   xy->mX.pop_back();
 
@@ -928,13 +945,13 @@ static void primitive_division(boost::shared_ptr<XY> const& xy) {
 }
 
 // ^ [X^lhs^rhs] Y] -> [X^lhs**rhs Y]
-static void primitive_power(boost::shared_ptr<XY> const& xy) {
+static void primitive_power(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYObject> rhs(xy->mX.back());
+  intrusive_ptr<XYObject> rhs(xy->mX.back());
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> lhs(xy->mX.back());
+  intrusive_ptr<XYObject> lhs(xy->mX.back());
   assert(lhs);
   xy->mX.pop_back();
 
@@ -942,9 +959,9 @@ static void primitive_power(boost::shared_ptr<XY> const& xy) {
 }
 
 // _ floor [X^n] Y] -> [X^n Y]
-static void primitive_floor(boost::shared_ptr<XY> const& xy) {
+static void primitive_floor(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  intrusive_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(xy->mX.back());
   xy_assert(n, XYError::TYPE);
   xy->mX.pop_back();
 
@@ -952,39 +969,39 @@ static void primitive_floor(boost::shared_ptr<XY> const& xy) {
 }
 
 // set [X^value^name Y] -> [X Y] 
-static void primitive_set(boost::shared_ptr<XY> const& xy) {
+static void primitive_set(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYSymbol> name = dynamic_pointer_cast<XYSymbol>(xy->mX.back());
+  intrusive_ptr<XYSymbol> name = dynamic_pointer_cast<XYSymbol>(xy->mX.back());
   xy_assert(name, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> value = xy->mX.back();
+  intrusive_ptr<XYObject> value = xy->mX.back();
   xy->mX.pop_back();
 
   xy->mEnv[name->mValue] = value;
 }
 
 // get [X^name Y] [X^value Y]
-static void primitive_get(boost::shared_ptr<XY> const& xy) {
+static void primitive_get(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYSymbol> name = dynamic_pointer_cast<XYSymbol>(xy->mX.back());
+  intrusive_ptr<XYSymbol> name = dynamic_pointer_cast<XYSymbol>(xy->mX.back());
   xy_assert(name, XYError::TYPE);
   xy->mX.pop_back();
 
   XYEnv::iterator it = xy->mEnv.find(name->mValue);
   xy_assert(it != xy->mEnv.end(), XYError::SYMBOL_NOT_FOUND);
 
-  shared_ptr<XYObject> value = (*it).second;
+  intrusive_ptr<XYObject> value = (*it).second;
   xy->mX.push_back(value);
 }
 
 // . [X^{O1..On} Y] [X O1^..^On^Y]
-static void primitive_unquote(boost::shared_ptr<XY> const& xy) {
+static void primitive_unquote(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYObject> o = xy->mX.back();
+  intrusive_ptr<XYObject> o = xy->mX.back();
   xy->mX.pop_back();
 
-  shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(o);
+  intrusive_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(o);
 
   if (list) {
     XYStack temp;
@@ -993,7 +1010,7 @@ static void primitive_unquote(boost::shared_ptr<XY> const& xy) {
     xy->mY.insert(xy->mY.begin(), temp.begin(), temp.end());
   }
   else {
-    shared_ptr<XYSymbol> symbol = dynamic_pointer_cast<XYSymbol>(o);
+    intrusive_ptr<XYSymbol> symbol = dynamic_pointer_cast<XYSymbol>(o);
     if (symbol) {
       // If it's a symbol, get the value of the symbol and apply
       // unquote to that.
@@ -1014,11 +1031,11 @@ static void primitive_unquote(boost::shared_ptr<XY> const& xy) {
 }
 
 // ) [X^{pattern} Y] [X^result Y]
-static void primitive_pattern_ss(boost::shared_ptr<XY> const& xy) {
+static void primitive_pattern_ss(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
   // Get the pattern from the stack
-  shared_ptr<XYSequence> pattern = dynamic_pointer_cast<XYSequence>(xy->mX.back());
+  intrusive_ptr<XYSequence> pattern = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   xy_assert(pattern, XYError::TYPE);
   xy->mX.pop_back();
   assert(pattern->size() != 0);
@@ -1031,7 +1048,7 @@ static void primitive_pattern_ss(boost::shared_ptr<XY> const& xy) {
   if (pattern->size() > 1) {
     int start = 0;
     int end   = pattern->size();
-    shared_ptr<XYList> list(new XYList());    
+    intrusive_ptr<XYList> list(new XYList());    
     xy->replacePattern(env, msp(new XYSlice(pattern, ++start, end)), back_inserter(list->mList));
     assert(list->size() > 0);
 
@@ -1043,11 +1060,11 @@ static void primitive_pattern_ss(boost::shared_ptr<XY> const& xy) {
 }
 
 // ( [X^{pattern} Y] [X result^Y]
-static void primitive_pattern_sq(boost::shared_ptr<XY> const& xy) {
+static void primitive_pattern_sq(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
   // Get the pattern from the stack
-  shared_ptr<XYSequence> pattern = dynamic_pointer_cast<XYSequence>(xy->mX.back());
+  intrusive_ptr<XYSequence> pattern = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   xy_assert(pattern, XYError::TYPE);
   xy->mX.pop_back();
   assert(pattern->size() != 0);
@@ -1060,7 +1077,7 @@ static void primitive_pattern_sq(boost::shared_ptr<XY> const& xy) {
   if (pattern->size() > 1) {
     int start = 0;
     int end   = pattern->size();
-    shared_ptr<XYList> list(new XYList());
+    intrusive_ptr<XYList> list(new XYList());
     xy->replacePattern(env, msp(new XYSlice(pattern, ++start, end)), back_inserter(list->mList));
     assert(list->size() > 0);
 
@@ -1072,13 +1089,13 @@ static void primitive_pattern_sq(boost::shared_ptr<XY> const& xy) {
 }
 
 // ` dip [X^b^{a0..an} Y] [X a0..an^b^Y]
-static void primitive_dip(boost::shared_ptr<XY> const& xy) {
+static void primitive_dip(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
+  intrusive_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   xy_assert(list, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> o = xy->mX.back();
+  intrusive_ptr<XYObject> o = xy->mX.back();
   assert(o);
   xy->mX.pop_back();
 
@@ -1089,43 +1106,43 @@ static void primitive_dip(boost::shared_ptr<XY> const& xy) {
 }
 
 // | reverse [X^{a0..an} Y] [X^{an..a0} Y]
-static void primitive_reverse(boost::shared_ptr<XY> const& xy) {
+static void primitive_reverse(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
+  intrusive_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   xy_assert(list, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYList> reversed(new XYList());
+  intrusive_ptr<XYList> reversed(new XYList());
   list->pushBackInto(reversed->mList);
   reverse(reversed->mList.begin(), reversed->mList.end());
   xy->mX.push_back(reversed);
 }
 
 // \ quote [X^o Y] [X^{o} Y]
-static void primitive_quote(boost::shared_ptr<XY> const& xy) {
+static void primitive_quote(boost::intrusive_ptr<XY> const& xy) {
   assert(xy->mY.size() >= 1);
-  shared_ptr<XYObject> o = xy->mY.front();
+  intrusive_ptr<XYObject> o = xy->mY.front();
   assert(o);
   xy->mY.pop_front();
 
-  shared_ptr<XYList> list = msp(new XYList());
+  intrusive_ptr<XYList> list = msp(new XYList());
   list->mList.push_back(o);
   xy->mX.push_back(list);
 }
 
 // , join [X^a^b Y] [X^{...} Y]
-static void primitive_join(boost::shared_ptr<XY> const& xy) {
+static void primitive_join(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYObject> rhs = xy->mX.back();
+  intrusive_ptr<XYObject> rhs = xy->mX.back();
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> lhs = xy->mX.back();
+  intrusive_ptr<XYObject> lhs = xy->mX.back();
   assert(lhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYSequence> list_lhs = dynamic_pointer_cast<XYSequence>(lhs);
-  shared_ptr<XYSequence> list_rhs = dynamic_pointer_cast<XYSequence>(rhs);
+  intrusive_ptr<XYSequence> list_lhs = dynamic_pointer_cast<XYSequence>(lhs);
+  intrusive_ptr<XYSequence> list_rhs = dynamic_pointer_cast<XYSequence>(rhs);
 
   if (list_lhs && list_rhs) {
     // Reset original pointers to enable copy on write optimisations
@@ -1140,7 +1157,7 @@ static void primitive_join(boost::shared_ptr<XY> const& xy) {
     lhs.reset(static_cast<XYSequence*>(0));
 
     // If rhs is not a list, it is added to the end of the list.
-    shared_ptr<XYList> list(new XYList());
+    intrusive_ptr<XYList> list(new XYList());
     list->mList.push_back(rhs);
     xy->mX.push_back(list_lhs->join(list));
   }
@@ -1149,13 +1166,13 @@ static void primitive_join(boost::shared_ptr<XY> const& xy) {
     rhs.reset(static_cast<XYSequence*>(0));
 
     // If lhs is not a list, it is added to the front of the list
-    shared_ptr<XYList> list(new XYList());
+    intrusive_ptr<XYList> list(new XYList());
     list->mList.push_back(lhs);
     xy->mX.push_back(list->join(list_rhs));
   }
   else {
     // If neither are lists, a list is made containing the two items
-    shared_ptr<XYList> list(new XYList());
+    intrusive_ptr<XYList> list(new XYList());
     list->mList.push_back(lhs);
     list->mList.push_back(rhs);
     xy->mX.push_back(list);
@@ -1166,14 +1183,14 @@ static void primitive_join(boost::shared_ptr<XY> const& xy) {
 // has stack effect ( stack queue -- stack queue ). $ will
 // call this program with X and Y on the stack, and replace
 // X and Y with the results.
-static void primitive_stack(boost::shared_ptr<XY> const& xy) {
+static void primitive_stack(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYSequence> list  = dynamic_pointer_cast<XYSequence>(xy->mX.back());
+  intrusive_ptr<XYSequence> list  = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   xy_assert(list, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYList> stack(new XYList(xy->mX.begin(), xy->mX.end()));
-  shared_ptr<XYList> queue(new XYList(xy->mY.begin(), xy->mY.end()));
+  intrusive_ptr<XYList> stack(new XYList(xy->mX.begin(), xy->mX.end()));
+  intrusive_ptr<XYList> queue(new XYList(xy->mY.begin(), xy->mY.end()));
 
   xy->mX.push_back(stack);
   xy->mX.push_back(queue);
@@ -1185,14 +1202,14 @@ static void primitive_stack(boost::shared_ptr<XY> const& xy) {
 
 // $$ stackqueue - Helper word for '$'. Given a stack and queue on the
 // stack, replaces the existing stack and queue with them.
-static void primitive_stackqueue(boost::shared_ptr<XY> const& xy) {
+static void primitive_stackqueue(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYSequence> queue = dynamic_pointer_cast<XYSequence>(xy->mX.back());
+  intrusive_ptr<XYSequence> queue = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   xy_assert(queue, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYSequence> stack = dynamic_pointer_cast<XYSequence>(xy->mX.back());
+  intrusive_ptr<XYSequence> stack = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   xy_assert(stack, XYError::TYPE);
   xy->mX.pop_back();
 
@@ -1208,14 +1225,14 @@ static void primitive_stackqueue(boost::shared_ptr<XY> const& xy) {
 }
 
 // = equals [X^a^b Y] [X^? Y] 
-static void primitive_equals(boost::shared_ptr<XY> const& xy) {
+static void primitive_equals(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYObject> rhs = xy->mX.back();
+  intrusive_ptr<XYObject> rhs = xy->mX.back();
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> lhs = xy->mX.back();
+  intrusive_ptr<XYObject> lhs = xy->mX.back();
   assert(lhs);
   xy->mX.pop_back();
 
@@ -1226,14 +1243,14 @@ static void primitive_equals(boost::shared_ptr<XY> const& xy) {
 }
 
 // <  [X^a^b Y] [X^? Y] 
-static void primitive_lessThan(boost::shared_ptr<XY> const& xy) {
+static void primitive_lessThan(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYObject> rhs = xy->mX.back();
+  intrusive_ptr<XYObject> rhs = xy->mX.back();
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> lhs = xy->mX.back();
+  intrusive_ptr<XYObject> lhs = xy->mX.back();
   assert(lhs);
   xy->mX.pop_back();
 
@@ -1244,14 +1261,14 @@ static void primitive_lessThan(boost::shared_ptr<XY> const& xy) {
 }
 
 // >  [X^a^b Y] [X^? Y] 
-static void primitive_greaterThan(boost::shared_ptr<XY> const& xy) {
+static void primitive_greaterThan(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYObject> rhs = xy->mX.back();
+  intrusive_ptr<XYObject> rhs = xy->mX.back();
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> lhs = xy->mX.back();
+  intrusive_ptr<XYObject> lhs = xy->mX.back();
   assert(lhs);
   xy->mX.pop_back();
 
@@ -1262,14 +1279,14 @@ static void primitive_greaterThan(boost::shared_ptr<XY> const& xy) {
 }
 
 // <=  [X^a^b Y] [X^? Y] 
-static void primitive_lessThanEqual(boost::shared_ptr<XY> const& xy) {
+static void primitive_lessThanEqual(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYObject> rhs = xy->mX.back();
+  intrusive_ptr<XYObject> rhs = xy->mX.back();
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> lhs = xy->mX.back();
+  intrusive_ptr<XYObject> lhs = xy->mX.back();
   assert(lhs);
   xy->mX.pop_back();
 
@@ -1280,14 +1297,14 @@ static void primitive_lessThanEqual(boost::shared_ptr<XY> const& xy) {
 }
 
 // >=  [X^a^b Y] [X^? Y] 
-static void primitive_greaterThanEqual(boost::shared_ptr<XY> const& xy) {
+static void primitive_greaterThanEqual(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYObject> rhs = xy->mX.back();
+  intrusive_ptr<XYObject> rhs = xy->mX.back();
   assert(rhs);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> lhs = xy->mX.back();
+  intrusive_ptr<XYObject> lhs = xy->mX.back();
   assert(lhs);
   xy->mX.pop_back();
 
@@ -1299,19 +1316,19 @@ static void primitive_greaterThanEqual(boost::shared_ptr<XY> const& xy) {
 
 
 // not not [X^a Y] [X^? Y] 
-static void primitive_not(boost::shared_ptr<XY> const& xy) {
+static void primitive_not(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYObject> o = xy->mX.back();
+  intrusive_ptr<XYObject> o = xy->mX.back();
   assert(o);
   xy->mX.pop_back();
 
-  shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(o);
+  intrusive_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(o);
   if (n && n->is_zero()) {
     xy->mX.push_back(msp(new XYInteger(1)));
   }
   else {
-    shared_ptr<XYSequence> l = dynamic_pointer_cast<XYSequence>(o);
+    intrusive_ptr<XYSequence> l = dynamic_pointer_cast<XYSequence>(o);
     if(l && l->size() == 0)
       xy->mX.push_back(msp(new XYInteger(1)));
     else
@@ -1320,19 +1337,19 @@ static void primitive_not(boost::shared_ptr<XY> const& xy) {
 }
 
 // @ nth [X^n^{...} Y] [X^o Y] 
-static void primitive_nth(boost::shared_ptr<XY> const& xy) {
+static void primitive_nth(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
+  intrusive_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   xy_assert(list, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> index(xy->mX.back());
+  intrusive_ptr<XYObject> index(xy->mX.back());
   assert(index);
   xy->mX.pop_back();
 
-  shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(index);
-  shared_ptr<XYSequence> s = dynamic_pointer_cast<XYSequence>(index);
+  intrusive_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(index);
+  intrusive_ptr<XYSequence> s = dynamic_pointer_cast<XYSequence>(index);
   xy_assert(n || s, XYError::TYPE);
 
   if (n) {
@@ -1349,11 +1366,11 @@ static void primitive_nth(boost::shared_ptr<XY> const& xy) {
       xy->mX.push_back(list);
     }    
     else {
-      shared_ptr<XYObject> head = s->head();
-      shared_ptr<XYSequence> tail = s->tail();
+      intrusive_ptr<XYObject> head = s->head();
+      intrusive_ptr<XYSequence> tail = s->tail();
 
       // If head is a list, then it's a request to get multiple values
-      shared_ptr<XYSequence> headlist = dynamic_pointer_cast<XYSequence>(head);
+      intrusive_ptr<XYSequence> headlist = dynamic_pointer_cast<XYSequence>(head);
       if (headlist && headlist->size() == 0) {
 	if (tail->size() == 0) {
 	  xy->mX.push_back(list);
@@ -1413,10 +1430,10 @@ static void primitive_nth(boost::shared_ptr<XY> const& xy) {
 }
 
 // print [X^n Y] [X Y] 
-static void primitive_print(boost::shared_ptr<XY> const& xy) {
+static void primitive_print(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYObject> o(xy->mX.back());
+  intrusive_ptr<XYObject> o(xy->mX.back());
   assert(o);
   xy->mX.pop_back();
 
@@ -1428,10 +1445,10 @@ static void primitive_print(boost::shared_ptr<XY> const& xy) {
 }
 
 // println [X^n Y] [X Y] 
-static void primitive_println(boost::shared_ptr<XY> const& xy) {
+static void primitive_println(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYObject> o(xy->mX.back());
+  intrusive_ptr<XYObject> o(xy->mX.back());
   assert(o);
   xy->mX.pop_back();
 
@@ -1443,10 +1460,10 @@ static void primitive_println(boost::shared_ptr<XY> const& xy) {
 
 
 // write [X^n Y] [X Y] 
-static void primitive_write(boost::shared_ptr<XY> const& xy) {
+static void primitive_write(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYObject> o(xy->mX.back());
+  intrusive_ptr<XYObject> o(xy->mX.back());
   assert(o);
   xy->mX.pop_back();
 
@@ -1459,18 +1476,18 @@ static void primitive_write(boost::shared_ptr<XY> const& xy) {
 // count [X^{...} Y] [X^n Y] 
 // Returns the length of any list. If the item at the top of the
 // stack is an atom, returns 1.
-static void primitive_count(boost::shared_ptr<XY> const& xy) {
+static void primitive_count(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYObject> o(xy->mX.back());
+  intrusive_ptr<XYObject> o(xy->mX.back());
   assert(o);
   xy->mX.pop_back();
 
-  shared_ptr<XYSequence> list(dynamic_pointer_cast<XYSequence>(o));
+  intrusive_ptr<XYSequence> list(dynamic_pointer_cast<XYSequence>(o));
   if (list)
     xy->mX.push_back(msp(new XYInteger(list->size())));
   else {
-    shared_ptr<XYString> s(dynamic_pointer_cast<XYString>(o));
+    intrusive_ptr<XYString> s(dynamic_pointer_cast<XYString>(o));
     if (s)
       xy->mX.push_back(msp(new XYInteger(s->mValue.size())));
     else
@@ -1481,21 +1498,21 @@ static void primitive_count(boost::shared_ptr<XY> const& xy) {
 // split [X^string^seps Y] [X^{...} Y] 
 // Splits a string into an array of strings, splitting
 // on the specified characters.
-static void primitive_split(boost::shared_ptr<XY> const& xy) {
+static void primitive_split(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYString> seps(dynamic_pointer_cast<XYString>(xy->mX.back()));
+  intrusive_ptr<XYString> seps(dynamic_pointer_cast<XYString>(xy->mX.back()));
   xy_assert(seps, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYString> str(dynamic_pointer_cast<XYString>(xy->mX.back()));
+  intrusive_ptr<XYString> str(dynamic_pointer_cast<XYString>(xy->mX.back()));
   xy_assert(str, XYError::TYPE);
   xy->mX.pop_back();
 
   vector<string> result;
   split(result, str->mValue, is_any_of(seps->mValue));
  
-  shared_ptr<XYList> list(new XYList());
+  intrusive_ptr<XYList> list(new XYList());
   for (vector<string>::iterator it = result.begin(); it != result.end(); ++it)
     list->mList.push_back(msp(new XYString(*it)));
   xy->mX.push_back(list);
@@ -1503,15 +1520,15 @@ static void primitive_split(boost::shared_ptr<XY> const& xy) {
 
 // sdrop [X^seq^n Y] [X^{...} Y] 
 // drops n items from the beginning of the sequence
-static void primitive_sdrop(boost::shared_ptr<XY> const& xy) {
+static void primitive_sdrop(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYNumber> n(dynamic_pointer_cast<XYNumber>(xy->mX.back()));
+  intrusive_ptr<XYNumber> n(dynamic_pointer_cast<XYNumber>(xy->mX.back()));
   xy_assert(n, XYError::TYPE);
   xy->mX.pop_back();
   
-  shared_ptr<XYString>   str(dynamic_pointer_cast<XYString>(xy->mX.back()));
-  shared_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYString>   str(dynamic_pointer_cast<XYString>(xy->mX.back()));
+  intrusive_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(str || seq, XYError::TYPE);
   xy->mX.pop_back();
 
@@ -1529,15 +1546,15 @@ static void primitive_sdrop(boost::shared_ptr<XY> const& xy) {
 
 // stake [X^seq^n Y] [X^{...} Y] 
 // takes n items from the beginning of the sequence
-static void primitive_stake(boost::shared_ptr<XY> const& xy) {
+static void primitive_stake(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYNumber> n(dynamic_pointer_cast<XYNumber>(xy->mX.back()));
+  intrusive_ptr<XYNumber> n(dynamic_pointer_cast<XYNumber>(xy->mX.back()));
   xy_assert(n, XYError::TYPE);
   xy->mX.pop_back();
   
-  shared_ptr<XYString>   str(dynamic_pointer_cast<XYString>(xy->mX.back()));
-  shared_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYString>   str(dynamic_pointer_cast<XYString>(xy->mX.back()));
+  intrusive_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(str || seq, XYError::TYPE);
   xy->mX.pop_back();
 
@@ -1556,17 +1573,17 @@ void tokenize(InputIterator first, InputIterator last, OutputIterator out);
 
 // tokenize [X^s Y] [X^{tokens} Y] 
 // Given a string, returns a list of cf tokens
-static void primitive_tokenize(boost::shared_ptr<XY> const& xy) {
+static void primitive_tokenize(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYString> s(dynamic_pointer_cast<XYString>(xy->mX.back()));
+  intrusive_ptr<XYString> s(dynamic_pointer_cast<XYString>(xy->mX.back()));
   xy_assert(s, XYError::TYPE);
   xy->mX.pop_back();
 
   vector<string> tokens;
   tokenize(s->mValue.begin(), s->mValue.end(), back_inserter(tokens));
 
-  shared_ptr<XYList> result(new XYList());
+  intrusive_ptr<XYList> result(new XYList());
   for(vector<string>::iterator it=tokens.begin(); it != tokens.end(); ++it)
     result->mList.push_back(msp(new XYString(*it)));
 
@@ -1575,27 +1592,27 @@ static void primitive_tokenize(boost::shared_ptr<XY> const& xy) {
 
 // parse [X^{tokens} Y] [X^{...} Y] 
 // Given a list of tokens, parses it and returns the program
-static void primitive_parse(boost::shared_ptr<XY> const& xy) {
+static void primitive_parse(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
-  shared_ptr<XYSequence> tokens(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYSequence> tokens(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(tokens, XYError::TYPE);
   xy->mX.pop_back();
 
   vector<string> strings;
   for (int i=0; i < tokens->size(); ++i) {
-    shared_ptr<XYString> s = dynamic_pointer_cast<XYString>(tokens->at(i));
+    intrusive_ptr<XYString> s = dynamic_pointer_cast<XYString>(tokens->at(i));
     xy_assert(s, XYError::TYPE);
     strings.push_back(s->mValue);
   }
 
-  shared_ptr<XYList> result(new XYList());
+  intrusive_ptr<XYList> result(new XYList());
   parse(strings.begin(), strings.end(), back_inserter(result->mList));
   xy->mX.push_back(result);
 }
 
 // Asynchronous handler for getline
-static void getlineHandler(shared_ptr<XY> const& xy, boost::system::error_code const& err) {
+static void getlineHandler(intrusive_ptr<XY> const& xy, boost::system::error_code const& err) {
   if (!err) {
     istream stream(&xy->mInputBuffer);
     string input;
@@ -1607,7 +1624,7 @@ static void getlineHandler(shared_ptr<XY> const& xy, boost::system::error_code c
 
 // getline [X Y] [X^".." Y] 
 // Get a line of input from the user
-static void primitive_getline(boost::shared_ptr<XY> const& xy) {
+static void primitive_getline(boost::intrusive_ptr<XY> const& xy) {
   boost::asio::async_read_until(xy->mInputStream,
 				xy->mInputBuffer,
 				"\n",
@@ -1619,7 +1636,7 @@ static void primitive_getline(boost::shared_ptr<XY> const& xy) {
 // millis [X Y] [X^m Y]
 // Runs the number of milliseconds on the stack since
 // 1 Janary 1970.
-static void primitive_millis(boost::shared_ptr<XY> const& xy) {
+static void primitive_millis(boost::intrusive_ptr<XY> const& xy) {
   using namespace boost::posix_time;
   using namespace boost::gregorian;
 
@@ -1632,37 +1649,37 @@ static void primitive_millis(boost::shared_ptr<XY> const& xy) {
 }
 
 // enum [X^n Y] -> [X^{0..n} Y]
-static void primitive_enum(boost::shared_ptr<XY> const& xy) {
+static void primitive_enum(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(xy->mX.back());
+  intrusive_ptr<XYNumber> n = dynamic_pointer_cast<XYNumber>(xy->mX.back());
   xy_assert(n, XYError::TYPE);
   xy->mX.pop_back();
 
   int value = n->as_uint();
-  shared_ptr<XYList> list = msp(new XYList());
+  intrusive_ptr<XYList> list = msp(new XYList());
   for(int i=0; i < value; ++i)
     list->mList.push_back(msp(new XYInteger(i)));
   xy->mX.push_back(list);
 }
 
 // clone [X^o Y] -> [X^o Y]
-static void primitive_clone(boost::shared_ptr<XY> const& xy) {
+static void primitive_clone(boost::intrusive_ptr<XY> const& xy) {
   // TODO: Only works for sequences for now
   // Implemented to work around an XYJoin limitation
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYSequence> o = dynamic_pointer_cast<XYSequence>(xy->mX.back());
+  intrusive_ptr<XYSequence> o = dynamic_pointer_cast<XYSequence>(xy->mX.back());
   xy_assert(o, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYList> r(new XYList());
+  intrusive_ptr<XYList> r(new XYList());
   o->pushBackInto(r->mList);
   xy->mX.push_back(r);
 }
 
 // clone [X^o Y] -> [X^string Y]
-static void primitive_to_string(boost::shared_ptr<XY> const& xy) {
+static void primitive_to_string(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYObject> o(xy->mX.back());
+  intrusive_ptr<XYObject> o(xy->mX.back());
   xy->mX.pop_back();
 
   xy->mX.push_back(msp(new XYString(o->toString(true))));
@@ -1674,16 +1691,16 @@ static void primitive_to_string(boost::shared_ptr<XY> const& xy) {
 // [3] 1 2 + [+] foldl
 // [] 3 3 + [+] foldl
 // 6
-static void primitive_foldl(boost::shared_ptr<XY> const& xy) {
+static void primitive_foldl(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYSequence> quot(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYSequence> quot(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(quot, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> seed(xy->mX.back());
+  intrusive_ptr<XYObject> seed(xy->mX.back());
   xy->mX.pop_back();
 
-  shared_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(seq, XYError::TYPE);
   xy->mX.pop_back();
 			     
@@ -1691,8 +1708,8 @@ static void primitive_foldl(boost::shared_ptr<XY> const& xy) {
     xy->mX.push_back(seed);
   }
   else {
-    shared_ptr<XYObject> head(seq->head());
-    shared_ptr<XYSequence> tail(seq->tail());
+    intrusive_ptr<XYObject> head(seq->head());
+    intrusive_ptr<XYSequence> tail(seq->tail());
   
     XYStack temp;
     temp.push_back(tail);
@@ -1714,16 +1731,16 @@ static void primitive_foldl(boost::shared_ptr<XY> const& xy) {
 // 0 1 2 [] 3 [+] foldr + + +
 // 0 1 2 3  + + +
 // 6
-static void primitive_foldr(boost::shared_ptr<XY> const& xy) {
+static void primitive_foldr(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYSequence> quot(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYSequence> quot(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(quot, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> seed(xy->mX.back());
+  intrusive_ptr<XYObject> seed(xy->mX.back());
   xy->mX.pop_back();
 
-  shared_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(seq, XYError::TYPE);
   xy->mX.pop_back();
 			     
@@ -1731,8 +1748,8 @@ static void primitive_foldr(boost::shared_ptr<XY> const& xy) {
     xy->mX.push_back(seed);
   }
   else {
-    shared_ptr<XYObject> head(seq->head());
-    shared_ptr<XYSequence> tail(seq->tail());
+    intrusive_ptr<XYObject> head(seq->head());
+    intrusive_ptr<XYSequence> tail(seq->tail());
     
     XYStack temp;
     temp.push_back(seed);
@@ -1749,19 +1766,19 @@ static void primitive_foldr(boost::shared_ptr<XY> const& xy) {
 
 // if [X^bool^then^else Y] -> [X Y]
 // 2 1 = [ ... ] [ ... ] if
-static void primitive_if(boost::shared_ptr<XY> const& xy) {
+static void primitive_if(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYSequence> else_quot(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYSequence> else_quot(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(else_quot, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYSequence> then_quot(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYSequence> then_quot(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(then_quot, XYError::TYPE);
   xy->mX.pop_back();
 
-  shared_ptr<XYObject> o(xy->mX.back());
-  shared_ptr<XYNumber> num(dynamic_pointer_cast<XYNumber>(o));
-  shared_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(o));
+  intrusive_ptr<XYObject> o(xy->mX.back());
+  intrusive_ptr<XYNumber> num(dynamic_pointer_cast<XYNumber>(o));
+  intrusive_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(o));
   xy_assert(o || num || seq, XYError::TYPE);
   xy->mX.pop_back();
 
@@ -1779,12 +1796,12 @@ static void primitive_if(boost::shared_ptr<XY> const& xy) {
 }
 
 // ? find [X^seq^elt Y] -> [X^index Y]
-static void primitive_find(boost::shared_ptr<XY> const& xy) {
+static void primitive_find(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  shared_ptr<XYObject> elt(xy->mX.back());
+  intrusive_ptr<XYObject> elt(xy->mX.back());
   xy->mX.pop_back();
 
-  shared_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  intrusive_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
   xy_assert(seq, XYError::TYPE);
   xy->mX.pop_back();
 
@@ -1815,7 +1832,7 @@ bool XYTimeLimit::check(XY* xy) {
 }
 
 // XYError
-XYError::XYError(shared_ptr<XY> const& xy, code c) :
+XYError::XYError(intrusive_ptr<XY> const& xy, code c) :
   mXY(xy),
   mCode(c),
   mLine(-1),
@@ -1823,7 +1840,7 @@ XYError::XYError(shared_ptr<XY> const& xy, code c) :
 {
 }
 
-XYError::XYError(shared_ptr<XY> const& xy, code c, char const* file, int line) :
+XYError::XYError(intrusive_ptr<XY> const& xy, code c, char const* file, int line) :
   mXY(xy),
   mCode(c),
   mLine(line),
@@ -1866,6 +1883,7 @@ string XYError::message() {
 
 // XY
 XY::XY(boost::asio::io_service& service) :
+  XYReference(),
   mService(service),
   mInputStream(service, ::dup(STDIN_FILENO)),
   mOutputStream(service, ::dup(STDOUT_FILENO)),
@@ -1926,7 +1944,7 @@ void XY::stdioHandler(boost::system::error_code const& err) {
       (*it)->start(this);
     }
 
-    mService.post(bind(&XY::evalHandler, shared_from_this()));
+    mService.post(bind(&XY::evalHandler, msp(this)));
   }
   else if (err != boost::asio::error::eof) {
     boost::asio::streambuf buffer;
@@ -1953,19 +1971,19 @@ void XY::evalHandler() {
       boost::asio::async_read_until(mInputStream,
 				    mInputBuffer,
 				    "\n",
-				    bind(&XY::stdioHandler, shared_from_this(), boost::asio::placeholders::error));
+				    bind(&XY::stdioHandler, msp(this), boost::asio::placeholders::error));
     }
     else if(mY.size() == 0 && !mRepl) {
       // We've completed. Inform waiting interpreters we're done.
       if (mWaiting.size() > 0) {
-	for(vector<shared_ptr<XY> >::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
+	for(vector<intrusive_ptr<XY> >::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
 	  (*it)->mService.post(bind(&XY::evalHandler, (*it)));
 	}
 	mWaiting.clear();
       }
     }
     else {
-      mService.post(bind(&XY::evalHandler, shared_from_this()));
+      mService.post(bind(&XY::evalHandler, msp(this)));
     }
   }
   catch(XYError& e) {
@@ -1982,9 +2000,9 @@ void XY::evalHandler() {
       stream << "Error: " << e.message() << endl;
       boost::asio::write(mOutputStream, buffer);
 
-      shared_ptr<XYList> stack(new XYList(mX.begin(), mX.end()));
-      shared_ptr<XYList> queue(new XYList(mY.begin(), mY.end()));
-      shared_ptr<XYList> error(new XYList());
+      intrusive_ptr<XYList> stack(new XYList(mX.begin(), mX.end()));
+      intrusive_ptr<XYList> queue(new XYList(mY.begin(), mY.end()));
+      intrusive_ptr<XYList> error(new XYList());
 
       mX.clear();
       mY.clear();
@@ -1996,7 +2014,7 @@ void XY::evalHandler() {
       mX.push_back(error);
       // We've completed. Inform waiting interpreters we're done.
       if (!mRepl && mWaiting.size() > 0) {
-	for(vector<shared_ptr<XY> >::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
+	for(vector<intrusive_ptr<XY> >::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
 	  (*it)->mService.post(bind(&XY::evalHandler, (*it)));
 	}
 	mWaiting.clear();
@@ -2007,22 +2025,22 @@ void XY::evalHandler() {
 	  (*it)->start(this);
 	}
 
-	mService.post(bind(&XY::evalHandler, shared_from_this()));
+	mService.post(bind(&XY::evalHandler, msp(this)));
       }
     }
   }
 }
 
 void XY::yield() {
-  mService.post(bind(&XY::evalHandler, shared_from_this()));
-  throw XYError(shared_from_this(), XYError::WAITING_FOR_ASYNC_EVENT);
+  mService.post(bind(&XY::evalHandler, msp(this)));
+  throw XYError(msp(this), XYError::WAITING_FOR_ASYNC_EVENT);
 }
 
 void XY::checkLimits() {
   for(XYLimits::iterator it = mLimits.begin(); it != mLimits.end(); ++it) {
     if ((*it)->check(this)) {
       // This limit was reached, stop executing and throw the error
-      throw XYError(shared_from_this(), XYError::LIMIT_REACHED);
+      throw XYError(msp(this), XYError::LIMIT_REACHED);
     }
   }
 }
@@ -2044,12 +2062,12 @@ void XY::eval1() {
   if (mY.size() == 0)
     return;
 
-  shared_ptr<XYObject> o = mY.front();
+  intrusive_ptr<XYObject> o = mY.front();
   assert(o);
 
   mY.pop_front();
 
-  o->eval1(shared_from_this());
+  o->eval1(msp(this));
 }
 
 void XY::eval() {
@@ -2065,13 +2083,13 @@ void XY::eval() {
 
 template <class OutputIterator>
 void XY::match(OutputIterator out, 
-               shared_ptr<XYObject> object,
-               shared_ptr<XYObject> pattern,
-               shared_ptr<XYSequence> sequence,
+               intrusive_ptr<XYObject> object,
+               intrusive_ptr<XYObject> pattern,
+               intrusive_ptr<XYSequence> sequence,
                int i) {
-  shared_ptr<XYSequence> object_list = dynamic_pointer_cast<XYSequence>(object);
-  shared_ptr<XYSequence> pattern_list = dynamic_pointer_cast<XYSequence>(pattern);
-  shared_ptr<XYSymbol> pattern_symbol = dynamic_pointer_cast<XYSymbol>(pattern);
+  intrusive_ptr<XYSequence> object_list = dynamic_pointer_cast<XYSequence>(object);
+  intrusive_ptr<XYSequence> pattern_list = dynamic_pointer_cast<XYSequence>(pattern);
+  intrusive_ptr<XYSymbol> pattern_symbol = dynamic_pointer_cast<XYSymbol>(pattern);
   if (object_list && pattern_list) {
     int pi = 0;
     int oi = 0;
@@ -2081,7 +2099,7 @@ void XY::match(OutputIterator out,
     // If there are more pattern items than there are list items,
     // set the pattern value to null.
     while(pi < pattern_list->size()) {
-      shared_ptr<XYSymbol> s = dynamic_pointer_cast<XYSymbol>(pattern_list->at(pi));
+      intrusive_ptr<XYSymbol> s = dynamic_pointer_cast<XYSymbol>(pattern_list->at(pi));
       if (s) {
         *out++ = make_pair(s->mValue, msp(new XYList()));
       }
@@ -2092,7 +2110,7 @@ void XY::match(OutputIterator out,
     // If the pattern is a list, but the object is not, 
     // pretend the object is a one element list. This enables:
     // 42 [ [[a A]] a A ] -> 42 []
-    shared_ptr<XYList> list(new XYList());
+    intrusive_ptr<XYList> list(new XYList());
     list->mList.push_back(object);
     match(out, list, pattern, sequence, i);
   }
@@ -2108,29 +2126,29 @@ void XY::match(OutputIterator out,
 }
 
 template <class OutputIterator>
-void XY::getPatternValues(shared_ptr<XYObject> pattern, OutputIterator out) {
-  shared_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(pattern);
+void XY::getPatternValues(intrusive_ptr<XYObject> pattern, OutputIterator out) {
+  intrusive_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(pattern);
   if (list) {
     assert(mX.size() >= list->size());
-    shared_ptr<XYList> stack(new XYList(mX.end() - list->size(), mX.end()));
+    intrusive_ptr<XYList> stack(new XYList(mX.end() - list->size(), mX.end()));
     match(out, stack, pattern, stack, 0);
     mX.resize(mX.size() - list->size());
   }
   else {
-    shared_ptr<XYObject> o = mX.back();
+    intrusive_ptr<XYObject> o = mX.back();
     mX.pop_back();
-    shared_ptr<XYList> list(new XYList());
+    intrusive_ptr<XYList> list(new XYList());
     match(out, o, pattern, list, list->size());
   }
 }
  
 template <class OutputIterator>
-void XY::replacePattern(XYEnv const& env, shared_ptr<XYObject> object, OutputIterator out) {
-  shared_ptr<XYSequence> list   = dynamic_pointer_cast<XYSequence>(object);
-  shared_ptr<XYSymbol>   symbol = dynamic_pointer_cast<XYSymbol>(object); 
+void XY::replacePattern(XYEnv const& env, intrusive_ptr<XYObject> object, OutputIterator out) {
+  intrusive_ptr<XYSequence> list   = dynamic_pointer_cast<XYSequence>(object);
+  intrusive_ptr<XYSymbol>   symbol = dynamic_pointer_cast<XYSymbol>(object); 
   if (list) {
     // Recurse through the list replacing variables as needed
-    shared_ptr<XYList> new_list(new XYList());
+    intrusive_ptr<XYList> new_list(new XYList());
     for(int i=0; i < list->size(); ++i)
       replacePattern(env, list->at(i), back_inserter(new_list->mList));
     *out++ = new_list;
