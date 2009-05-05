@@ -147,4 +147,9 @@ Eliding indexes to get matrix slices
 >     [1000 2000 3000 4000]
 >   ] @
 > ] test.
+
+Handling of circular lists
+
+> [ "[ 1 (circular) 3 ]" ] [ [1 2 3] dup. 1  abc-abca ! to-string ] test.
+
 > "Test run completed\n" write
