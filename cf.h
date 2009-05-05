@@ -237,6 +237,9 @@ class XYSequence : public XYObject
     // Returns the element at index 'n'
     virtual boost::intrusive_ptr<XYObject> at(size_t n) = 0;
 
+    // Set the element at index 'n' to the value 'v'
+    virtual void set_at(size_t n, boost::intrusive_ptr<XYObject> const& v) = 0;
+
     // Returns the head of a sequence (the first item).
     virtual boost::intrusive_ptr<XYObject> head() = 0;
 
@@ -261,6 +264,7 @@ class XYString : public XYSequence
     virtual size_t size();
     virtual void pushBackInto(List& list);
     virtual boost::intrusive_ptr<XYObject> at(size_t n);
+    virtual void set_at(size_t n, boost::intrusive_ptr<XYObject> const& v);
     virtual boost::intrusive_ptr<XYObject> head();
     virtual boost::intrusive_ptr<XYSequence> tail();
     virtual boost::intrusive_ptr<XYSequence> join(boost::intrusive_ptr<XYSequence> const& rhs);
@@ -282,6 +286,7 @@ class XYList : public XYSequence
     virtual size_t size();
     virtual void pushBackInto(List& list);
     virtual boost::intrusive_ptr<XYObject> at(size_t n);
+    virtual void set_at(size_t n, boost::intrusive_ptr<XYObject> const& v);
     virtual boost::intrusive_ptr<XYObject> head();
     virtual boost::intrusive_ptr<XYSequence> tail();
     virtual boost::intrusive_ptr<XYSequence> join(boost::intrusive_ptr<XYSequence> const& rhs);
@@ -309,6 +314,7 @@ class XYSlice : public XYSequence
     virtual size_t size();
     virtual void pushBackInto(List& list);
     virtual boost::intrusive_ptr<XYObject> at(size_t n);
+    virtual void set_at(size_t n, boost::intrusive_ptr<XYObject> const& v);
     virtual boost::intrusive_ptr<XYObject> head();
     virtual boost::intrusive_ptr<XYSequence> tail();
     virtual boost::intrusive_ptr<XYSequence> join(boost::intrusive_ptr<XYSequence> const& rhs);
@@ -336,6 +342,7 @@ class XYJoin : public XYSequence
     virtual size_t size();
     virtual void pushBackInto(List& list);
     virtual boost::intrusive_ptr<XYObject> at(size_t n);
+    virtual void set_at(size_t n, boost::intrusive_ptr<XYObject> const& v);
     virtual boost::intrusive_ptr<XYObject> head();
     virtual boost::intrusive_ptr<XYSequence> tail();
     virtual boost::intrusive_ptr<XYSequence> join(boost::intrusive_ptr<XYSequence> const& rhs);
@@ -394,7 +401,8 @@ class XYError {
     SYMBOL_NOT_FOUND,
     TYPE,
     WAITING_FOR_ASYNC_EVENT,
-    LIMIT_REACHED
+    LIMIT_REACHED,
+    RANGE
   };
 
   // The interpreter state at the time of the error

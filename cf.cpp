@@ -478,6 +478,16 @@ intrusive_ptr<XYObject> XYString::at(size_t n)
   return msp(new XYInteger(mValue[n]));
 }
 
+void XYString::set_at(size_t n, intrusive_ptr<XYObject> const& v)
+{
+  assert(n < mValue.size());
+  intrusive_ptr<XYInteger> c(dynamic_pointer_cast<XYInteger>(v));
+  //  xy_assert(c, XYError::TYPE);
+  assert(c);
+
+  mValue[n] = c->as_uint(); 
+}
+
 intrusive_ptr<XYObject> XYString::head()
 {
   assert(mValue.size() > 0);
@@ -631,6 +641,12 @@ intrusive_ptr<XYObject> XYList::at(size_t n)
   return mList[n];
 }
 
+void XYList::set_at(size_t n, intrusive_ptr<XYObject> const& v)
+{
+  assert(n < mList.size());
+  mList[n] = v; 
+}
+
 intrusive_ptr<XYObject> XYList::head()
 {
   assert(mList.size() > 0);
@@ -718,6 +734,12 @@ intrusive_ptr<XYObject> XYSlice::at(size_t n)
   return mOriginal->at(mBegin + n);
 }
 
+void XYSlice::set_at(size_t n, intrusive_ptr<XYObject> const& v)
+{
+  assert(mBegin + n < mEnd);
+  mOriginal->set_at(mBegin + n, v); 
+}
+
 intrusive_ptr<XYObject> XYSlice::head()
 {
   assert(mBegin != mEnd);
@@ -798,6 +820,20 @@ intrusive_ptr<XYObject> XYJoin::at(size_t n)
     s += (*it)->size();
     if (n < s)
       return (*it)->at(n-b);
+  }
+
+  assert(1 == 0);
+}
+
+void XYJoin::set_at(size_t n, intrusive_ptr<XYObject> const& v)
+{
+  assert(n < size());
+  size_t s = 0;
+  for(iterator it = mSequences.begin(); it != mSequences.end(); ++it) {
+    size_t b = s;
+    s += (*it)->size();
+    if (n < s)
+      return (*it)->set_at(n-b, v);
   }
 
   assert(1 == 0);
@@ -1429,6 +1465,28 @@ static void primitive_nth(boost::intrusive_ptr<XY> const& xy) {
   }
 }
 
+// ! set-nth [X^v^n^{...} Y] [X Y] 
+static void primitive_set_nth(boost::intrusive_ptr<XY> const& xy) {
+  xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
+
+  intrusive_ptr<XYSequence> list = dynamic_pointer_cast<XYSequence>(xy->mX.back());
+  xy_assert(list, XYError::TYPE);
+  xy->mX.pop_back();
+
+  intrusive_ptr<XYNumber> index(dynamic_pointer_cast<XYNumber>(xy->mX.back()));
+  xy_assert(index, XYError::TYPE);
+  xy->mX.pop_back();
+
+  intrusive_ptr<XYObject> v(xy->mX.back());
+  assert(v);
+  xy->mX.pop_back();
+
+  unsigned int n = index->as_uint();
+  xy_assert(n < list->size(), XYError::RANGE);
+
+  list->set_at(n, v);
+}
+
 // print [X^n Y] [X Y] 
 static void primitive_print(boost::intrusive_ptr<XY> const& xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
@@ -1912,6 +1970,7 @@ XY::XY(boost::asio::io_service& service) :
   mP[">="]  = msp(new XYPrimitive(">=", primitive_greaterThanEqual));
   mP["not"] = msp(new XYPrimitive("not", primitive_not));
   mP["@"]   = msp(new XYPrimitive("@", primitive_nth));
+  mP["!"]   = msp(new XYPrimitive("!", primitive_set_nth));
   mP["println"] = msp(new XYPrimitive("print", primitive_println));
   mP["print"] = msp(new XYPrimitive("print", primitive_print));
   mP["write"] = msp(new XYPrimitive("write", primitive_write));
