@@ -26,7 +26,7 @@ public:
   void writeln(intrusive_ptr<XYSequence> const& seq);
   void close();
 
-  virtual std::string toString(bool parse) const;
+  virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
   virtual void eval1(boost::intrusive_ptr<XY> const& xy);
   virtual int compare(boost::intrusive_ptr<XYObject> rhs);
 };
@@ -46,7 +46,7 @@ public:
 
   void handleRead(boost::system::error_code const& err);
 
-  virtual std::string toString(bool parse) const;
+  virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
   virtual void eval1(boost::intrusive_ptr<XY> const& xy);
   virtual int compare(boost::intrusive_ptr<XYObject> rhs);
 };
@@ -88,8 +88,8 @@ void XYSocket::close() {
   mSocket.close();
 }
 
-std::string XYSocket::toString(bool parse) const {
-  return "socket";
+void XYSocket::print(std::ostringstream& stream, CircularSet&, bool) const {
+  stream << "socket";
 }
 
 void XYSocket::eval1(intrusive_ptr<XY> const& xy) {
@@ -144,10 +144,8 @@ void XYLineChannel::handleRead(boost::system::error_code const& err) {
   }
 }
 
-std::string XYLineChannel::toString(bool parse) const {
-  ostringstream str;
-  str << "line-channel(" << mLines.size() << ")";
-  return str.str();
+void XYLineChannel::print(std::ostringstream& stream, CircularSet&, bool) const {
+  stream << "line-channel(" << mLines.size() << ")";
 }
 
 void XYLineChannel::eval1(intrusive_ptr<XY> const& xy) {

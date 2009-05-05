@@ -18,7 +18,7 @@ public:
 
   void spawn();
 
-  virtual std::string toString(bool parse) const;
+  virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
   virtual void eval1(boost::intrusive_ptr<XY> const& xy);
   virtual int compare(boost::intrusive_ptr<XYObject> rhs);
 };
@@ -39,8 +39,8 @@ void XYThread::spawn() {
   mXY->mService.post(bind(&XY::evalHandler, mXY));
 }
 
-std::string XYThread::toString(bool parse) const {
-  return "thread";
+void XYThread::print(std::ostringstream& stream, CircularSet&, bool) const {
+  stream << "thread";
 }
 
 void XYThread::eval1(intrusive_ptr<XY> const& xy) {

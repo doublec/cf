@@ -8,6 +8,7 @@
 #include <iterator>
 #include <algorithm>
 #include <functional>
+#include <set>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -226,6 +227,13 @@ void XYReference::decrement() {
 // XYObject
 XYObject::XYObject() { }
 
+string XYObject::toString(bool parse) const {
+  CircularSet printed;
+  ostringstream str;
+  print(str, printed, parse);
+  return str.str();
+}
+
 intrusive_ptr<XYObject> XYObject::add(XYObject* rhs) {
   assert(1==0);
 }
@@ -321,8 +329,8 @@ XYFloat::XYFloat(double v) : XYNumber(FLOAT), mValue(v) { }
 XYFloat::XYFloat(string v) : XYNumber(FLOAT), mValue(v) { }
 XYFloat::XYFloat(mpf_class const& v) : XYNumber(FLOAT), mValue(v) { }
 
-string XYFloat::toString(bool) const {
-  return lexical_cast<string>(mValue);
+void XYFloat::print(ostringstream& stream, CircularSet&, bool) const {
+  stream << lexical_cast<string>(mValue);
 }
 
 void XYFloat::eval1(intrusive_ptr<XY> const& xy) {
@@ -373,8 +381,8 @@ XYInteger::XYInteger(long v) : XYNumber(INTEGER), mValue(v) { }
 XYInteger::XYInteger(string v) : XYNumber(INTEGER), mValue(v) { }
 XYInteger::XYInteger(mpz_class const& v) : XYNumber(INTEGER), mValue(v) { }
 
-string XYInteger::toString(bool) const {
-  return lexical_cast<string>(mValue);
+void XYInteger::print(ostringstream& stream, CircularSet&, bool) const {
+  stream << lexical_cast<string>(mValue);
 }
 
 void XYInteger::eval1(intrusive_ptr<XY> const& xy) {
@@ -417,8 +425,8 @@ intrusive_ptr<XYNumber> XYInteger::floor() {
 // XYSymbol
 XYSymbol::XYSymbol(string v) : mValue(v) { }
 
-string XYSymbol::toString(bool) const {
-  return mValue;
+void XYSymbol::print(ostringstream& stream, CircularSet&, bool) const {
+  stream << mValue;
 }
 
 void XYSymbol::eval1(intrusive_ptr<XY> const& xy) {
@@ -441,14 +449,13 @@ int XYSymbol::compare(intrusive_ptr<XYObject> rhs) {
 // XYString
 XYString::XYString(string v) : mValue(v) { }
 
-string XYString::toString(bool parse) const {
+void XYString::print(ostringstream& stream, CircularSet&, bool parse) const {
   if (parse) {
-    ostringstream s;
-    s << '\"' << escape(mValue) << '\"';
-    return s.str();
+    stream << '\"' << escape(mValue) << '\"';
   }
-  
-  return mValue;
+  else {
+    stream << mValue;
+  }
 }
 
 void XYString::eval1(intrusive_ptr<XY> const& xy) {
@@ -546,10 +553,8 @@ XYShuffle::XYShuffle(string v) {
   mAfter  = result[1];
 }
 
-string XYShuffle::toString(bool) const {
-  ostringstream out;
-  out << mBefore << "-" << mAfter;
-  return out.str();
+void XYShuffle::print(ostringstream& stream, CircularSet&, bool) const {
+  stream << mBefore << "-" << mAfter;
 }
 
 void XYShuffle::eval1(intrusive_ptr<XY> const& xy) {
@@ -613,13 +618,20 @@ XYList::XYList(InputIterator first, InputIterator last) {
   mList.assign(first, last);
 }
 
-string XYList::toString(bool parse) const {
-  ostringstream s;
-  s << "[ ";
-  for (XYSequence::const_iterator it = mList.begin(); it != mList.end(); ++it)
-    s << (*it)->toString(parse) << " ";
-  s << "]";
-  return s.str();
+void XYList::print(ostringstream& stream, CircularSet& seen, bool parse) const {
+  if (seen.find(this) != seen.end()) {
+    stream << "(circular)";
+  }
+  else {
+    seen.insert(this);
+    stream << "[ ";
+    for (XYSequence::const_iterator it = mList.begin(); it != mList.end(); ++it) {
+      (*it)->print(stream, seen, parse);
+      stream << " ";
+    }
+
+    stream << "]";
+  }
 }
 
 void XYList::eval1(intrusive_ptr<XY> const& xy) {
@@ -705,13 +717,20 @@ XYSlice::XYSlice(intrusive_ptr<XYSequence> original,
   }
 }
 
-string XYSlice::toString(bool parse) const {
-  ostringstream s;
-  s << "[ ";
-  for (int i=mBegin; i < mEnd; ++i) 
-    s << mOriginal->at(i)->toString(parse) << " ";
-  s << "]";
-  return s.str();
+void XYSlice::print(ostringstream& stream, CircularSet& seen, bool parse) const {
+  if (seen.find(this) != seen.end()) {
+    stream << "(circular)";
+  }
+  else {
+    seen.insert(this);
+    stream << "[ ";
+    for (int i=mBegin; i < mEnd; ++i) {
+      mOriginal->at(i)->print(stream, seen, parse);
+      stream << " ";
+    }
+
+    stream << "]";
+  }
 }
 
 void XYSlice::eval1(intrusive_ptr<XY> const& xy) {
@@ -787,15 +806,21 @@ XYJoin::XYJoin(intrusive_ptr<XYSequence> first,
   mSequences.push_back(second);
 }
 
-string XYJoin::toString(bool parse) const {
-  ostringstream s;
-  s << "[ ";
-  for(const_iterator it = mSequences.begin(); it != mSequences.end(); ++it) {
-    for (int i=0; i < (*it)->size(); ++i)
-      s << (*it)->at(i)->toString(parse) << " ";
+void XYJoin::print(ostringstream& stream, CircularSet& seen, bool parse) const {
+  if (seen.find(this) != seen.end()) {
+    stream << "(circular)";
   }
-  s << "]";
-  return s.str();
+  else {
+    seen.insert(this);
+    stream << "[ ";
+    for(const_iterator it = mSequences.begin(); it != mSequences.end(); ++it) {
+      for (int i=0; i < (*it)->size(); ++i) {
+	(*it)->print(stream, seen, parse);
+	stream << " ";
+      }
+    }
+    stream << "]";
+  }
 }
 
 void XYJoin::eval1(intrusive_ptr<XY> const& xy) {
@@ -906,8 +931,8 @@ boost::intrusive_ptr<XYSequence> XYJoin::join(boost::intrusive_ptr<XYSequence> c
 // XYPrimitive
 XYPrimitive::XYPrimitive(string n, void (*func)(intrusive_ptr<XY> const&)) : mName(n), mFunc(func) { }
 
-string XYPrimitive::toString(bool) const {
-  return mName;
+void XYPrimitive::print(ostringstream& stream, CircularSet&, bool) const {
+  stream << mName;
 }
 
 void XYPrimitive::eval1(intrusive_ptr<XY> const& xy) {

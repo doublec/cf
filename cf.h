@@ -7,6 +7,7 @@
 #include <map>
 #include <vector>
 #include <deque>
+#include <sstream>
 #include <boost/intrusive_ptr.hpp>
 #include <boost/xpressive/xpressive.hpp>
 #include <boost/asio.hpp>
@@ -95,8 +96,16 @@ class XYObject : public XYReference
   // Convert the object into a string repesentation for
   // printing. if 'parse' is true then the output
   // should be able to be read back in by the cf parser.
-  virtual std::string toString(bool parse) const = 0;
+  virtual std::string toString(bool parse) const;
 
+  // This does the actual work of the string conversion for
+  // printing. It is overriden by derived classes to write to
+  // a string stream. A set containing all objects already
+  // printed is passed to enable circular references to be
+  // detected.
+  typedef std::set<XYObject const*> CircularSet;
+  virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const = 0;
+  
   // Return a negative number if this object is less than
   // the rhs object. Return 0 if they are equal. Returns
   // a positive number if it is greater.
@@ -145,7 +154,7 @@ class XYFloat : public XYNumber
     XYFloat(double v = 0.0);
     XYFloat(std::string v);
     XYFloat(mpf_class const& v);
-    virtual std::string toString(bool parse) const;
+    virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
     virtual void eval1(boost::intrusive_ptr<XY> const& xy);
     virtual int compare(boost::intrusive_ptr<XYObject> rhs);
     DD(add);
@@ -170,7 +179,7 @@ class XYInteger : public XYNumber
     XYInteger(long v = 0);
     XYInteger(std::string v);
     XYInteger(mpz_class const& v);
-    virtual std::string toString(bool parse) const;
+    virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
     virtual void eval1(boost::intrusive_ptr<XY> const& xy);
     virtual int compare(boost::intrusive_ptr<XYObject> rhs);
     DD(add);
@@ -193,7 +202,7 @@ class XYSymbol : public XYObject
 
   public:
     XYSymbol(std::string v);
-    virtual std::string toString(bool parse) const;
+    virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
     virtual void eval1(boost::intrusive_ptr<XY> const& xy);
     virtual int compare(boost::intrusive_ptr<XYObject> rhs);
 };
@@ -207,7 +216,7 @@ class XYShuffle : public XYObject
 
   public:
     XYShuffle(std::string v);
-    virtual std::string toString(bool parse) const;
+    virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
     virtual void eval1(boost::intrusive_ptr<XY> const& xy);
     virtual int compare(boost::intrusive_ptr<XYObject> rhs);
 };
@@ -258,7 +267,7 @@ class XYString : public XYSequence
 
   public:
     XYString(std::string v);
-    virtual std::string toString(bool parse) const;
+    virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
     virtual void eval1(boost::intrusive_ptr<XY> const& xy);
     virtual int compare(boost::intrusive_ptr<XYObject> rhs);
     virtual size_t size();
@@ -281,7 +290,7 @@ class XYList : public XYSequence
   public:
     XYList();
     template <class InputIterator> XYList(InputIterator first, InputIterator last);
-    virtual std::string toString(bool parse) const;
+    virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
     virtual void eval1(boost::intrusive_ptr<XY> const& xy);
     virtual size_t size();
     virtual void pushBackInto(List& list);
@@ -309,7 +318,7 @@ class XYSlice : public XYSequence
     XYSlice(boost::intrusive_ptr<XYSequence> original, 
             int start, 
             int end);
-    virtual std::string toString(bool parse) const;
+    virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
     virtual void eval1(boost::intrusive_ptr<XY> const& xy);
     virtual size_t size();
     virtual void pushBackInto(List& list);
@@ -337,7 +346,7 @@ class XYJoin : public XYSequence
     XYJoin() { }
     XYJoin(boost::intrusive_ptr<XYSequence> first,
            boost::intrusive_ptr<XYSequence> second); 
-    virtual std::string toString(bool parse) const;
+    virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
     virtual void eval1(boost::intrusive_ptr<XY> const& xy);
     virtual size_t size();
     virtual void pushBackInto(List& list);
@@ -359,7 +368,7 @@ class XYPrimitive : public XYObject
 
   public:
     XYPrimitive(std::string name, void (*func)(boost::intrusive_ptr<XY> const&));
-    virtual std::string toString(bool parse) const;
+    virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
     virtual void eval1(boost::intrusive_ptr<XY> const& xy);
     virtual int compare(boost::intrusive_ptr<XYObject> rhs);
 };
