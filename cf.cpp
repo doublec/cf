@@ -815,7 +815,7 @@ void XYJoin::print(ostringstream& stream, CircularSet& seen, bool parse) const {
     stream << "[ ";
     for(const_iterator it = mSequences.begin(); it != mSequences.end(); ++it) {
       for (int i=0; i < (*it)->size(); ++i) {
-	(*it)->print(stream, seen, parse);
+	(*it)->at(i)->print(stream, seen, parse);
 	stream << " ";
       }
     }
