@@ -16,7 +16,7 @@ using namespace std;
 using namespace boost;
 
 // A literate file. See literate.lcf for details.
-void eval_literate_file(intrusive_ptr<XY> xy, char* filename) {
+void eval_literate_file(XY* xy, char* filename) {
   cout << "Loading " << filename << endl;
   ifstream file(filename);
   ostringstream out;
@@ -47,7 +47,7 @@ void eval_literate_file(intrusive_ptr<XY> xy, char* filename) {
   xy->eval();
 }
 
-void eval_non_literate_file(intrusive_ptr<XY> xy, char* filename) {
+void eval_non_literate_file(XY* xy, char* filename) {
   cout << "Loading " << filename << endl;
   ifstream file(filename);
   ostringstream out;
@@ -63,7 +63,7 @@ void eval_non_literate_file(intrusive_ptr<XY> xy, char* filename) {
   xy->eval();
 }
 
-void eval_file(intrusive_ptr<XY> xy, char* filename) {
+void eval_file(XY* xy, char* filename) {
   char* ext = strrchr(filename, '.');
   if (ext && strcmp(ext, ".lcf") == 0)
     eval_literate_file(xy, filename);
@@ -72,7 +72,7 @@ void eval_file(intrusive_ptr<XY> xy, char* filename) {
 }
 
 template <class InputIterator>
-void eval_files(intrusive_ptr<XY> xy, InputIterator first, InputIterator last) {
+void eval_files(XY* xy, InputIterator first, InputIterator last) {
   for(InputIterator it = first; it != last; ++it)
     eval_file(xy, *it);
 }
@@ -80,7 +80,7 @@ void eval_files(intrusive_ptr<XY> xy, InputIterator first, InputIterator last) {
 int main(int argc, char* argv[]) {
   boost::asio::io_service io;
 
-  intrusive_ptr<XY> xy(new XY(io));
+  XY* xy(new XY(io));
 
   eval_file(xy, "prelude.cf");
   eval_file(xy, "bench.lcf");

@@ -5,7 +5,7 @@
 
 #include "cf.h"
 
-void install_thread_primitives(boost::intrusive_ptr<XY> const& xy);
+void install_thread_primitives(XY* xy);
 
 #endif // threads_h
 // Copyright (C) 2009 Chris Double. All Rights Reserved.

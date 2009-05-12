@@ -15,7 +15,7 @@ using namespace std;
 using namespace boost;
 
 // A literate file. See literate.lcf for details.
-void eval_literate_file(intrusive_ptr<XY> xy, char* filename) {
+void eval_literate_file(XY* xy, char* filename) {
   cout << "Loading " << filename << endl;
   ifstream file(filename);
   ostringstream out;
@@ -46,7 +46,7 @@ void eval_literate_file(intrusive_ptr<XY> xy, char* filename) {
   xy->eval();
 }
 
-void eval_non_literate_file(intrusive_ptr<XY> xy, char* filename) {
+void eval_non_literate_file(XY* xy, char* filename) {
   cout << "Loading " << filename << endl;
   ifstream file(filename);
   ostringstream out;
@@ -62,7 +62,7 @@ void eval_non_literate_file(intrusive_ptr<XY> xy, char* filename) {
   xy->eval();
 }
 
-void eval_file(intrusive_ptr<XY> xy, char* filename) {
+void eval_file(XY* xy, char* filename) {
   char* ext = strrchr(filename, '.');
   if (ext && strcmp(ext, ".lcf") == 0)
     eval_literate_file(xy, filename);
@@ -71,15 +71,16 @@ void eval_file(intrusive_ptr<XY> xy, char* filename) {
 }
 
 template <class InputIterator>
-void eval_files(intrusive_ptr<XY> xy, InputIterator first, InputIterator last) {
+void eval_files(XY* xy, InputIterator first, InputIterator last) {
   for(InputIterator it = first; it != last; ++it)
     eval_file(xy, *it);
 }
 
 int main(int argc, char* argv[]) {
+  GC_INIT();
   boost::asio::io_service io;
 
-  intrusive_ptr<XY> xy(new XY(io));
+  XY* xy(new (GC) XY(io));
   install_socket_primitives(xy);
   install_thread_primitives(xy);
 
@@ -90,14 +91,14 @@ int main(int argc, char* argv[]) {
     }
     catch(XYError& error) {
       cout << error.message() << endl;
-      xy.reset(new XY(io));
+      xy = new (GC) XY(io);
     }
   }
 
   // Limit test. If any line input by the user takes
   // longer than this time period to run then a
   // limit exception is thrown.
-  //xy->mLimits.push_back(msp(new XYTimeLimit(10000)));
+  //xy->mLimits.push_back(new (GC) XYTimeLimit(10000));
 
   xy->print();
   cout << "ok ";
@@ -109,7 +110,6 @@ int main(int argc, char* argv[]) {
 				  bind(&XY::stdioHandler, xy, boost::asio::placeholders::error));
 
     xy->mService.run();
-    xy->mService.reset();
   }
 
   return 0;

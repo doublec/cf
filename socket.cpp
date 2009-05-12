@@ -22,33 +22,33 @@ public:
   XYSocket(boost::asio::io_service& service);
 
   void connect(string const& host, std::string const& port);
-  void writeln(intrusive_ptr<XYString> const& seq);
-  void writeln(intrusive_ptr<XYSequence> const& seq);
+  void writeln(XYString* seq);
+  void writeln(XYSequence* seq);
   void close();
 
   virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
-  virtual void eval1(boost::intrusive_ptr<XY> const& xy);
-  virtual int compare(boost::intrusive_ptr<XYObject> rhs);
+  virtual void eval1(XY* xy);
+  virtual int compare(XYObject* rhs);
 };
 
 class XYLineChannel : public XYObject {
 public:
   XYQueue mLines;
   boost::asio::streambuf mResponse;
-  intrusive_ptr<XYSocket> mSocket;
+  XYSocket* mSocket;
 
   // Set to interpreters that are waiting for
   // lines to appear.
-  vector<intrusive_ptr<XY> > mWaiting;
+  XYWaitingList mWaiting;
 
 public:
-  XYLineChannel(intrusive_ptr<XYSocket> const& socket);
+  XYLineChannel(XYSocket* socket);
 
   void handleRead(boost::system::error_code const& err);
 
   virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
-  virtual void eval1(boost::intrusive_ptr<XY> const& xy);
-  virtual int compare(boost::intrusive_ptr<XYObject> rhs);
+  virtual void eval1(XY* xy);
+  virtual int compare(XYObject* rhs);
 };
 
 // XYSocket
@@ -65,18 +65,18 @@ void XYSocket::connect(string const& host, std::string const& port) {
   mSocket.connect(*iterator);
 }
 
-void XYSocket::writeln(intrusive_ptr<XYString> const& str) {
+void XYSocket::writeln(XYString* str) {
   boost::asio::streambuf request;
   std::ostream request_stream(&request);
   request_stream << str->mValue << "\r\n";
   boost::asio::write(mSocket, request);
 }
 
-void XYSocket::writeln(intrusive_ptr<XYSequence> const& seq) {
+void XYSocket::writeln(XYSequence* seq) {
   boost::asio::streambuf request;
   std::ostream request_stream(&request);
   for(int i=0; i < seq->size(); ++i) {
-    intrusive_ptr<XYInteger> n(dynamic_pointer_cast<XYInteger>(seq->at(i)));
+    XYInteger* n(dynamic_cast<XYInteger*>(seq->at(i)));
     assert(n);
     request_stream << (char)(n->as_uint());
   }
@@ -92,19 +92,19 @@ void XYSocket::print(std::ostringstream& stream, CircularSet&, bool) const {
   stream << "socket";
 }
 
-void XYSocket::eval1(intrusive_ptr<XY> const& xy) {
-  xy->mX.push_back(msp(this));
+void XYSocket::eval1(XY* xy) {
+  xy->mX.push_back(this);
 }
 
-int XYSocket::compare(intrusive_ptr<XYObject> rhs) {
-  if (rhs.get() == this)
+int XYSocket::compare(XYObject* rhs) {
+  if (rhs == this)
     return 0;
 
-  return rhs.get() < this;
+  return rhs < this;
 }
 
 // XYLineChannel
-XYLineChannel::XYLineChannel(intrusive_ptr<XYSocket> const& socket) :
+XYLineChannel::XYLineChannel(XYSocket* socket) :
   mSocket(socket) {
   // read lines until EOF.
   boost::asio::async_read_until(mSocket->mSocket, 
@@ -123,9 +123,9 @@ void XYLineChannel::handleRead(boost::system::error_code const& err) {
     std::getline(stream, result);
     if (result[result.size()-1] == 13)
       result = result.substr(0, result.size()-1);
-    mLines.push_back(msp(new XYString(result)));
+    mLines.push_back(new XYString(result));
     if (mWaiting.size() > 0) {
-      for(vector<intrusive_ptr<XY> >::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
+      for(XYWaitingList::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
 	(*it)->mService.post(bind(&XY::evalHandler, (*it)));
       }
       mWaiting.clear();
@@ -148,37 +148,37 @@ void XYLineChannel::print(std::ostringstream& stream, CircularSet&, bool) const 
   stream << "line-channel(" << mLines.size() << ")";
 }
 
-void XYLineChannel::eval1(intrusive_ptr<XY> const& xy) {
-  xy->mX.push_back(msp(this));
+void XYLineChannel::eval1(XY* xy) {
+  xy->mX.push_back(this);
 }
 
-int XYLineChannel::compare(intrusive_ptr<XYObject> rhs) {
-  if (rhs.get() == this)
+int XYLineChannel::compare(XYObject* rhs) {
+  if (rhs == this)
     return 0;
 
-  return rhs.get() < this;
+  return rhs < this;
 }
 
 
 // socket [X^host^port Y] -> [X^socket Y]
-static void primitive_socket(boost::intrusive_ptr<XY> const& xy) {
+static void primitive_socket(XY* xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  intrusive_ptr<XYObject> port(xy->mX.back());
+  XYObject* port(xy->mX.back());
   xy->mX.pop_back();
 
-  intrusive_ptr<XYString> host(dynamic_pointer_cast<XYString>(xy->mX.back()));
+  XYString* host(dynamic_cast<XYString*>(xy->mX.back()));
   xy_assert(host, XYError::TYPE);
   xy->mX.pop_back();
 
-  intrusive_ptr<XYSocket> socket(new XYSocket(xy->mService));
+  XYSocket* socket(new XYSocket(xy->mService));
   socket->connect(host->mValue, port->toString(false));
   xy->mX.push_back(socket);
 }
 
 // socket-close [X^socket Y] -> [X Y]
-static void primitive_socket_close(boost::intrusive_ptr<XY> const& xy) {
+static void primitive_socket_close(XY* xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  intrusive_ptr<XYSocket> socket(dynamic_pointer_cast<XYSocket>(xy->mX.back()));
+  XYSocket* socket(dynamic_cast<XYSocket*>(xy->mX.back()));
   xy_assert(socket, XYError::TYPE);
   xy->mX.pop_back();
 
@@ -186,14 +186,14 @@ static void primitive_socket_close(boost::intrusive_ptr<XY> const& xy) {
 }
 
 // socket-writeln [X^string^socket Y] -> [X Y]
-static void primitive_socket_writeln(boost::intrusive_ptr<XY> const& xy) {
+static void primitive_socket_writeln(XY* xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-  intrusive_ptr<XYSocket> socket(dynamic_pointer_cast<XYSocket>(xy->mX.back()));
+  XYSocket* socket(dynamic_cast<XYSocket*>(xy->mX.back()));
   xy_assert(socket, XYError::TYPE);
   xy->mX.pop_back();
 
-  intrusive_ptr<XYString> str(dynamic_pointer_cast<XYString>(xy->mX.back()));
-  intrusive_ptr<XYSequence> seq(dynamic_pointer_cast<XYSequence>(xy->mX.back()));
+  XYString* str(dynamic_cast<XYString*>(xy->mX.back()));
+  XYSequence* seq(dynamic_cast<XYSequence*>(xy->mX.back()));
   xy_assert(str || seq, XYError::TYPE);
   xy->mX.pop_back();
   
@@ -204,31 +204,31 @@ static void primitive_socket_writeln(boost::intrusive_ptr<XY> const& xy) {
 }
 
 // line-channel [X^socket Y] -> [X^channel Y]
-static void primitive_line_channel(boost::intrusive_ptr<XY> const& xy) {
+static void primitive_line_channel(XY* xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  intrusive_ptr<XYSocket> socket(dynamic_pointer_cast<XYSocket>(xy->mX.back()));
+  XYSocket* socket(dynamic_cast<XYSocket*>(xy->mX.back()));
   xy_assert(socket, XYError::TYPE);
   xy->mX.pop_back();
 
-  xy->mX.push_back(msp(new XYLineChannel(socket)));
+  xy->mX.push_back(new XYLineChannel(socket));
 }
 
 // line-channel-get [X^channel Y] -> [X^str Y]
-static void primitive_line_channel_get(boost::intrusive_ptr<XY> const& xy) {
+static void primitive_line_channel_get(XY* xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
-  intrusive_ptr<XYLineChannel> channel(dynamic_pointer_cast<XYLineChannel>(xy->mX.back()));
+  XYLineChannel* channel(dynamic_cast<XYLineChannel*>(xy->mX.back()));
   xy_assert(channel, XYError::TYPE);
 
   if (channel->mLines.size() == 0) {
     channel->mWaiting.push_back(xy);
-    xy->mY.push_front(msp(new XYPrimitive("line-channel-get", primitive_line_channel_get)));
+    xy->mY.push_front(new XYPrimitive("line-channel-get", primitive_line_channel_get));
     throw XYError(xy, XYError::WAITING_FOR_ASYNC_EVENT);
   }
     
   xy->mX.pop_back();
   
-  intrusive_ptr<XYString> line(dynamic_pointer_cast<XYString>(channel->mLines.front()));
+  XYString* line(dynamic_cast<XYString*>(channel->mLines.front()));
   xy_assert(line, XYError::TYPE);
   channel->mLines.pop_front();
 
@@ -236,23 +236,23 @@ static void primitive_line_channel_get(boost::intrusive_ptr<XY> const& xy) {
 }
 
 // line-channel-getall [X^channel Y] -> [X^seq Y]
-static void primitive_line_channel_getall(boost::intrusive_ptr<XY> const& xy) {
+static void primitive_line_channel_getall(XY* xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
 
-  intrusive_ptr<XYLineChannel> channel(dynamic_pointer_cast<XYLineChannel>(xy->mX.back()));
+  XYLineChannel* channel(dynamic_cast<XYLineChannel*>(xy->mX.back()));
   xy_assert(channel, XYError::TYPE);
 
   if (channel->mLines.size() == 0) {
     channel->mWaiting.push_back(xy);
-    xy->mY.push_front(msp(new XYPrimitive("line-channel-getall", primitive_line_channel_getall)));
+    xy->mY.push_front(new XYPrimitive("line-channel-getall", primitive_line_channel_getall));
     throw XYError(xy, XYError::WAITING_FOR_ASYNC_EVENT);
   }
 
   xy->mX.pop_back();
 
-  intrusive_ptr<XYList> list(new XYList());
+  XYList* list(new XYList());
   while (channel->mLines.size() != 0) {
-    intrusive_ptr<XYString> line(dynamic_pointer_cast<XYString>(channel->mLines.front()));
+    XYString* line(dynamic_cast<XYString*>(channel->mLines.front()));
     xy_assert(line, XYError::TYPE);
     channel->mLines.pop_front();
     list->mList.push_back(line);
@@ -262,23 +262,23 @@ static void primitive_line_channel_getall(boost::intrusive_ptr<XY> const& xy) {
 }
 
 // line-channel-count [X^channel Y] -> [X^n Y]
-static void primitive_line_channel_count(boost::intrusive_ptr<XY> const& xy) {
+static void primitive_line_channel_count(XY* xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
-  intrusive_ptr<XYLineChannel> channel(dynamic_pointer_cast<XYLineChannel>(xy->mX.back()));
+  XYLineChannel* channel(dynamic_cast<XYLineChannel*>(xy->mX.back()));
   xy_assert(channel, XYError::TYPE);
   xy->mX.pop_back();
 
-  xy->mX.push_back(msp(new XYInteger(channel->mLines.size())));		     
+  xy->mX.push_back(new XYInteger(channel->mLines.size()));
 }
 
-void install_socket_primitives(intrusive_ptr<XY> const& xy) {
-  xy->mP["socket"] = msp(new XYPrimitive("socket", primitive_socket));
-  xy->mP["socket-writeln"] = msp(new XYPrimitive("socket-writeln", primitive_socket_writeln));
-  xy->mP["socket-close"] = msp(new XYPrimitive("socket-close", primitive_socket_close));
-  xy->mP["line-channel"] = msp(new XYPrimitive("line-channel", primitive_line_channel));
-  xy->mP["line-channel-get"] = msp(new XYPrimitive("line-channel-get", primitive_line_channel_get));
-  xy->mP["line-channel-getall"] = msp(new XYPrimitive("line-channel-getall", primitive_line_channel_getall));
-  xy->mP["line-channel-count"] = msp(new XYPrimitive("line-channel-count", primitive_line_channel_count));
+void install_socket_primitives(XY* xy) {
+  xy->mP["socket"] = new XYPrimitive("socket", primitive_socket);
+  xy->mP["socket-writeln"] = new XYPrimitive("socket-writeln", primitive_socket_writeln);
+  xy->mP["socket-close"] = new XYPrimitive("socket-close", primitive_socket_close);
+  xy->mP["line-channel"] = new XYPrimitive("line-channel", primitive_line_channel);
+  xy->mP["line-channel-get"] = new XYPrimitive("line-channel-get", primitive_line_channel_get);
+  xy->mP["line-channel-getall"] = new XYPrimitive("line-channel-getall", primitive_line_channel_getall);
+  xy->mP["line-channel-count"] = new XYPrimitive("line-channel-count", primitive_line_channel_count);
 }
 
 // Copyright (C) 2009 Chris Double. All Rights Reserved.
