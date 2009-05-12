@@ -390,7 +390,7 @@ class XYError {
 };
 
 // The environment maps names to objects
-typedef std::map<std::string, XYObject*> XYEnv;
+typedef std::map<std::string, XYObject*, std::less<std::string>, gc_allocator<std::pair<const std::string, XYObject*> > > XYEnv;
 typedef std::vector<XYObject*, gc_allocator<XYObject*> > XYStack;
 typedef std::deque<XYObject*, gc_allocator<XYObject*>  > XYQueue;
 typedef std::vector<XYLimit*, gc_allocator<XYObject*>  > XYLimits;
