@@ -118,6 +118,10 @@ XYLineChannel::XYLineChannel(XYSocket* socket) :
 
 void XYLineChannel::markChildren() {
   mSocket->mark();
+  for (XYWaitingList::iterator it = mWaiting.begin();
+       it != mWaiting.end();
+       ++it)
+    (*it)->mark();
 }
 
 void XYLineChannel::handleRead(boost::system::error_code const& err) {
