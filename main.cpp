@@ -99,6 +99,8 @@ int main(int argc, char* argv[]) {
   // limit exception is thrown.
   //xy->mLimits.push_back(new XYTimeLimit(10000));
 
+  GarbageCollector::GC.addRoot(xy);
+  GarbageCollector::GC.collect();
   xy->print();
   cout << "ok ";
   cout.flush();

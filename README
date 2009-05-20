@@ -178,6 +178,7 @@ foldl     - ( seq seed q -- seq ) left fold
 foldr     - ( seq seed q -- seq ) right fold 
 if        - ( bool then else -- )
 ?         - ( seq elt -- index ) find
+gc        - ( -- ) Perform garbage collection
 
 Numbers can be floats or integers. Integers can be of any length. For example:
 

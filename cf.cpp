@@ -209,6 +209,90 @@ static XYObject* dd_power(XYSequence* lhs, XYSequence* rhs) {
   return list;
 }
 
+// GCObject
+GCObject::GCObject() :
+  mMarked(false) {
+  GarbageCollector::GC.addObject(this);
+}
+
+GCObject::~GCObject() {
+}
+
+void GCObject::mark() {
+  if (!mMarked) {
+    mMarked = true;
+    markChildren();
+  }
+}
+
+void GCObject::markChildren() {
+}
+
+// GarbageCollector
+GarbageCollector GarbageCollector::GC;
+
+void GarbageCollector::collect() {
+  using namespace boost::posix_time;
+  unsigned int start = (microsec_clock::universal_time() - ptime(min_date_time)).total_milliseconds();
+
+  for (ObjectSet::iterator it = mRoots.begin();
+       it != mRoots.end();
+       ++it)
+    (*it)->mark();
+
+  cout << "GC: " << mHeap.size() << " objects in heap" << endl;
+  sweep();
+
+  unsigned int end = (microsec_clock::universal_time() - ptime(min_date_time)).total_milliseconds();
+  cout << "GC: " << (end-start) << " milliseconds" << endl;
+}
+
+void GarbageCollector::addRoot(GCObject* root) {
+  mRoots.insert(root);
+}
+
+void GarbageCollector::removeRoot(GCObject* root) {
+  mRoots.erase(root);
+}
+
+void GarbageCollector::addObject(GCObject* o) {
+  mHeap.insert(o);
+}
+
+void GarbageCollector::removeObject(GCObject* o) {
+  mHeap.erase(o);
+}
+
+void GarbageCollector::sweep() {
+  unsigned int live = 0;
+  unsigned int dead = 0;
+  unsigned int total = 0;
+  vector<ObjectSet::iterator> erase;
+  for (ObjectSet::iterator it = mHeap.begin();
+       it != mHeap.end();
+       ++it) {
+    GCObject* p = *it;
+    total++;
+    if (p->mMarked) {
+      p->mMarked = false;
+      ++live;
+    }
+    else {
+      erase.push_back(it);
+    } 
+  }
+  dead = erase.size();
+  for (vector<ObjectSet::iterator>::iterator it = erase.begin();
+       it != erase.end();
+       ++it) {
+    GCObject* p = **it;
+    mHeap.erase(*it);
+    delete p;
+  }
+  cout << "GC: " << live << " objects live after sweep" << endl;
+  cout << "GC: " << dead << " objects dead after sweep" << endl;
+}
+
 // XYObject
 XYObject::XYObject() { }
 
@@ -557,6 +641,7 @@ DD_IMPL(XYSequence, subtract)
 DD_IMPL(XYSequence, multiply)
 DD_IMPL(XYSequence, divide)
 DD_IMPL(XYSequence, power)
+
 int XYSequence::compare(XYObject* rhs) {
   XYSequence* o = dynamic_cast<XYSequence*>(rhs);
   if (!o)
@@ -588,6 +673,11 @@ XYList::XYList() { }
 template <class InputIterator>
 XYList::XYList(InputIterator first, InputIterator last) {
   mList.assign(first, last);
+}
+
+void XYList::markChildren() {
+  for (iterator it = mList.begin(); it != mList.end(); ++it)
+    (*it)->mark();
 }
 
 void XYList::print(ostringstream& stream, CircularSet& seen, bool parse) const {
@@ -681,6 +771,10 @@ XYSlice::XYSlice(XYSequence* original,
   }
 }
 
+void XYSlice::markChildren() {
+  mOriginal->mark();
+}
+
 void XYSlice::print(ostringstream& stream, CircularSet& seen, bool parse) const {
   if (seen.find(this) != seen.end()) {
     stream << "(circular)";
@@ -759,6 +853,11 @@ XYJoin::XYJoin(XYSequence* first, XYSequence* second)
 { 
   mSequences.push_back(first);
   mSequences.push_back(second);
+}
+
+void XYJoin::markChildren() {
+  for (iterator it = mSequences.begin(); it != mSequences.end(); ++it)
+    (*it)->mark();
 }
 
 void XYJoin::print(ostringstream& stream, CircularSet& seen, bool parse) const {
@@ -1821,6 +1920,11 @@ static void primitive_find(XY* xy) {
   xy->mX.push_back(new XYInteger(i));
 }
 
+// gc gc [X Y] -> [X Y]
+static void primitive_gc(XY* xy) {
+  GarbageCollector::GC.collect();
+}
+
 // XYTimeLimit
 XYTimeLimit::XYTimeLimit(unsigned int milliseconds) :
   mMilliseconds(milliseconds) {
@@ -1937,6 +2041,40 @@ XY::XY(boost::asio::io_service& service) :
   mP["foldr"] = new XYPrimitive("foldr", primitive_foldr);
   mP["if"] = new XYPrimitive("if", primitive_if);
   mP["?"] = new XYPrimitive("?", primitive_find);
+  mP["gc"] = new XYPrimitive("gc", primitive_gc);
+}
+
+void XY::markChildren() {
+  for (XYWaitingList::iterator it = mWaiting.begin();
+       it != mWaiting.end();
+       ++it) {
+    (*it)->mark();
+  }
+  for (XYEnv::iterator it = mEnv.begin();
+       it != mEnv.end();
+       ++it) {
+    (*it).second->mark();
+  }
+  for (XYEnv::iterator it = mP.begin();
+       it != mP.end();
+       ++it) {
+    (*it).second->mark();
+  }
+  for (XYStack::iterator it = mX.begin();
+       it != mX.end();
+       ++it) {
+    (*it)->mark();
+  }
+  for (XYQueue::iterator it = mY.begin();
+       it != mY.end();
+       ++it) {
+    (*it)->mark();
+  }
+  for (XYLimits::iterator it = mLimits.begin();
+       it != mLimits.end();
+       ++it) {
+    (*it)->mark();
+  }
 }
 
 void XY::stdioHandler(boost::system::error_code const& err) {

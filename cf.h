@@ -29,13 +29,68 @@ class XYSequence;
     virtual XYObject* name(XYInteger* lhs);  \
     virtual XYObject* name(XYSequence* lhs)
 
-// Objects in XY are garbage collected using the Boehm Garbage
-// Collector.
-//
+// Base class for all objects that are tracked by
+// the garbage collector.
+class GCObject {
+ public:
+
+  // For mark and sweep algorithm. When a GC occurs
+  // all live objects are traversed and mMarked is
+  // set to true. This is followed by the sweep phase
+  // where all unmarked objects are deleted.
+  bool mMarked;
+
+ public:
+  GCObject();
+  virtual ~GCObject();
+
+  // Mark the object and all its children as live
+  void mark();
+
+  // Overridden by derived classes to call mark()
+  // on objects referenced by this object. The default
+  // implemention does nothing.
+  virtual void markChildren();
+};
+
+// Garbage Collector. Implements mark and sweep GC algorithm.
+class GarbageCollector {
+ public:
+  // A collection of all active heap objects.
+  typedef std::set<GCObject*> ObjectSet;
+  ObjectSet mHeap;
+
+  // Collection of objects that are scanned for garbage.
+  ObjectSet mRoots;
+
+  // Global garbage collector object
+  static GarbageCollector GC;
+
+ public:
+  // Perform garbage collection
+  void collect();
+
+  // Add a root object to the collector.
+  void addRoot(GCObject* root);
+
+  // Remove a root object from the collector.
+  void removeRoot(GCObject* root);
+
+  // Add an heap allocated object to the collector.
+  void addObject(GCObject* o);
+
+  // Remove a heap allocated object from the collector.
+  void removeObject(GCObject* o);
+
+  // Go through all objects in the heap, unmarking the live
+  // objects and destroying the unreferenced ones.
+  void sweep();
+};
+
 // Base class for all objects in the XY system. Anything
 // stored on the stack, in the queue, in the the environment
 // must be derived from this.
-class XYObject
+class XYObject : public GCObject
 {
  public:
   XYObject();
@@ -246,6 +301,8 @@ class XYList : public XYSequence
   public:
     XYList();
     template <class InputIterator> XYList(InputIterator first, InputIterator last);
+    
+    virtual void markChildren();
     virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
     virtual void eval1(XY* xy);
     virtual size_t size();
@@ -274,6 +331,8 @@ class XYSlice : public XYSequence
     XYSlice(XYSequence* original, 
             int start, 
             int end);
+
+    virtual void markChildren();
     virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
     virtual void eval1(XY* xy);
     virtual size_t size();
@@ -301,6 +360,8 @@ class XYJoin : public XYSequence
   public:
     XYJoin() { }
     XYJoin(XYSequence* first, XYSequence* second); 
+
+    virtual void markChildren();
     virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
     virtual void eval1(XY* xy);
     virtual size_t size();
@@ -332,7 +393,7 @@ class XYPrimitive : public XYObject
 // XY program. Limit examples might be a requirement to run
 // within a certain number of ticks, time period or
 // memory size.
-class XYLimit {
+class XYLimit : public GCObject {
  public:
   // Called when execution starts so the limit checker can
   // initialize things like initial start time or tick count.
@@ -398,7 +459,7 @@ typedef std::vector<XY*> XYWaitingList;
 // Holds the environment, stack and queue
 // and provides methods to step through or run
 // the interpreter.
-class XY {
+class XY : public GCObject {
   public:
     // io service for handling asynchronous events
     // The lifetime of the service is controlled by
@@ -447,6 +508,8 @@ class XY {
     // environment.
     XY(boost::asio::io_service& service);
     virtual ~XY() { }
+
+    virtual void markChildren();
 
     // Handler for asynchronous i/o events
     void stdioHandler(boost::system::error_code const& err);

@@ -16,6 +16,7 @@ public:
 public:
   XYThread(XY* xy, XY* parent);
 
+  virtual void markChildren();
   void spawn();
 
   virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
@@ -28,6 +29,12 @@ XYThread::XYThread(XY* xy, XY* parent) :
   mXY(xy),
   mParent(parent)
 {
+}
+
+void XYThread::markChildren() {
+  mXY->mark();
+  if (mParent)
+    mParent->mark();
 }
 
 void XYThread::spawn() {

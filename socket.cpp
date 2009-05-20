@@ -44,6 +44,7 @@ public:
 public:
   XYLineChannel(XYSocket* socket);
 
+  virtual void markChildren();
   void handleRead(boost::system::error_code const& err);
 
   virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
@@ -113,6 +114,10 @@ XYLineChannel::XYLineChannel(XYSocket* socket) :
 				boost::bind(&XYLineChannel::handleRead, 
 					    this,
 					    boost::asio::placeholders::error));
+}
+
+void XYLineChannel::markChildren() {
+  mSocket->mark();
 }
 
 void XYLineChannel::handleRead(boost::system::error_code const& err) {
