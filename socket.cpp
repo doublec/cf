@@ -108,6 +108,7 @@ int XYSocket::compare(XYObject* rhs) {
 XYLineChannel::XYLineChannel(XYSocket* socket) :
   mSocket(socket) {
   // read lines until EOF.
+  GarbageCollector::GC.addRoot(this);
   boost::asio::async_read_until(mSocket->mSocket, 
 				mResponse,
 				"\r\n",
@@ -129,6 +130,8 @@ void XYLineChannel::markChildren() {
 }
 
 void XYLineChannel::handleRead(boost::system::error_code const& err) {
+  GarbageCollector::GC.removeRoot(this);
+
   if (!err) {
     //    cout << "Got some data" << endl;
     istream stream(&mResponse);
@@ -145,6 +148,8 @@ void XYLineChannel::handleRead(boost::system::error_code const& err) {
     }
 
     // read lines until EOF.
+    GarbageCollector::GC.addRoot(this);
+
     boost::asio::async_read_until(mSocket->mSocket, 
 				  mResponse,
 				  "\r\n",

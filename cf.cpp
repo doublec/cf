@@ -240,6 +240,7 @@ void GarbageCollector::collect() {
        ++it)
     (*it)->mark();
 
+  cout << "Roots: " << mRoots.size() << endl;
   cout << "GC: " << mHeap.size() << " objects in heap" << endl;
   sweep();
 
@@ -2212,7 +2213,9 @@ void XY::eval1() {
 
   mY.pop_front();
 
+  GarbageCollector::GC.addRoot(o);
   o->eval1(this);
+  GarbageCollector::GC.removeRoot(o);
 }
 
 void XY::eval() {
