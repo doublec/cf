@@ -1,3 +1,8 @@
+Changes since  5e25d6
+=====================
+1) Sequences are mutable
+   Join will possibly modify any of the sequences passed in
+
 Changes since  7d64b2
 =====================
 1) Re-enabled the limits code. 

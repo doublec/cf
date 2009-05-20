@@ -7,7 +7,7 @@
 [ab-aba] over set
 
 ** Lists **
-[ [[[a A]] a A] )] uncons set
+[ puncons ] uncons set
 [ [[a b] [a]b,] (] cons set
 
 ** Operators **

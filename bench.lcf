@@ -33,7 +33,7 @@ Appending two lists:
 Unconsing:
 
 > "Uncons:" println
-> [ dup. [ [[[a A]] A] ) do-unconstest. ] [ drop. ] if ] do-unconstest set
+> [ dup. [ puncons ab-b do-unconstest. ] [ drop. ] if ] do-unconstest set
 > [ enum [do-unconstest.] time. ] unconstest set
 > "1000 = " write 1000 unconstest.println
 > "2000 = " write 2000 unconstest.println

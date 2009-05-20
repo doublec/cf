@@ -738,19 +738,14 @@ XYSequence* XYList::tail()
 
 XYSequence* XYList::join(XYSequence* rhs)
 {
-  XYSequence* self(dynamic_cast<XYSequence*>(this));
-
-  if (dynamic_cast<XYJoin const*>(rhs)) {
-    // Pointer is shared, we have to copy the data
-    XYJoin* join_rhs(dynamic_cast<XYJoin*>(rhs));
-    XYJoin* result(new XYJoin());
-    result->mSequences.push_back(self);
-    result->mSequences.insert(result->mSequences.end(), 
-			      join_rhs->mSequences.begin(), join_rhs->mSequences.end());
-    return result;
+  if (dynamic_cast<XYJoin*>(rhs)) {
+    // Modify the existing join
+    XYJoin* join_rhs = dynamic_cast<XYJoin*>(rhs);
+    join_rhs->mSequences.push_front(this);
+    return join_rhs;
   }
 
-  return new XYJoin(self, rhs);
+  return new XYJoin(this, rhs);
 }
 
 // XYSlice
@@ -834,19 +829,14 @@ XYSequence* XYSlice::tail()
 
 XYSequence* XYSlice::join(XYSequence* rhs)
 {
-  XYSequence* self(dynamic_cast<XYSequence*>(this));
-
-  if (dynamic_cast<XYJoin const*>(rhs)) {
-    // Pointer is shared, we have to copy the data
-    XYJoin* join_rhs(dynamic_cast<XYJoin*>(rhs));
-    XYJoin* result(new XYJoin());
-    result->mSequences.push_back(self);
-    result->mSequences.insert(result->mSequences.end(), 
-			      join_rhs->mSequences.begin(), join_rhs->mSequences.end());
-    return result;
+  if (dynamic_cast<XYJoin*>(rhs)) {
+    // Modify the existing join
+    XYJoin* join_rhs = dynamic_cast<XYJoin*>(rhs);
+    join_rhs->mSequences.push_front(this);
+    return join_rhs;
   }
 
-  return new XYJoin(self, rhs);
+  return new XYJoin(this, rhs);
 }
 
 // XYJoin
@@ -941,25 +931,17 @@ XYSequence* XYJoin::tail()
 
 XYSequence* XYJoin::join(XYSequence* rhs)
 {
-  XYJoin* self(dynamic_cast<XYJoin*>(this));
-
-  if (dynamic_cast<XYJoin const*>(rhs)) {
-    // Pointer is shared, we have to copy the data
+  if (dynamic_cast<XYJoin*>(rhs)) {
+    // Modify ourselves
     XYJoin* join_rhs(dynamic_cast<XYJoin*>(rhs));
-    XYJoin* result(new XYJoin());
-    result->mSequences.insert(result->mSequences.end(), 
-			      mSequences.begin(), mSequences.end());
-    result->mSequences.insert(result->mSequences.end(), 
-			      join_rhs->mSequences.begin(), join_rhs->mSequences.end());
-    return result;
+    mSequences.insert(mSequences.end(), 
+		      mSequences.begin(), mSequences.end());
+    return this;
   }
 
-  // rhs is not a join and we can't modify ourselves
-  XYJoin* result(new XYJoin());
-  result->mSequences.insert(result->mSequences.end(), 
-			    mSequences.begin(), mSequences.end());
-  result->mSequences.push_back(rhs);
-  return result;
+  // rhs is not a join
+  mSequences.push_back(rhs);
+  return this;
 }
 
 // XYPrimitive
@@ -1088,6 +1070,24 @@ static void primitive_get(XY* xy) {
 
   XYObject* value = (*it).second;
   xy->mX.push_back(value);
+}
+
+// puncons [X^{O1..On} Y] [X^O1^{O2..On} Y]
+static void primitive_uncons(XY* xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
+  XYObject* o = xy->mX.back();
+  xy->mX.pop_back();
+
+  XYSequence* list = dynamic_cast<XYSequence*>(o);
+
+  if (list && list->size() > 0) {
+    xy->mX.push_back(list->head());
+    xy->mX.push_back(list->tail());
+  }
+  else {
+    xy->mX.push_back(o);
+    xy->mX.push_back(new XYList());
+  }
 }
 
 // . [X^{O1..On} Y] [X O1^..^On^Y]
@@ -1245,9 +1245,16 @@ static void primitive_join(XY*xy) {
   }
   else if(list_lhs) {
     // If rhs is not a list, it is added to the end of the list.
-    XYList* list(new XYList());
-    list->mList.push_back(rhs);
-    xy->mX.push_back(list_lhs->join(list));
+    if (dynamic_cast<XYList*>(lhs)) {
+      // Optimisation for a list on the lhs. We modify the list.
+      dynamic_cast<XYList*>(list_lhs)->mList.push_back(rhs);
+    }
+    else {
+      XYList* list(new XYList());
+      list->mList.push_back(rhs);
+      xy->mX.push_back(list_lhs->join(list));
+    }
+    xy->mX.push_back(list_lhs);
   }
   else if(list_rhs) {
     // If lhs is not a list, it is added to the front of the list
@@ -2008,6 +2015,7 @@ XY::XY(boost::asio::io_service& service) :
   mP["set"] = new XYPrimitive("set", primitive_set);
   mP[";"]   = new XYPrimitive(";", primitive_get);
   mP["."]   = new XYPrimitive(".", primitive_unquote);
+  mP["puncons"] = new XYPrimitive("puncons", primitive_uncons);
   mP[")"]   = new XYPrimitive(")", primitive_pattern_ss);
   mP["("]   = new XYPrimitive("(", primitive_pattern_sq);
   mP["`"]   = new XYPrimitive("`", primitive_dip);
