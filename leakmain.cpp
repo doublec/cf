@@ -69,6 +69,7 @@ void eval_file(XY* xy, char* filename) {
     eval_literate_file(xy, filename);
   else
     eval_non_literate_file(xy, filename);
+  GarbageCollector::GC.collect();
 }
 
 template <class InputIterator>
@@ -81,10 +82,24 @@ int main(int argc, char* argv[]) {
   boost::asio::io_service io;
 
   XY* xy(new XY(io));
+  GarbageCollector::GC.addRoot(xy);
 
   eval_file(xy, "prelude.cf");
   eval_file(xy, "bench.lcf");
   eval_file(xy, "test.lcf");
+
+  // Clear children of root so it can be safely
+  // deleted after GC
+  xy->mX.clear();
+  xy->mY.clear();
+  xy->mP.clear();
+  xy->mEnv.clear();
+  xy->mLimits.clear();
+  xy->mWaiting.clear();
+  
+  GarbageCollector::GC.collect();
+
+  delete xy;
 
   return 0;
 }
