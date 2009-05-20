@@ -77,10 +77,9 @@ void eval_files(XY* xy, InputIterator first, InputIterator last) {
 }
 
 int main(int argc, char* argv[]) {
-  GC_INIT();
   boost::asio::io_service io;
 
-  XY* xy(new (GC) XY(io));
+  XY* xy(new XY(io));
   install_socket_primitives(xy);
   install_thread_primitives(xy);
 
@@ -91,14 +90,14 @@ int main(int argc, char* argv[]) {
     }
     catch(XYError& error) {
       cout << error.message() << endl;
-      xy = new (GC) XY(io);
+      xy = new XY(io);
     }
   }
 
   // Limit test. If any line input by the user takes
   // longer than this time period to run then a
   // limit exception is thrown.
-  //xy->mLimits.push_back(new (GC) XYTimeLimit(10000));
+  //xy->mLimits.push_back(new XYTimeLimit(10000));
 
   xy->print();
   cout << "ok ";

@@ -6,7 +6,7 @@ LIB=-L/opt/local/lib
 endif
 
 INCLUDE=
-LIB=-lgc -lgccpp
+LIB=
 
 all: cf testcf leakcf
 
@@ -35,7 +35,7 @@ leakmain.o: leakmain.cpp cf.h
 	g++ $(INCLUDE) -g -c -o leakmain.o leakmain.cpp
 
 leakcf: cf.o leakmain.o
-	g++ $(INCLUDE) -g -o leakcf cf.o leakmain.o $(LIB) -lgmp -lgmpxx  -lboost_system -lpthread  -lgc -lgccpp
+	g++ $(INCLUDE) -g -o leakcf cf.o leakmain.o $(LIB) -lgmp -lgmpxx  -lboost_system -lpthread 
 
 clean: 
 	rm *.o

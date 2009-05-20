@@ -11,8 +11,6 @@
 #include <boost/xpressive/xpressive.hpp>
 #include <boost/asio.hpp>
 #include <gmpxx.h>
-#include <gc_cpp.h>
-#include <gc/gc_allocator.h>
 
 // XY is the object that contains the state of the running
 // system. For example, the stack (X), the queue (Y) and
@@ -37,7 +35,7 @@ class XYSequence;
 // Base class for all objects in the XY system. Anything
 // stored on the stack, in the queue, in the the environment
 // must be derived from this.
-class XYObject : public gc
+class XYObject
 {
  public:
   XYObject();
@@ -183,7 +181,7 @@ class XYShuffle : public XYObject
 class XYSequence : public XYObject
 {
   public:
-    typedef std::vector<XYObject*, gc_allocator<XYObject*> > List;
+    typedef std::vector<XYObject*> List;
     typedef List::iterator iterator;
     typedef List::const_iterator const_iterator;
 
@@ -294,7 +292,7 @@ class XYJoin : public XYSequence
 {
   public:
     // The original sequences we join.
-    typedef std::deque<XYSequence*, gc_allocator<XYObject*> > Vector;
+    typedef std::deque<XYSequence*> Vector;
     typedef Vector::iterator iterator;
     typedef Vector::const_iterator const_iterator;
 
@@ -334,7 +332,7 @@ class XYPrimitive : public XYObject
 // XY program. Limit examples might be a requirement to run
 // within a certain number of ticks, time period or
 // memory size.
-class XYLimit : public gc {
+class XYLimit {
  public:
   // Called when execution starts so the limit checker can
   // initialize things like initial start time or tick count.
@@ -390,17 +388,17 @@ class XYError {
 };
 
 // The environment maps names to objects
-typedef std::map<std::string, XYObject*, std::less<std::string>, gc_allocator<std::pair<const std::string, XYObject*> > > XYEnv;
-typedef std::vector<XYObject*, gc_allocator<XYObject*> > XYStack;
-typedef std::deque<XYObject*, gc_allocator<XYObject*>  > XYQueue;
-typedef std::vector<XYLimit*, gc_allocator<XYObject*>  > XYLimits;
-typedef std::vector<XY*, gc_allocator<XY*> > XYWaitingList;
+typedef std::map<std::string, XYObject*> XYEnv;
+typedef std::vector<XYObject*> XYStack;
+typedef std::deque<XYObject*> XYQueue;
+typedef std::vector<XYLimit*> XYLimits;
+typedef std::vector<XY*> XYWaitingList;
 
 // The state of the runtime interpreter.
 // Holds the environment, stack and queue
 // and provides methods to step through or run
 // the interpreter.
-class XY : public gc {
+class XY {
   public:
     // io service for handling asynchronous events
     // The lifetime of the service is controlled by
