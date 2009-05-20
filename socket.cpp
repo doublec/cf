@@ -122,6 +122,10 @@ void XYLineChannel::markChildren() {
        it != mWaiting.end();
        ++it)
     (*it)->mark();
+  for (XYQueue::iterator it = mLines.begin();
+       it != mLines.end();
+       ++it)
+    (*it)->mark();
 }
 
 void XYLineChannel::handleRead(boost::system::error_code const& err) {
