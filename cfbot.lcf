@@ -6,8 +6,9 @@ allowed to run before it is aborted.
 
 > "irc.freenode.net" server    set
 > "6667"             port      set
-> "#doublec"         channel   set
-> "cfbot"            nickname  set
+> "#doublec      "   channel   set
+> "cfeval"           nickname  set
+> "password"         password  set
 > 10000              timelimit set
 > 200                textlimit set
 
@@ -36,7 +37,8 @@ required setup.
 > [ "NICK " nickname;,over.irc-write. ] set-nick set
 > [ "USER "nickname;," +iw ",nickname;," :",nickname;,over.irc-write. ] set-status set
 > [ "JOIN " channel;,over.irc-write. ] join-channel set
-> [ set-nick.set-status.join-channel. ] bot-init set
+> [ "PRIVMSG nickserv :identify " password;,over.irc-write. ] register set
+> [ set-nick.set-status.register.join-channel. ] bot-init set
 
 Send a message to the channel:
 

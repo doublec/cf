@@ -73,7 +73,7 @@
 [swap.dup.[[uncons.]repeat.'a-,]`[cons.]repeat.[[]]swap.,,.] ltake set
 
 ** head? **
-[ [[a b] a count a 42, ltake. a count b ltake. = ] ( ] head? set
+[ [[a b] a count b swap.stake a = ] ( ] head? set
  
 ** benchmarking **
 [millis'.`'millis`-] time set
