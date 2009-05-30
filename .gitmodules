@@ -1,0 +1,3 @@
+[submodule "gc"]
+	path = gc
+	url = git://github.com/doublec/gc.git

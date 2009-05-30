@@ -45,13 +45,24 @@ You'll need the following:
 1) A C++ compiler. I used gccc 4.3.3 to build it and it worked fine.
 2) libgmp [3] for 'big numbers'
 3) Boost [4] for various library features I use.
+4) gc C++ garbage collector [5]
 
-To build run 'make'. This produces a 'cf' and a 'testcf' executable.
-Run 'cf' to get a simple command line repl and 'testcf' to run some
-tests to see if things are working.
+'cf' uses 'gc', a C++ garbage collector. The git repository for 'cf'
+has 'gc' included as a submodule. When first getting the 'cf' source
+code via git you should do the following:
+
+  $ git submodule init
+  $ git submodule update
+
+To build 'cf' run 'make'. This produces 'cf', 'testcf' and 'leakcf'
+executables.  Run 'cf' to get a simple command line repl and 'testcf'
+to run some tests to see if things are working. 'leakcf' will run,
+load some test files, execute a garbage collection and exit. It's
+useful for testing for leaks under valgrind.
 
 [3] http://gmplib.org/
 [4] http://www.boost.org/
+[5] http://github.com/doublec/gc
 
 Running
 =======

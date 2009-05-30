@@ -11,6 +11,7 @@
 #include <boost/xpressive/xpressive.hpp>
 #include <boost/asio.hpp>
 #include <gmpxx.h>
+#include "gc/gc.h"
 
 // XY is the object that contains the state of the running
 // system. For example, the stack (X), the queue (Y) and
@@ -28,64 +29,6 @@ class XYSequence;
     virtual XYObject* name(XYFloat* lhs);    \
     virtual XYObject* name(XYInteger* lhs);  \
     virtual XYObject* name(XYSequence* lhs)
-
-// Base class for all objects that are tracked by
-// the garbage collector.
-class GCObject {
- public:
-
-  // For mark and sweep algorithm. When a GC occurs
-  // all live objects are traversed and mMarked is
-  // set to true. This is followed by the sweep phase
-  // where all unmarked objects are deleted.
-  bool mMarked;
-
- public:
-  GCObject();
-  virtual ~GCObject();
-
-  // Mark the object and all its children as live
-  void mark();
-
-  // Overridden by derived classes to call mark()
-  // on objects referenced by this object. The default
-  // implemention does nothing.
-  virtual void markChildren();
-};
-
-// Garbage Collector. Implements mark and sweep GC algorithm.
-class GarbageCollector {
- public:
-  // A collection of all active heap objects.
-  typedef std::set<GCObject*> ObjectSet;
-  ObjectSet mHeap;
-
-  // Collection of objects that are scanned for garbage.
-  ObjectSet mRoots;
-
-  // Global garbage collector object
-  static GarbageCollector GC;
-
- public:
-  // Perform garbage collection
-  void collect();
-
-  // Add a root object to the collector.
-  void addRoot(GCObject* root);
-
-  // Remove a root object from the collector.
-  void removeRoot(GCObject* root);
-
-  // Add an heap allocated object to the collector.
-  void addObject(GCObject* o);
-
-  // Remove a heap allocated object from the collector.
-  void removeObject(GCObject* o);
-
-  // Go through all objects in the heap, unmarking the live
-  // objects and destroying the unreferenced ones.
-  void sweep();
-};
 
 // Base class for all objects in the XY system. Anything
 // stored on the stack, in the queue, in the the environment
