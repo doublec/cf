@@ -394,8 +394,8 @@ void testParse(boost::asio::io_service& io)
 void testObjects(boost::asio::io_service& io) 
 {
   {
-    XYObject* o1 = new XYString("o1");
-    XYObject* o2 = new XYString("o2");
+    XYObject* o1 = new XYObject();
+    XYObject* o2 = new XYObject();
     XYObject* m = new XYList();
     XYObject* v = new XYString("v");
     XYObject* v2 = new XYString("v2");
@@ -405,13 +405,15 @@ void testObjects(boost::asio::io_service& io)
     o2->addSlot("b", m, v2, false);
 
     BOOST_CHECK(o1->getSlot("a"));
-    BOOST_CHECK(o1->getSlot("a")->mValue->toString(false) == "v");
+    BOOST_CHECK(o1->getSlot("a")->mValue == v);
     BOOST_CHECK(o1->getSlot("a:"));
     BOOST_CHECK(o1->getSlot("parent"));
-    BOOST_CHECK(o1->getSlot("parent")->mValue->toString(false) == "o2");
+    BOOST_CHECK(o1->getSlot("parent")->mValue == o2);
     BOOST_CHECK(o2->getSlot("b"));
-    BOOST_CHECK(o2->getSlot("b")->mValue->toString(false) == "v2");
+    BOOST_CHECK(o2->getSlot("b")->mValue == v2);
 
+    cout << o1 ->toString(true) << endl;
+    cout << o2 ->toString(true) << endl;
     set<XYObject*> circular1;
     XYObject* context1 = 0;
     BOOST_CHECK(o1->lookup("b", circular1, &context1) == o2->getSlot("b"));

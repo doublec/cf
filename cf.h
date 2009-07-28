@@ -106,7 +106,7 @@ class XYObject : public GCObject
   // queue and some action needs to be taken. For
   // literal objects (numbers, strings, etc) this 
   // involves pushing the object on the stack.
-  virtual void eval1(XY* xy) = 0;
+  virtual void eval1(XY* xy);
 
   // Convert the object into a string repesentation for
   // printing. if 'parse' is true then the output
@@ -119,12 +119,12 @@ class XYObject : public GCObject
   // printed is passed to enable circular references to be
   // detected.
   typedef std::set<XYObject const*> CircularSet;
-  virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const = 0;
+  virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
   
   // Return a negative number if this object is less than
   // the rhs object. Return 0 if they are equal. Returns
   // a positive number if it is greater.
-  virtual int compare(XYObject* rhs) = 0;
+  virtual int compare(XYObject* rhs);
 
   // Math Operators
   DD(add);
@@ -170,7 +170,6 @@ class XYFloat : public XYNumber
     XYFloat(std::string v);
     XYFloat(mpf_class const& v);
     virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
-    virtual void eval1(XY* xy);
     virtual int compare(XYObject* rhs);
     DD(add);
     DD(subtract);
@@ -195,7 +194,6 @@ class XYInteger : public XYNumber
     XYInteger(std::string v);
     XYInteger(mpz_class const& v);
     virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
-    virtual void eval1(XY* xy);
     virtual int compare(XYObject* rhs);
     DD(add);
     DD(subtract);
@@ -283,7 +281,6 @@ class XYString : public XYSequence
   public:
     XYString(std::string v);
     virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
-    virtual void eval1(XY* xy);
     virtual int compare(XYObject* rhs);
     virtual size_t size();
     virtual void pushBackInto(List& list);
@@ -308,7 +305,6 @@ class XYList : public XYSequence
     
     virtual void markChildren();
     virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
-    virtual void eval1(XY* xy);
     virtual size_t size();
     virtual void pushBackInto(List& list);
     virtual XYObject* at(size_t n);
@@ -338,7 +334,6 @@ class XYSlice : public XYSequence
 
     virtual void markChildren();
     virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
-    virtual void eval1(XY* xy);
     virtual size_t size();
     virtual void pushBackInto(List& list);
     virtual XYObject* at(size_t n);
@@ -367,7 +362,6 @@ class XYJoin : public XYSequence
 
     virtual void markChildren();
     virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
-    virtual void eval1(XY* xy);
     virtual size_t size();
     virtual void pushBackInto(List& list);
     virtual XYObject* at(size_t n);

@@ -296,6 +296,45 @@ void XYObject::removeSlot(std::string const& name) {
   mSlots.erase(name);
 }
 
+void XYObject::eval1(XY* xy) {
+  xy->mX.push_back(this);
+}
+
+void XYObject::print(ostringstream& stream, CircularSet& seen, bool parse) const {
+  if (seen.find(this) != seen.end()) {
+    stream << "(circular)";
+  }
+  else {
+    seen.insert(this);
+    stream << "(| ";
+    for (Slots::const_iterator it = mSlots.begin();
+	 it != mSlots.end();
+	 ++it) {
+      string name = (*it).first;
+      XYSlot* slot = (*it).second;
+      stream << name;
+      if (slot->mParent)
+	stream << '*';
+      stream << "=";
+      if (slot->mValue) 
+	slot->mValue->print(stream, seen, parse);
+      else
+	stream << "{method: " << slot->mMethod << "}";
+      stream << " ";
+    }
+    stream << "|)";
+  }
+}
+
+int XYObject::compare(XYObject* rhs) {
+  if (this < rhs)
+    return -1;
+  else if (this > rhs)
+    return 1;
+  
+  return 0;
+}
+
 string XYObject::toString(bool parse) const {
   CircularSet printed;
   ostringstream str;
@@ -402,10 +441,6 @@ void XYFloat::print(ostringstream& stream, CircularSet&, bool) const {
   stream << lexical_cast<string>(mValue);
 }
 
-void XYFloat::eval1(XY* xy) {
-  xy->mX.push_back(this);
-}
-
 int XYFloat::compare(XYObject* rhs) {
   XYFloat* o = dynamic_cast<XYFloat*>(rhs);
   if (!o) {
@@ -452,10 +487,6 @@ XYInteger::XYInteger(mpz_class const& v) : XYNumber(INTEGER), mValue(v) { }
 
 void XYInteger::print(ostringstream& stream, CircularSet&, bool) const {
   stream << lexical_cast<string>(mValue);
-}
-
-void XYInteger::eval1(XY* xy) {
-  xy->mX.push_back(this);
 }
 
 int XYInteger::compare(XYObject* rhs) {
@@ -525,10 +556,6 @@ void XYString::print(ostringstream& stream, CircularSet&, bool parse) const {
   else {
     stream << mValue;
   }
-}
-
-void XYString::eval1(XY* xy) {
-  xy->mX.push_back(this);
 }
 
 int XYString::compare(XYObject* rhs) {
@@ -696,10 +723,6 @@ void XYList::print(ostringstream& stream, CircularSet& seen, bool parse) const {
   }
 }
 
-void XYList::eval1(XY* xy) {
-  xy->mX.push_back(this);
-}
-
 size_t XYList::size()
 {
   return mList.size();
@@ -786,10 +809,6 @@ void XYSlice::print(ostringstream& stream, CircularSet& seen, bool parse) const 
   }
 }
 
-void XYSlice::eval1(XY* xy) {
-  xy->mX.push_back(this);
-}
-
 size_t XYSlice::size()
 {
   return mEnd - mBegin;
@@ -865,10 +884,6 @@ void XYJoin::print(ostringstream& stream, CircularSet& seen, bool parse) const {
     }
     stream << "]";
   }
-}
-
-void XYJoin::eval1(XY* xy) {
-  xy->mX.push_back(this);
 }
 
 size_t XYJoin::size()
