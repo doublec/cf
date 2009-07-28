@@ -428,7 +428,9 @@ class XYError {
     TYPE,
     WAITING_FOR_ASYNC_EVENT,
     LIMIT_REACHED,
-    RANGE
+    RANGE,
+    INVALID_SLOT_TYPE,
+    SLOT_NOT_FOUND
   };
 
   // The interpreter state at the time of the error

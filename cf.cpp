@@ -1967,6 +1967,80 @@ static void primitive_copy(XY* xy) {
   xy->mX.push_back(o->copy());
 }
 
+// add-data-slot add-data-slot [X^object^value^name Y] -> [X^object Y]
+// Adds a data slot to the object
+static void primitive_add_data_slot(XY* xy) {
+  xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
+
+  XYSymbol* name(dynamic_cast<XYSymbol*>(xy->mX.back()));
+  xy_assert(name, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYObject* value(xy->mX.back());
+  xy_assert(value, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYObject* object(xy->mX.back());
+  xy_assert(object, XYError::TYPE);
+  xy->mX.pop_back();
+
+  string n = name->mValue;
+  bool parent = false;
+  if (n[n.size()-1] == '*') {
+    n = n.substr(0, n.size() - 1);
+    parent = true;
+  }
+  XYList* getter = new XYList();
+  getter->mList.push_back(new XYString(n));
+  getter->mList.push_back(new XYSymbol("get-slot-value"));
+
+  object->addSlot(n, getter, value, parent);
+  xy->mX.push_back(object);
+}
+
+// get-slot-value get-slot-value [X^object^name Y] -> [X^value Y]
+// Gets the value held in a slot of an object
+static void primitive_get_slot_value(XY* xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
+
+  XYString* name(dynamic_cast<XYString*>(xy->mX.back()));
+  xy_assert(name, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYObject* object(xy->mX.back());
+  xy_assert(object, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYObject* value = object->getSlot(name->mValue)->mValue;
+  xy_assert(value, XYError::INVALID_SLOT_TYPE);
+  xy->mX.push_back(value);
+}
+
+// lookup lookup [X^object^name Y] -> [X^object^method Y]
+// Find the name in the object slots using the
+// prototype chain and return the method there.
+static void primitive_lookup(XY* xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
+
+  XYSymbol* name(dynamic_cast<XYSymbol*>(xy->mX.back()));
+  xy_assert(name, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYObject* object(xy->mX.back());
+  xy_assert(object, XYError::TYPE);
+  xy->mX.pop_back();
+
+  set<XYObject*> circular;
+  XYObject* context = 0;
+  XYSlot* slot = object->lookup(name->mValue, circular, &context);
+  xy_assert(slot, XYError::SLOT_NOT_FOUND);
+  xy_assert(slot->mMethod, XYError::INVALID_SLOT_TYPE);
+  xy_assert(context, XYError::INVALID_SLOT_TYPE);
+
+  xy->mX.push_back(context);
+  xy->mX.push_back(slot->mMethod);
+}
+
 // XYTimeLimit
 XYTimeLimit::XYTimeLimit(unsigned int milliseconds) :
   mMilliseconds(milliseconds) {
@@ -2089,6 +2163,10 @@ XY::XY(boost::asio::io_service& service) :
   // Object system test primitives. These will change
   // when the system settles down.
   mP["copy"] = new XYPrimitive("copy", primitive_copy);
+  mP["add-data-slot"] = new XYPrimitive("add-data-slot", primitive_add_data_slot);
+  //  mP["add-method-slot"] = new XYPrimitive("add-method-slot", primitive_add_method_slot);
+  mP["get-slot-value"] = new XYPrimitive("get-slot-value", primitive_get_slot_value);
+  mP["lookup"] = new XYPrimitive("lookup", primitive_lookup);
 
   // The object prototype
   mEnv["object"] = new XYObject();
