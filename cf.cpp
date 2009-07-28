@@ -2505,20 +2505,27 @@ boost::xpressive::sregex re_number() {
 boost::xpressive::sregex re_special() {
   using namespace boost::xpressive;
   using boost::xpressive::set;
-  return (set= '\\' , '[' , ']' , '{' , '}' , '(' , ')' , ';' , '!' , '.' , ',' , '`' , '\'' , '|', '@');
+  return (set= '\\' , '[' , ']' , '{' , '}' , '(' , ')' , ';' , '!' , '.' , ',' , '`' , '\'' , '|', '@', '+', '*');
 }
 
 // Return regex for non-specials
 boost::xpressive::sregex re_non_special() {
   using namespace boost::xpressive;
   using boost::xpressive::set;
-  return ~(set[(set= '\\','[',']','{','}','(',')',';','!','.',',','`','\'','|','@') | _s]);
+  return ~(set[(set= '\\','[',']','{','}','(',')',';','!','.',',','`','\'','|','@','+','*') | _s]);
+}
+
+// Return regex for allowed end of symbols
+boost::xpressive::sregex re_symbol_end() {
+  using namespace boost::xpressive;
+  using boost::xpressive::set;
+  return (set= '+', '*');
 }
 
 // Return regex for symbols
 boost::xpressive::sregex re_symbol() {
   using namespace boost::xpressive;
-  return !range('0', '9') >> +(re_non_special());
+  return !range('0', '9') >> +(re_non_special()) >> *(re_symbol_end());
 }
 
 // Return regex for a character in a string
