@@ -209,8 +209,92 @@ static XYObject* dd_power(XYSequence* lhs, XYSequence* rhs) {
   return list;
 }
 
+// XYSlot
+XYSlot::XYSlot(XYObject* method, XYObject* value, bool parent) :
+  mMethod(method),
+  mValue(value),
+  mParent(parent) 
+{
+}
+
+void XYSlot::markChildren() {
+  if (mMethod)
+    mMethod->mark();
+  if (mValue)
+    mValue->mark();
+}
+
 // XYObject
 XYObject::XYObject() { }
+
+void XYObject::markChildren() {
+  for (Slots::iterator it = mSlots.begin(); 
+       it != mSlots.end(); 
+       ++it) {
+    (*it).second->mark();
+  }
+}
+
+XYSlot* XYObject::lookup(std::string const& name, 
+			 std::set<XYObject*>& circular,
+			 XYObject** context) {
+  assert(name.size() > 0);
+
+  if (circular.find(this) != circular.end())
+    return 0;
+
+  circular.insert(this);
+
+  Slots::iterator it = mSlots.find(name);
+  if (it == mSlots.end()) {
+    // Could not find name in the slots of this
+    // object. Look for the name in the slots of
+    // the parents.
+    for (Slots::iterator it = mSlots.begin();
+	 it != mSlots.end();
+	 ++it) {
+      XYSlot* slot = (*it).second;
+      if (slot->mParent) {
+	XYSlot* found = slot->mValue->lookup(name, circular, context);
+	if (found)
+	  return found;
+      }
+    }
+    // Not found in any parent object, so slot does not exist
+    return 0;
+  }
+
+  // Found the slot in this object. Store the object that the slot
+  // was found in, if requested, as the context.
+  if (context)
+    *context = this;
+
+  return (*it).second;
+}
+
+XYSlot* XYObject::getSlot(string const& name) {
+  assert(name.size() > 0);
+  assert(mSlots.find(name) != mSlots.end());
+  return mSlots[name];
+}
+
+void XYObject::addSlot(std::string const& name, 
+		       XYObject* method,
+		       XYObject* value,
+		       bool parent) {
+  assert(name.size() > 0);
+  assert(method);
+  assert(mSlots.find(name) == mSlots.end());
+
+  mSlots[name] = new XYSlot(method, value, parent);
+}
+  
+void XYObject::removeSlot(std::string const& name) {
+  assert(name.size() > 0);
+  assert(mSlots.find(name) != mSlots.end());
+  
+  mSlots.erase(name);
+}
 
 string XYObject::toString(bool parse) const {
   CircularSet printed;

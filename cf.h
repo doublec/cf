@@ -5,6 +5,7 @@
 
 #include <string>
 #include <map>
+#include <set>
 #include <vector>
 #include <deque>
 #include <sstream>
@@ -18,7 +19,8 @@
 // the environment.
 class XY;
 
-// Forward declare classes for double dispatch operations
+// Forward declare classes
+class XYObject;
 class XYFloat;
 class XYInteger;
 class XYSequence;
@@ -28,18 +30,77 @@ class XYSequence;
     virtual XYObject* name(XYObject* rhs);   \
     virtual XYObject* name(XYFloat* lhs);    \
     virtual XYObject* name(XYInteger* lhs);  \
-    virtual XYObject* name(XYSequence* lhs)
+    virtual XYObject* name(XYSequence* lhs)		   
+
+// XYObjects form a prototype object system similar to that in the
+// 'Self' programming language. 
+// An XY object has zero or more slots. A slot has a name and a 
+// quotation. The quotation has stack effect ( ... object -- ... ).
+// Slots can optionally have a value. This is used for data slots
+// where the getter and setter change this value.
+// A slot can be a parent slot, in which case the value stored there
+// is used in the prototype lookup chain. A parent slot must be a data
+// slot.
+//
+// The value held in the XYObject Slots map. This holds data
+// for the given slot.
+class XYSlot : public GCObject
+{
+ public:
+  XYObject* mMethod;
+  XYObject* mValue;
+  bool mParent;
+
+ public:
+  XYSlot(XYObject* method, XYObject* value, bool parent);
+
+  // GCObject method
+  virtual void markChildren();
+};
 
 // Base class for all objects in the XY system. Anything
 // stored on the stack, in the queue, in the the environment
-// must be derived from this.
+// must be derived from this. 
+//
 class XYObject : public GCObject
 {
+ public:    
+  // Mapping of slot name to getter/setter.
+  typedef std::map<std::string, XYSlot*> Slots;
+  Slots mSlots;
+
  public:
   XYObject();
 
   // Ensure virtual destructors for base classes
   virtual ~XYObject() { }
+
+  // GCObject method
+  virtual void markChildren();
+
+  // Find the slot with the given name,
+  // searching down the prototype chain as needed.
+  // 'circular' is used to prevent infinite loops
+  // while lookup up parent objects. The 'context'
+  // will hold a pointer to the object that where the
+  // slot was found. 'context' can be passed null in
+  // which case it is ignored.
+  XYSlot* lookup(std::string const& name, 
+		 std::set<XYObject*>& circular,
+		 XYObject** context);
+
+  // Get the slot object if there is one, without
+  // following the prototype lookup chain.
+  XYSlot* getSlot(std::string const& name);
+
+  // Adds a slot
+  void addSlot(std::string const& name, 
+	       XYObject* method,
+	       XYObject* value,
+	       bool parent);
+  
+  // Remove a slot
+  void removeSlot(std::string const& name);
 
   // Call when the object has been removed from the XY
   // queue and some action needs to be taken. For

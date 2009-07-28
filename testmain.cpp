@@ -20,8 +20,8 @@ using namespace std;
 using namespace boost;
 using namespace boost::lambda;
 
-void testParse() {
-  boost::asio::io_service io;
+void testParse(boost::asio::io_service& io) 
+{
   {
     // Simple number parsing
     XYStack x;
@@ -391,8 +391,49 @@ void testParse() {
 
 }
 
+void testObjects(boost::asio::io_service& io) 
+{
+  {
+    XYObject* o1 = new XYString("o1");
+    XYObject* o2 = new XYString("o2");
+    XYObject* m = new XYList();
+    XYObject* v = new XYString("v");
+    XYObject* v2 = new XYString("v2");
+    o1->addSlot("a", m, v, false);
+    o1->addSlot("a:", m, 0, false);
+    o1->addSlot("parent", m, o2, true);
+    o2->addSlot("b", m, v2, false);
+
+    BOOST_CHECK(o1->getSlot("a"));
+    BOOST_CHECK(o1->getSlot("a")->mValue->toString(false) == "v");
+    BOOST_CHECK(o1->getSlot("a:"));
+    BOOST_CHECK(o1->getSlot("parent"));
+    BOOST_CHECK(o1->getSlot("parent")->mValue->toString(false) == "o2");
+    BOOST_CHECK(o2->getSlot("b"));
+    BOOST_CHECK(o2->getSlot("b")->mValue->toString(false) == "v2");
+
+    set<XYObject*> circular1;
+    XYObject* context1 = 0;
+    BOOST_CHECK(o1->lookup("b", circular1, &context1) == o2->getSlot("b"));
+    BOOST_CHECK(context1 == o2);
+
+    set<XYObject*> circular2;
+    XYObject* context2 = 0;
+    BOOST_CHECK(o1->lookup("a", circular2, &context2) == o1->getSlot("a"));
+    BOOST_CHECK(context2 == o1);
+
+    set<XYObject*> circular3;
+    BOOST_CHECK(o1->lookup("c", circular3, 0) == 0);
+  }
+}
+
 int test_main(int argc, char* argv[]) {
-  testParse();
+  boost::asio::io_service io;
+
+  testParse(io);
+  testObjects(io);
+
+  GarbageCollector::GC.collect();
 
   return 0;
 }
