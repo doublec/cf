@@ -296,6 +296,16 @@ void XYObject::removeSlot(std::string const& name) {
   mSlots.erase(name);
 }
 
+XYObject* XYObject::copy() const {
+  XYObject* o = new XYObject();
+  for (Slots::const_iterator it = mSlots.begin();
+       it != mSlots.end();
+       ++it) {
+    o->mSlots[(*it).first] = new XYSlot(*((*it).second));
+  }
+  return o;
+}
+
 void XYObject::eval1(XY* xy) {
   xy->mX.push_back(this);
 }
@@ -1947,6 +1957,16 @@ static void primitive_gc(XY* xy) {
   GarbageCollector::GC.collect();
 }
 
+// copy copy [X^object Y] -> [X^object Y]
+// Returns a copy of the object
+static void primitive_copy(XY* xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
+  XYObject* o(xy->mX.back());
+  xy->mX.pop_back();
+
+  xy->mX.push_back(o->copy());
+}
+
 // XYTimeLimit
 XYTimeLimit::XYTimeLimit(unsigned int milliseconds) :
   mMilliseconds(milliseconds) {
@@ -2065,6 +2085,13 @@ XY::XY(boost::asio::io_service& service) :
   mP["if"] = new XYPrimitive("if", primitive_if);
   mP["?"] = new XYPrimitive("?", primitive_find);
   mP["gc"] = new XYPrimitive("gc", primitive_gc);
+
+  // Object system test primitives. These will change
+  // when the system settles down.
+  mP["copy"] = new XYPrimitive("copy", primitive_copy);
+
+  // The object prototype
+  mEnv["object"] = new XYObject();
 }
 
 void XY::markChildren() {

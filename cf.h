@@ -102,6 +102,9 @@ class XYObject : public GCObject
   // Remove a slot
   void removeSlot(std::string const& name);
 
+  // Create a shallow copy of this object.
+  virtual XYObject* copy() const;
+
   // Call when the object has been removed from the XY
   // queue and some action needs to be taken. For
   // literal objects (numbers, strings, etc) this 
