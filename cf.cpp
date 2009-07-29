@@ -2053,9 +2053,15 @@ static void primitive_get_slot_value(XY* xy) {
   xy_assert(object, XYError::TYPE);
   xy->mX.pop_back();
 
+#if 0
   XYObject* value = object->getSlot(name->mValue)->mValue;
   xy_assert(value, XYError::INVALID_SLOT_TYPE);
-  xy->mX.push_back(value);
+#endif
+  set<XYObject*> circular;
+  XYSlot* slot = object->lookup(name->mValue, circular, 0);  
+  xy_assert(slot, XYError::INVALID_SLOT_TYPE);
+  xy_assert(slot->mValue, XYError::INVALID_SLOT_TYPE);
+  xy->mX.push_back(slot->mValue);
 }
 
 // call-method call-method [X^object^method Y] -> [X Y]
@@ -2112,7 +2118,7 @@ static void primitive_lookup(XY* xy) {
   xy_assert(slot->mMethod, XYError::INVALID_SLOT_TYPE);
   xy_assert(context, XYError::INVALID_SLOT_TYPE);
 
-  xy->mX.push_back(context);
+  xy->mX.push_back(object);
   xy->mX.push_back(slot->mMethod);
 }
 

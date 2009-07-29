@@ -176,5 +176,19 @@ Testing prototype object lookup
 >         parent* add-data-slot
 >         foo lookup .
 >       ] test.
+> [ "foo!" ] [ 
+>         object;copy 
+>           [ frame self lookup . message lookup . ] foo add-method-slot 
+>         object;copy "foo!" message add-data-slot 
+>         swap;. parent* add-data-slot
+>         message lookup .
+>       ] test.
+> [ "foo!" ] [ 
+>         object;copy 
+>           [ frame self lookup . message lookup . ] foo add-method-slot 
+>         object;copy "foo!" message add-data-slot 
+>         swap;. parent* add-data-slot
+>         foo lookup .
+>       ] test.
 
 > "Test run completed\n" write
