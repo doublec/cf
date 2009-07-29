@@ -96,7 +96,8 @@ int main(int argc, char* argv[]) {
   xy->mEnv.clear();
   xy->mLimits.clear();
   xy->mWaiting.clear();
-  
+  xy->mFrame = 0;
+
   GarbageCollector::GC.collect();
 
   delete xy;

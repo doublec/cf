@@ -2307,7 +2307,8 @@ void XY::markChildren() {
        ++it) {
     (*it)->mark();
   }
-  mFrame->mark();
+  if (mFrame)
+    mFrame->mark();
 }
 
 void XY::stdioHandler(boost::system::error_code const& err) {
