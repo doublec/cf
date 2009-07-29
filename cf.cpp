@@ -1993,8 +1993,13 @@ static void primitive_add_data_slot(XY* xy) {
   XYList* getter = new XYList();
   getter->mList.push_back(new XYString(n));
   getter->mList.push_back(new XYSymbol("get-slot-value"));
-
   object->addSlot(n, getter, value, parent);
+
+  XYList* setter = new XYList();
+  setter->mList.push_back(new XYString(n));
+  setter->mList.push_back(new XYSymbol("set-slot-value"));
+  object->addSlot(n + ":", setter, 0, parent);
+  
   xy->mX.push_back(object);
 }
 
@@ -2062,6 +2067,30 @@ static void primitive_get_slot_value(XY* xy) {
   xy_assert(slot, XYError::INVALID_SLOT_TYPE);
   xy_assert(slot->mValue, XYError::INVALID_SLOT_TYPE);
   xy->mX.push_back(slot->mValue);
+}
+
+// set-slot-value set-slot-value [X^value^object^name Y] -> [X Y]
+// Sets the value held in a slot of an object
+static void primitive_set_slot_value(XY* xy) {
+  xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
+
+  XYString* name(dynamic_cast<XYString*>(xy->mX.back()));
+  xy_assert(name, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYObject* object(xy->mX.back());
+  xy_assert(object, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYObject* value(xy->mX.back());
+  xy_assert(value, XYError::TYPE);
+  xy->mX.pop_back();
+
+  set<XYObject*> circular;
+  XYSlot* slot = object->lookup(name->mValue, circular, 0);  
+  xy_assert(slot, XYError::INVALID_SLOT_TYPE);
+  xy_assert(slot->mValue, XYError::INVALID_SLOT_TYPE);
+  slot->mValue = value;
 }
 
 // call-method call-method [X^object^method Y] -> [X Y]
@@ -2266,6 +2295,7 @@ XY::XY(boost::asio::io_service& service) :
   mP["add-data-slot"] = new XYPrimitive("add-data-slot", primitive_add_data_slot);
   mP["add-method-slot"] = new XYPrimitive("add-method-slot", primitive_add_method_slot);
   mP["get-slot-value"] = new XYPrimitive("get-slot-value", primitive_get_slot_value);
+  mP["set-slot-value"] = new XYPrimitive("set-slot-value", primitive_set_slot_value);
   mP["call-method"] = new XYPrimitive("call-method", primitive_call_method);
   mP["lookup"] = new XYPrimitive("lookup", primitive_lookup);
   mP["frame"] = new XYPrimitive("frame", primitive_frame);

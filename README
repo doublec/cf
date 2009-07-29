@@ -329,6 +329,8 @@ added with 'add-data-slot':
 
   object copy 42 foo add-data-slot foo lookup .
     => 42
+  object copy 42 foo add-data-slot 25 over. foo: lookup . foo lookup .
+    => 25
 
 Parent slots have a name ending in '*'. If a message is not found when
 looked up in an object then all that objects parent slots are also searched
