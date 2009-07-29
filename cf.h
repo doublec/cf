@@ -487,7 +487,7 @@ class XY : public GCObject {
     // to objects.
     XYEnv mEnv;
 
-    // Mapping of primitives to their primtive
+    // Mapping of primitives to their primitive
     // object. These are symbols that are executed
     // implicitly and don't need their value looked up
     // by the user.
@@ -502,6 +502,9 @@ class XY : public GCObject {
     // The limits that restrict the operation of this
     // interpreter.
     XYLimits mLimits;
+
+    // The current executing frame object
+    XYObject* mFrame;
 
     // True if we are a 'repl' based interpreter
     bool mRepl;

@@ -1998,6 +1998,48 @@ static void primitive_add_data_slot(XY* xy) {
   xy->mX.push_back(object);
 }
 
+// add-method-slot add-method-slot [X^object^method^name Y] -> [X^object Y]
+// Adds a method slot to the object
+static void primitive_add_method_slot(XY* xy) {
+  xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
+
+  XYSymbol* name(dynamic_cast<XYSymbol*>(xy->mX.back()));
+  xy_assert(name, XYError::TYPE);
+  xy->mX.pop_back();
+
+  // Parent slots can't be methods
+  xy_assert(name->mValue[name->mValue.size()-1] != '*', XYError::INVALID_SLOT_TYPE);
+
+  XYObject* method(xy->mX.back());
+  xy_assert(method, XYError::TYPE);
+  xy->mX.pop_back();
+
+  // If the method passed is a list, then we convert it to a method object.
+  // Otherwise we assume it is a method object already.
+  XYList* list = dynamic_cast<XYList*>(method);
+  if (list) {
+    XYObject* code = method;
+    XYList* getter = new XYList();
+    getter->mList.push_back(new XYString("code"));
+    getter->mList.push_back(new XYSymbol("get-slot-value"));
+    method = new XYObject();
+    method->addSlot("code", getter, code, false);
+  }
+
+  XYObject* object(xy->mX.back());
+  xy_assert(object, XYError::TYPE);
+  xy->mX.pop_back();
+
+  // Convert the method to a quotation that does the work of cloning it,
+  // install the frame, etc.
+  XYList* frameHandler = new XYList();
+  frameHandler->mList.push_back(method);
+  frameHandler->mList.push_back(new XYSymbol("call-method"));
+
+  object->addSlot(name->mValue, frameHandler, 0, false);
+  xy->mX.push_back(object);
+}
+
 // get-slot-value get-slot-value [X^object^name Y] -> [X^value Y]
 // Gets the value held in a slot of an object
 static void primitive_get_slot_value(XY* xy) {
@@ -2014,6 +2056,39 @@ static void primitive_get_slot_value(XY* xy) {
   XYObject* value = object->getSlot(name->mValue)->mValue;
   xy_assert(value, XYError::INVALID_SLOT_TYPE);
   xy->mX.push_back(value);
+}
+
+// call-method call-method [X^object^method Y] -> [X Y]
+// Calls the method by copying it, installing the copy as
+// the current frame, and running the code.
+static void primitive_call_method(XY* xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
+
+  XYObject* method(xy->mX.back());
+  xy_assert(method, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYObject* object(xy->mX.back());
+  xy_assert(object, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYObject* frame = method->copy();
+  XYList* getter = new XYList();
+  getter->mList.push_back(new XYString("self"));
+  getter->mList.push_back(new XYSymbol("get-slot-value"));
+  frame->addSlot("self", getter, object, true);
+  
+  // frame code-method 
+  XYObject* oldFrame = xy->mFrame;
+  xy->mY.push_front(new XYSymbol("set-frame"));
+  xy->mY.push_front(oldFrame);
+  xy->mY.push_front(new XYSymbol("."));
+  xy->mY.push_front(new XYSymbol("."));
+  xy->mY.push_front(new XYSymbol("lookup"));
+  xy->mY.push_front(new XYSymbol("code"));
+  xy->mY.push_front(frame);
+  xy->mY.push_front(new XYSymbol("set-frame"));
+  xy->mY.push_front(frame);
 }
 
 // lookup lookup [X^object^name Y] -> [X^object^method Y]
@@ -2039,6 +2114,24 @@ static void primitive_lookup(XY* xy) {
 
   xy->mX.push_back(context);
   xy->mX.push_back(slot->mMethod);
+}
+
+// set-frame set-frame [X^frame Y] -> [X Y]
+// Sets the frame object to the given frame
+static void primitive_set_frame(XY* xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
+
+  XYObject* frame(xy->mX.back());
+  xy_assert(frame, XYError::TYPE);
+  xy->mX.pop_back();
+
+  xy->mFrame = frame;
+}
+
+// frame frame [X Y] -> [X^frame Y]
+// Return the current executing frame object on the stack
+static void primitive_frame(XY* xy) {
+  xy->mX.push_back(xy->mFrame);
 }
 
 // XYTimeLimit
@@ -2113,6 +2206,7 @@ XY::XY(boost::asio::io_service& service) :
   mService(service),
   mInputStream(service, ::dup(STDIN_FILENO)),
   mOutputStream(service, ::dup(STDOUT_FILENO)),
+  mFrame(0),
   mRepl(true) {
   mP["+"]   = new XYPrimitive("+", primitive_addition);
   mP["-"]   = new XYPrimitive("-", primitive_subtraction);
@@ -2164,12 +2258,16 @@ XY::XY(boost::asio::io_service& service) :
   // when the system settles down.
   mP["copy"] = new XYPrimitive("copy", primitive_copy);
   mP["add-data-slot"] = new XYPrimitive("add-data-slot", primitive_add_data_slot);
-  //  mP["add-method-slot"] = new XYPrimitive("add-method-slot", primitive_add_method_slot);
+  mP["add-method-slot"] = new XYPrimitive("add-method-slot", primitive_add_method_slot);
   mP["get-slot-value"] = new XYPrimitive("get-slot-value", primitive_get_slot_value);
+  mP["call-method"] = new XYPrimitive("call-method", primitive_call_method);
   mP["lookup"] = new XYPrimitive("lookup", primitive_lookup);
+  mP["frame"] = new XYPrimitive("frame", primitive_frame);
+  mP["set-frame"] = new XYPrimitive("set-frame", primitive_set_frame);
 
   // The object prototype
-  mEnv["object"] = new XYObject();
+  mFrame = new XYObject();
+  mEnv["object"] = mFrame;
 }
 
 void XY::markChildren() {
@@ -2203,6 +2301,7 @@ void XY::markChildren() {
        ++it) {
     (*it)->mark();
   }
+  mFrame->mark();
 }
 
 void XY::stdioHandler(boost::system::error_code const& err) {
