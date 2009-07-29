@@ -296,6 +296,31 @@ void XYObject::removeSlot(std::string const& name) {
   mSlots.erase(name);
 }
 
+void XYObject::addMethod(std::string const& name, XYList* method) {
+  XYObject* code = method;
+  XYList* getter = new XYList();
+  getter->mList.push_back(new XYString("code"));
+  getter->mList.push_back(new XYSymbol("get-slot-value"));
+  XYObject* o = new XYObject();
+  o->addSlot("code", getter, code, false);
+  addMethod(name, o);
+}
+
+void XYObject::addMethod(std::string const& name, XYPrimitive* method) {
+  XYList* list = new XYList();
+  list->mList.push_back(method);
+  addMethod(name, list);
+}
+
+void XYObject::addMethod(std::string const& name, XYObject* method) {
+  // Convert the method to a quotation that does the work of cloning it,
+  // install the frame, etc.
+  XYList* frameHandler = new XYList();
+  frameHandler->mList.push_back(method);
+  frameHandler->mList.push_back(new XYSymbol("call-method"));
+  addSlot(name, frameHandler, 0, false);
+}
+
 XYObject* XYObject::copy() const {
   XYObject* o = new XYObject();
   for (Slots::const_iterator it = mSlots.begin();
@@ -329,7 +354,7 @@ void XYObject::print(ostringstream& stream, CircularSet& seen, bool parse) const
       if (slot->mValue) 
 	slot->mValue->print(stream, seen, parse);
       else
-	stream << "{method: " << slot->mMethod << "}";
+	stream << "{" << slot->mMethod << "}";
       stream << " ";
     }
     stream << "|)";
@@ -541,11 +566,28 @@ void XYSymbol::print(ostringstream& stream, CircularSet&, bool) const {
 
 void XYSymbol::eval1(XY* xy) {
   XYEnv::iterator it = xy->mP.find(mValue);
-  if (it != xy->mP.end())
+  if (it != xy->mP.end()) {
     // Primitive symbol, execute immediately
     (*it).second->eval1(xy);
-  else
-    xy->mX.push_back(this);
+    return;
+  }
+
+  // Look up primitives object. If it's a slot in there,
+  // execute immediately.
+  it = xy->mEnv.find("primitives");
+  if (it != xy->mEnv.end()) {
+    XYObject* p = (*it).second;
+    set<XYObject*> circular;
+    XYSlot* slot = p->lookup(mValue, circular, 0);
+    if (slot) {
+      xy->mY.push_front(new XYSymbol("."));
+      xy->mY.push_front(slot->mMethod);
+      xy->mY.push_front(p);
+      return;
+    }
+  }
+
+  xy->mX.push_back(this);
 }
 
 int XYSymbol::compare(XYObject* rhs) {
@@ -2019,29 +2061,16 @@ static void primitive_add_method_slot(XY* xy) {
   xy_assert(method, XYError::TYPE);
   xy->mX.pop_back();
 
-  // If the method passed is a list, then we convert it to a method object.
-  // Otherwise we assume it is a method object already.
-  XYList* list = dynamic_cast<XYList*>(method);
-  if (list) {
-    XYObject* code = method;
-    XYList* getter = new XYList();
-    getter->mList.push_back(new XYString("code"));
-    getter->mList.push_back(new XYSymbol("get-slot-value"));
-    method = new XYObject();
-    method->addSlot("code", getter, code, false);
-  }
-
   XYObject* object(xy->mX.back());
   xy_assert(object, XYError::TYPE);
   xy->mX.pop_back();
 
-  // Convert the method to a quotation that does the work of cloning it,
-  // install the frame, etc.
-  XYList* frameHandler = new XYList();
-  frameHandler->mList.push_back(method);
-  frameHandler->mList.push_back(new XYSymbol("call-method"));
+  XYList* list = dynamic_cast<XYList*>(method);
+  if (list)
+    object->addMethod(name->mValue, list);
+  else
+    object->addMethod(name->mValue, method);
 
-  object->addSlot(name->mValue, frameHandler, 0, false);
   xy->mX.push_back(object);
 }
 
@@ -2303,7 +2332,11 @@ XY::XY(boost::asio::io_service& service) :
 
   // The object prototype
   mFrame = new XYObject();
+  XYObject* primitives = new XYObject();
+  primitives->addMethod("printline", new XYPrimitive("println", primitive_println));
+
   mEnv["object"] = mFrame;
+  mEnv["primitives"] = primitives;
 }
 
 void XY::markChildren() {
