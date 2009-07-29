@@ -1,3 +1,8 @@
+Changes since  9f8f51
+=====================
+1) Started work on a prototype based object system.
+   See experimental section of README.
+
 Changes since  5e25d6
 =====================
 1) Sequences are mutable

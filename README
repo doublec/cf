@@ -303,6 +303,64 @@ the translation looks like:
 
   [1 2 3] 0 [+] fold => [0 1 2 3 + + + ].
 
+Experimental Object System
+==========================
+cf includes an experimental protoype based object system. This is
+still being designed and written so it is likely to change quite
+a bit. The object system is based on that in the Self programming
+language.
+
+cf objects can have named slots. Each slot refernces another cf
+object. Messages are symbols. The value of a slot is obtained
+using the 'lookup' primitive: 
+
+  lookup ( object message -- object list )
+
+The result of lookup is the original object and a list containing
+code that when unquoted will send the message to the object. The
+list can be unquoted with '.' as normal. So 'lookup .' is to objects
+as 'foo ;.' is to standard cf lookup and execution of functions.
+
+Slots can be data or method slots. A data slot holds an initial value
+and when a message is sent to it retrieves the value. Data slots are
+added with 'add-data-slot':
+
+  add-data-slot ( object value name -- object )
+
+  object copy 42 foo add-data-slot foo lookup .
+    => 42
+
+Parent slots have a name ending in '*'. If a message is not found when
+looked up in an object then all that objects parent slots are also searched
+for the message. This is how the prototype object system handles inheritance:
+
+  object copy 42 foo add-data-slot
+  object copy swap. parent* add-data-slot
+  foo lookup .
+    => 42
+
+Method slots take a list representing the program to run when the
+message is sent. When a message is sent that results in a method slot a
+frame object is created. This frame object has a parent slot called 'self'
+that points to the original object holding the method. Slot values of this
+original object can be retrieved by accessing this frame object. Eventually
+this will support named arguments.
+
+  add-method-slot ( object list name -- object )
+  frame ( -- object )
+
+  object copy [ frame message lookup . print ] display add-method-slot
+  object copy "hello" message add-data-slot
+  swap. parent* add-data-slot
+  display lookup .
+    => "hello"
+
+There is an 'object' primitive that returns the prototypical object. The
+'copy' primitive returns a shallow copy of an object.
+
+  object ( -- object )
+  copy ( object -- object' )
+
 Troubleshooting
 ===============
 Error handling started of as being C++ assertions so a lot of
