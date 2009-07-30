@@ -4,12 +4,12 @@ Compare overhead of object factorial computation vs non-object version
 object copy
   20000 n add-data-slot
   [ 
-    frame n;. 1 = [ 
-      frame self;.
+    n. 1 = [ 
+      self.
     ] [
-      frame n;.
-      dup. 1 - frame self;. copy n:;.
-      factorial;. n;. * frame self;. copy n:;.
+      n.
+      dup. 1 - self. copy n:;.
+      factorial;. n;. * self. copy n:;.
     ] if
   ] factorial add-method-slot
 

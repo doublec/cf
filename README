@@ -363,6 +363,23 @@ There is an 'object' primitive that returns the prototypical object. The
   object ( -- object )
   copy ( object -- object' )
 
+The get and unquote primitives have been overloaded to work with the object
+system. If ';' is called on a symbol, and that symbol is not found in the
+environment, then it will be looked up in an object on the stack using
+'lookup':
+
+  object copy 25 foo add-data-slot foo;.
+    => 25
+
+If '.' is called on a symbol, and that symbol is not found in the 
+environment, then it will be looked up in the frame object using
+'lookup'. This makes '.' similar to Self's implicit self sends:
+
+  object copy 25 foo add-data-slot
+  [ foo. println ] print-foo add-method-slot
+  foo;.
+    => 25
+
 Troubleshooting
 ===============
 Error handling started of as being C++ assertions so a lot of

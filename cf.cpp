@@ -1227,9 +1227,22 @@ static void primitive_unquote(XY* xy) {
 	primitive_unquote(xy);
       }
       else {
-	// If the symbol doesn't exist in the environment, just
-	// return the symbol itself.
-	xy->mX.push_back(symbol);
+	// If the symbol doesn't exist in the environment, look
+	// it up in the current frame.
+	assert(xy->mFrame);
+	set<XYObject*> circular;
+	XYSlot* slot = xy->mFrame->lookup(symbol->mValue, circular, 0);
+	if (slot) {
+	  xy_assert(slot->mMethod, XYError::INVALID_SLOT_TYPE);
+	  xy->mX.push_back(xy->mFrame);
+	  xy->mX.push_back(slot->mMethod);
+	  primitive_unquote(xy);
+	}
+	else {
+	  // Return the symbol itself if not in the environment
+	  // or the frame.
+	  xy->mX.push_back(symbol);
+	}
       }
     }
     else 
