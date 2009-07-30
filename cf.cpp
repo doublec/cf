@@ -2254,8 +2254,9 @@ static void primitive_set_method_args(XY* xy) {
   xy->mX.pop_back();
 
   xy_assert(xy->mX.size() >= args->size(), XYError::STACK_UNDERFLOW);
-  for (int i=0; i < args->size(); ++i) {
-    XYSymbol* name = dynamic_cast<XYSymbol*>(args->at(i));
+  int n = args->size();
+  for (int i=0; i < n; ++i) {
+    XYSymbol* name = dynamic_cast<XYSymbol*>(args->at(n-i-1));
     xy_assert(name, XYError::TYPE);
 
     XYObject* arg(xy->mX.back());
