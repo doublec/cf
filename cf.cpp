@@ -315,7 +315,7 @@ void XYObject::addSlot(std::string const& n, XYObject* value, bool readOnly) {
     XYList* setter = new XYList();
     setter->mList.push_back(new XYString(name));
     setter->mList.push_back(new XYSymbol("set-slot-value"));
-    addSlot(name + ":", setter, 0, parent);
+    addSlot(name + ":", setter, 0, false);
   }
 }
 
