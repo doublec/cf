@@ -4,16 +4,16 @@ Compare overhead of object factorial computation vs non-object version
 object copy
   20000 n add-data-slot
   [ 
-    frame n lookup. 1 = [ 
-      frame self lookup.
+    frame n;. 1 = [ 
+      frame self;.
     ] [
-      frame n lookup.
-      dup. 1 - frame self lookup. copy n: lookup.
-      factorial lookup. n lookup. * frame self lookup. copy n: lookup.
+      frame n;.
+      dup. 1 - frame self;. copy n:;.
+      factorial;. n;. * frame self;. copy n:;.
     ] if
   ] factorial add-method-slot
 
-[ factorial lookup. ] time.
+[ factorial;. ] time.
 [ 20000 fac. ] time. 
 abcd-bdbd % 1 - 100 *
 print " % overhead of object system\n" write

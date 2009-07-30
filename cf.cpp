@@ -1146,16 +1146,42 @@ static void primitive_set(XY* xy) {
 
 // get [X^name Y] [X^value Y]
 static void primitive_get(XY* xy) {
+  // The plan is for the 'get' primitive to be a
+  // 'message send' primitive. It will do a lookup
+  // of the symbol on the object on the stack. 
+  // To support backwards compatibility during the
+  // prototype object testing phase, look up the
+  // symbol in the environment first. If it's not there
+  // then check the object.
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   XYSymbol* name = dynamic_cast<XYSymbol*>(xy->mX.back());
   xy_assert(name, XYError::TYPE);
   xy->mX.pop_back();
 
   XYEnv::iterator it = xy->mEnv.find(name->mValue);
-  xy_assert(it != xy->mEnv.end(), XYError::SYMBOL_NOT_FOUND);
+  if (it == xy->mEnv.end()) {
+    // Not in environment, look up object
+    xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
+    XYObject* object = xy->mX.back();
+    xy_assert(object, XYError::TYPE);
+    xy->mX.pop_back();
 
-  XYObject* value = (*it).second;
-  xy->mX.push_back(value);
+    set<XYObject*> circular;
+    XYObject* context = 0;
+    XYSlot* slot = object->lookup(name->mValue, circular, &context);
+    xy_assert(slot, XYError::SLOT_NOT_FOUND);
+    xy_assert(slot->mMethod, XYError::INVALID_SLOT_TYPE);
+    xy_assert(context, XYError::INVALID_SLOT_TYPE);
+
+    xy->mX.push_back(object);
+    xy->mX.push_back(slot->mMethod);
+  }
+  else {
+    xy_assert(it != xy->mEnv.end(), XYError::SYMBOL_NOT_FOUND);
+
+    XYObject* value = (*it).second;
+    xy->mX.push_back(value);
+  }
 }
 
 // puncons [X^{O1..On} Y] [X^O1^{O2..On} Y]
