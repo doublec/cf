@@ -4,51 +4,57 @@ The channel, server, port and nickname words are used to configure where
 the bot lives. 'timelimit' is the maximum amount of time a eval request is
 allowed to run before it is aborted.
 
-> "irc.freenode.net" server    set
-> "6667"             port      set
-> "#doublec      "   channel   set
-> "cfeval"           nickname  set
-> "password"         password  set
+> object copy bot-traits set
+> object copy bot set
+> bot;bot-traits;parent* add-slot. 
+> "irc.freenode.net" server    add-slot
+> "6667"             port      add-slot
+> "cfevalbot"        nickname  add-slot
+> "#doublec"         channel   add-slot
 > 10000              timelimit set
 > 200                textlimit set
 
-When connected to the server we deal with an 'ircbot' structure. This is
-a list containing the following elements:
+When connected to the server we deal with the 'bot' object. As well as
+the slots listed above it contains the following private slots:
 
   1. The line-channel used to read server responses
   2. The socket used to write requests
 
-These helper words are used to extract this information:
+> nil bot-lines        add-slot
+> nil bot-socket       add-slot
 
-> [ '0`@ ] bot-line-channel set
-> [ '1`@ ] bot-socket       set
+That's all of the bot instance slots. The methods are defined on the
+traits object.
+
+> drop.bot-traits;
 
 Send a string to the server
 
-> [ bot-socket.socket-writeln ] irc-write set
+> [line][line.bot-socket.socket-writeln] irc-write add-method
 
-Connect to the server, returning the bot structure
+Connect to the server, returning the bot object
 
-> [ server;port;socket dup.'line-channel`, ] bot-connect set
+> [][ "NICK " nickname.,irc-write. ] set-nick add-method
+> [][ "USER " nickname.," +iw ",nickname.," :",nickname.,irc-write. ] set-status add-method
+> [][
+>   server.port.socket 
+>   dup.'line-channel`
+>   self.bot-socket:;.
+>        bot-lines:;.
+>        set-nick;.
+>   self.set-status;.
+> ] bot-connect add-method
 
-Initializes the connection by setting the nickname, and other IRC
-required setup.
+Methods to join channels, identify with nickserv and chat:
 
-> [ "NICK " nickname;,over.irc-write. ] set-nick set
-> [ "USER "nickname;," +iw ",nickname;," :",nickname;,over.irc-write. ] set-status set
-> [ "JOIN " channel;,over.irc-write. ] join-channel set
-> [ "PRIVMSG nickserv :identify " password;,over.irc-write. ] register set
-> [ set-nick.set-status.register.join-channel. ] bot-init set
+> [channel][ "JOIN " channel.,irc-write. ] join add-method
+> [password][ "PRIVMSG nickserv :identify " password.,irc-write. ] identify add-method
+> [channel message][ "PRIVMSG " channel. , " :" , message. , irc-write. ] say add-method
 
-Send a message to the channel:
-
-> [ [[c m] "PRIVMSG " c , " :" , m , ] ( over.irc-write. ] say set 
-
-Return the list of responses received from the server. Blocks if not
+Return the list of responses received from the server. Blocks if no
 responses have yet been received.
 
-> [ dup.bot-line-channel.line-channel-getall ] bot-responses set
-
+> [][ bot-lines.line-channel-getall ] bot-responses add-method
 
 Utility words to evaluate cf code. These should probably be in the
 prelude:
@@ -56,7 +62,6 @@ prelude:
 > [ tokenize parse [[]]` timelimit;make-limited-thread spawn thread-join to-string 2 sdrop dup. count 2 - stake ] eval set
 
 The following words operate on responses from the server. 
-
 
 > [ dup. 32 ? 1 + sdrop dup. 32 ? stake ] response-type set
 > [ dup. 32 ? 1 + sdrop dup. 32 ? 1 + sdrop dup. 32 ? stake ] response-channel set
@@ -72,21 +77,32 @@ Is it for the channel we are monitoring?
 
 Is it for us?
 
-> [ response-text. nickname; ",", swap. head?. ] for-bot? set
+> [][ response-text. nickname. ",", swap. head?. ] for-bot? add-method
 
 Map expression used to pick up the responses we are interested in. Anything
 we aren't interested in results in a 0 which is later filtered out.
 
-> [ dup.privmsg?.[dup.channel;channel?.[dup.for-bot?.[response-text.nickname;count 1 + sdrop][drop.0]if][drop.0]if][drop.0]if] wanted-messages set
+> [][ dup.privmsg?.[dup.channel.channel?.[dup.self.for-bot?;.[response-text.nickname.count 1 + sdrop][drop.0]if][drop.0]if][drop.0]if] wanted-messages add-method
 
 Get all responses, filter for the messages we want
-> [bot-responses.[wanted-messages.]map.[]filter.] messages-to-eval set
+
+> [][bot-responses.[self.wanted-messages;.]map.[]filter.] messages-to-eval add-method
 
 Build the expression to evaluate on another thread:
 
 > [ dup.count textlimit; < [ ] [ textlimit; stake "...", ] if ] limit-string set
-> [ messages-to-eval.[eval.limit-string.]map.[channel; abc-bca say.drop.][over.unit.]`,each.] handle-messages set
-> [ handle-messages.bot-loop. ] bot-loop set
+> [][
+>   messages-to-eval.[
+>     eval.limit-string.channel.swap.say.42
+>   ] map.drop.
+> ] handle-messages add-method
 
-> [ bot-connect.bot-init. ] start-bot set
-> [ dup.unit. [ bot-loop. ] make-thread spawn ] bot-daemonize set
+TODO: the tail call to bot-loop results in a growing call queue
+due to the frames being left on it.
+
+> [][ handle-messages.bot-loop. ] bot-loop add-method
+
+> [password][ bot-connect.password.identify.channel.join. ] start add-method
+> [][ self.unit.[ bot-loop;. ] make-thread spawn ] daemonize add-method
+
+> drop.
