@@ -1,0 +1,23 @@
+Compare overhead of object factorial computation vs non-object version
+
+\begin{code}
+object copy
+  20000 n add-data-slot
+  [ 
+    frame n lookup. 1 = [ 
+      frame self lookup.
+    ] [
+      frame n lookup.
+      dup. 1 - frame self lookup. copy n: lookup.
+      factorial lookup. n lookup. * frame self lookup. copy n: lookup.
+    ] if
+  ] factorial add-method-slot
+
+[ factorial lookup. ] time.
+[ 20000 fac. ] time. 
+abcd-bdbd % 1 - 100 *
+print " % overhead of object system\n" write
+print "ms non-object factorial\n" write
+print "ms object factorial\n" write
+\end{code}
+

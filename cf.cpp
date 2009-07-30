@@ -2103,7 +2103,7 @@ static void primitive_get_slot_value(XY* xy) {
   xy->mX.push_back(slot->mValue);
 }
 
-// set-slot-value set-slot-value [X^value^object^name Y] -> [X Y]
+// set-slot-value set-slot-value [X^value^object^name Y] -> [X^object Y]
 // Sets the value held in a slot of an object
 static void primitive_set_slot_value(XY* xy) {
   xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
@@ -2125,6 +2125,8 @@ static void primitive_set_slot_value(XY* xy) {
   xy_assert(slot, XYError::INVALID_SLOT_TYPE);
   xy_assert(slot->mValue, XYError::INVALID_SLOT_TYPE);
   slot->mValue = value;
+  
+  xy->mX.push_back(object);
 }
 
 // call-method call-method [X^object^method Y] -> [X Y]
@@ -2199,6 +2201,7 @@ static void primitive_set_method_args(XY* xy) {
     xy_assert(arg, XYError::TYPE);
     xy->mX.pop_back();
 
+    xy->mY.push_front(new XYShuffle("a-"));
     xy->mY.push_front(new XYSymbol("."));
     xy->mY.push_front(new XYSymbol("lookup"));
     xy->mY.push_front(new XYSymbol(name->mValue + ":"));
