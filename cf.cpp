@@ -2225,7 +2225,12 @@ static void primitive_call_method(XY* xy) {
 
   XYObject* frame = method->copy();
   frame->addSlot("self*", object);
-  
+
+  XYSequence* code = dynamic_cast<XYSequence*>(method->getSlot("code")->mValue);
+  xy_assert(code, XYError::TYPE);
+  XYSequence* args = dynamic_cast<XYSequence*>(method->getSlot("args")->mValue);
+  xy_assert(args, XYError::TYPE);
+
   // Restore the original frame
   XYObject* oldFrame = xy->mFrame;
   xy->mY.push_front(new XYSymbol("set-frame"));
@@ -2237,20 +2242,25 @@ static void primitive_call_method(XY* xy) {
   // Find the list containing the code to run for the method.
   // By doing the lookup at runtime we'll always get the latest
   // code if the method body changes.
+  xy->mY.push_front(code);
+#if 0
   xy->mY.push_front(new XYSymbol("."));
   xy->mY.push_front(new XYSymbol("lookup"));
   xy->mY.push_front(new XYSymbol("code"));
   xy->mY.push_front(frame);
-
+#endif
   // Populate the frame's argument slots with items on the stack
   xy->mY.push_front(new XYSymbol("set-method-args"));
   xy->mY.push_front(frame);
 
   // Get the list of arguments that this method takes.
+  xy->mY.push_front(args);
+#if 0
   xy->mY.push_front(new XYSymbol("."));
   xy->mY.push_front(new XYSymbol("lookup"));
   xy->mY.push_front(new XYSymbol("args"));
   xy->mY.push_front(frame);
+#endif
 
   // Set the current frame to be the one for this method call
   xy->mY.push_front(new XYSymbol("set-frame"));
