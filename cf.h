@@ -104,6 +104,11 @@ class XYObject : public GCObject
   // Remove a slot
   void removeSlot(std::string const& name);
 
+  // Adds a data slot. Adds a getter method to retrieve the value
+  // and optionally a setter if readOnly is false. If the slot name
+  // is suffixed with '*' then it is a parent slot.
+  void addSlot(std::string const& name, XYObject* value, bool readOnly = true);
+
   // Adds a method Slot. Different overloadings to make things easier.
   void addMethod(std::string const& name, XYList* method);
   void addMethod(std::string const& name, XYPrimitive* method);

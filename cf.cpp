@@ -296,13 +296,32 @@ void XYObject::removeSlot(std::string const& name) {
   mSlots.erase(name);
 }
 
-void XYObject::addMethod(std::string const& name, XYList* method) {
-  XYObject* code = method;
+void XYObject::addSlot(std::string const& n, XYObject* value, bool readOnly) {
+  assert(n.size() > 0);
+  assert(value);
+
+  bool parent = false;
+  string name = n;
+  if (name[name.size()-1] == '*') {
+    name = name.substr(0, name.size() - 1);
+    parent = true;
+  }
   XYList* getter = new XYList();
-  getter->mList.push_back(new XYString("code"));
+  getter->mList.push_back(new XYString(name));
   getter->mList.push_back(new XYSymbol("get-slot-value"));
+  addSlot(name, getter, value, parent);
+
+  if (!readOnly) {
+    XYList* setter = new XYList();
+    setter->mList.push_back(new XYString(name));
+    setter->mList.push_back(new XYSymbol("set-slot-value"));
+    addSlot(name + ":", setter, 0, parent);
+  }
+}
+
+void XYObject::addMethod(std::string const& name, XYList* method) {
   XYObject* o = new XYObject();
-  o->addSlot("code", getter, code, false);
+  o->addSlot("code", method);
   addMethod(name, o);
 }
 
@@ -2026,22 +2045,7 @@ static void primitive_add_data_slot(XY* xy) {
   xy_assert(object, XYError::TYPE);
   xy->mX.pop_back();
 
-  string n = name->mValue;
-  bool parent = false;
-  if (n[n.size()-1] == '*') {
-    n = n.substr(0, n.size() - 1);
-    parent = true;
-  }
-  XYList* getter = new XYList();
-  getter->mList.push_back(new XYString(n));
-  getter->mList.push_back(new XYSymbol("get-slot-value"));
-  object->addSlot(n, getter, value, parent);
-
-  XYList* setter = new XYList();
-  setter->mList.push_back(new XYString(n));
-  setter->mList.push_back(new XYSymbol("set-slot-value"));
-  object->addSlot(n + ":", setter, 0, parent);
-  
+  object->addSlot(name->mValue, value, true);
   xy->mX.push_back(object);
 }
 
@@ -2137,20 +2141,25 @@ static void primitive_call_method(XY* xy) {
   xy->mX.pop_back();
 
   XYObject* frame = method->copy();
-  XYList* getter = new XYList();
-  getter->mList.push_back(new XYString("self"));
-  getter->mList.push_back(new XYSymbol("get-slot-value"));
-  frame->addSlot("self", getter, object, true);
+  frame->addSlot("self*", object);
   
-  // frame code-method 
+  // Restore the original frame
   XYObject* oldFrame = xy->mFrame;
   xy->mY.push_front(new XYSymbol("set-frame"));
   xy->mY.push_front(oldFrame);
+
+  // Run the method body
   xy->mY.push_front(new XYSymbol("."));
+
+  // Find the list containing the code to run for the method.
+  // By doing the lookup at runtime we'll always get the latest
+  // code if the method body changes.
   xy->mY.push_front(new XYSymbol("."));
   xy->mY.push_front(new XYSymbol("lookup"));
   xy->mY.push_front(new XYSymbol("code"));
   xy->mY.push_front(frame);
+
+  // Set the current frame to be the one for this method call
   xy->mY.push_front(new XYSymbol("set-frame"));
   xy->mY.push_front(frame);
 }
