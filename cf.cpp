@@ -254,7 +254,9 @@ XYSlot* XYObject::lookup(std::string const& name,
 	 it != mSlots.end();
 	 ++it) {
       XYSlot* slot = (*it).second;
+      assert(slot);
       if (slot->mParent) {
+	assert(slot->mValue);
 	XYSlot* found = slot->mValue->lookup(name, circular, context);
 	if (found)
 	  return found;
