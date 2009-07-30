@@ -15,7 +15,9 @@ object copy
 
 [ factorial;. ] time.
 [ 20000 fac. ] time. 
-abcd-bdbd % 1 - 100 *
+abcd-bdbdca 
+n;. - 0 = [ "Results match\n" write ] [ "Warning: results do not match\n" write ] if
+% 1 - 100 *
 print " % overhead of object system\n" write
 print "ms non-object factorial\n" write
 print "ms object factorial\n" write
