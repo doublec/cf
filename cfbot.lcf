@@ -97,12 +97,9 @@ Build the expression to evaluate on another thread:
 >   ] map.drop.
 > ] handle-messages add-method
 
-TODO: the tail call to bot-loop results in a growing call queue
-due to the frames being left on it.
-
-> [][ handle-messages.bot-loop. ] bot-loop add-method
+> [ dup.handle-messages;.bot-loop. ] bot-loop set
 
 > [password][ bot-connect.password.identify.channel.join. ] start add-method
-> [][ self.unit.[ bot-loop;. ] make-thread spawn ] daemonize add-method
+> [][ self.unit.[ bot-loop. ] make-thread spawn ] daemonize add-method
 
 > drop.
