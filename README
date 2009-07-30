@@ -323,21 +323,21 @@ as 'foo ;.' is to standard cf lookup and execution of functions.
 
 Slots can be data or method slots. A data slot holds an initial value
 and when a message is sent to it retrieves the value. Data slots are
-added with 'add-data-slot':
+added with 'add-slot':
 
-  add-data-slot ( object value name -- object )
+  add-slot ( object value name -- object )
 
-  object copy 42 foo add-data-slot foo lookup .
+  object copy 42 foo add-data foo lookup .
     => 42
-  object copy 42 foo add-data-slot 25 over. foo: lookup . foo lookup .
+  object copy 42 foo add-data 25 over. foo: lookup . foo lookup .
     => 25
 
 Parent slots have a name ending in '*'. If a message is not found when
 looked up in an object then all that objects parent slots are also searched
 for the message. This is how the prototype object system handles inheritance:
 
-  object copy 42 foo add-data-slot
-  object copy swap. parent* add-data-slot
+  object copy 42 foo add-slot
+  object copy swap. parent* add-slot
   foo lookup .
     => 42
 
@@ -351,8 +351,8 @@ original object can be retrieved by accessing this frame object.
   frame ( -- object )
 
   object copy [] [ frame message lookup . print ] display add-method
-  object copy "hello" message add-data-slot
-  swap. parent* add-data-slot
+  object copy "hello" message add-slot
+  swap. parent* add-slot
   display lookup .
     => "hello"
 
@@ -367,14 +367,14 @@ system. If ';' is called on a symbol, and that symbol is not found in the
 environment, then it will be looked up in an object on the stack using
 'lookup':
 
-  object copy 25 foo add-data-slot foo;.
+  object copy 25 foo add-slot foo;.
     => 25
 
 If '.' is called on a symbol, and that symbol is not found in the 
 environment, then it will be looked up in the frame object using
 'lookup'. This makes '.' similar to Self's implicit self sends:
 
-  object copy 25 foo add-data-slot
+  object copy 25 foo add-slot
   [] [ foo. println ] print-foo add-method
   print-foo;.
     => 25

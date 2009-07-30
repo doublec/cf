@@ -154,55 +154,55 @@ Handling of circular lists
 
 Testing prototype object lookup
 
-> [ 5 ] [ object;copy 5 foo add-data-slot foo lookup .] test.
+> [ 5 ] [ object;copy 5 foo add-slot foo lookup .] test.
 > [ 5 ] [ 
->         object;copy 5  foo add-data-slot 
->         object;copy 10 bar add-data-slot
->                     12 foo add-data-slot 
->         parent* add-data-slot
+>         object;copy 5  foo add-slot 
+>         object;copy 10 bar add-slot
+>                     12 foo add-slot 
+>         parent* add-slot
 >         foo lookup .
 >       ] test.
 > [ 10 ] [ 
->         object;copy 5  foo add-data-slot 
->         object;copy 10 bar add-data-slot
->                     12 foo add-data-slot 
->         parent* add-data-slot
+>         object;copy 5  foo add-slot 
+>         object;copy 10 bar add-slot
+>                     12 foo add-slot 
+>         parent* add-slot
 >         bar lookup .
 >       ] test.
 > [ 12 ] [ 
->         object;copy 5  baz add-data-slot 
->         object;copy 10 bar add-data-slot
->                     12 foo add-data-slot 
->         parent* add-data-slot
+>         object;copy 5  baz add-slot 
+>         object;copy 10 bar add-slot
+>                     12 foo add-slot 
+>         parent* add-slot
 >         foo lookup .
 >       ] test.
 > [ "foo!" ] [ 
 >         object;copy 
 >           [] [ frame self lookup . message lookup . ] foo add-method 
->         object;copy "foo!" message add-data-slot 
->         swap;. parent* add-data-slot
+>         object;copy "foo!" message add-slot 
+>         swap;. parent* add-slot
 >         message lookup .
 >       ] test.
 > [ "foo!" ] [ 
 >         object;copy 
 >           [] [ frame self lookup . message lookup . ] foo add-method 
->         object;copy "foo!" message add-data-slot 
->         swap;. parent* add-data-slot
+>         object;copy "foo!" message add-slot 
+>         swap;. parent* add-slot
 >         foo lookup .
 >       ] test.
 > [ "foo!" ] [ 
 >         object;copy 
 >           [] [ frame message lookup . ] foo add-method 
->         object;copy "foo!" message add-data-slot 
->         swap;. parent* add-data-slot
+>         object;copy "foo!" message add-slot 
+>         swap;. parent* add-slot
 >         foo lookup .
 >       ] test.
 
 Testing calling methods with args
 > [ "xabcd" "xdefg" ] [
->   object copy [ "x" frame a lookup ., ] code add-data-slot
->   [ a ] args add-data-slot
->   object a add-data-slot
+>   object copy [ "x" frame a lookup ., ] code add-slot
+>   [ a ] args add-slot
+>   object a add-slot
 >   object copy
 >   swap.
 >   [] swap. foo add-method

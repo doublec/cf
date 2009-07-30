@@ -2076,9 +2076,9 @@ static void primitive_copy(XY* xy) {
   xy->mX.push_back(o->copy());
 }
 
-// add-data-slot add-data-slot [X^object^value^name Y] -> [X^object Y]
+// add-slot add-slot [X^object^value^name Y] -> [X^object Y]
 // Adds a data slot to the object
-static void primitive_add_data_slot(XY* xy) {
+static void primitive_add_slot(XY* xy) {
   xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
 
   XYSymbol* name(dynamic_cast<XYSymbol*>(xy->mX.back()));
@@ -2437,7 +2437,7 @@ XY::XY(boost::asio::io_service& service) :
   // Object system test primitives. These will change
   // when the system settles down.
   mP["copy"] = new XYPrimitive("copy", primitive_copy);
-  mP["add-data-slot"] = new XYPrimitive("add-data-slot", primitive_add_data_slot);
+  mP["add-slot"] = new XYPrimitive("add-slot", primitive_add_slot);
   mP["add-method"] = new XYPrimitive("add-method", primitive_add_method);
   mP["get-slot-value"] = new XYPrimitive("get-slot-value", primitive_get_slot_value);
   mP["set-slot-value"] = new XYPrimitive("set-slot-value", primitive_set_slot_value);
