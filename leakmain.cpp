@@ -16,7 +16,7 @@ using namespace std;
 using namespace boost;
 
 // A literate file. See literate.lcf for details.
-void eval_literate_file(XY* xy, char* filename) {
+void eval_literate_file(XY* xy, const char* filename) {
   cout << "Loading " << filename << endl;
   ifstream file(filename);
   ostringstream out;
@@ -47,7 +47,7 @@ void eval_literate_file(XY* xy, char* filename) {
   xy->eval();
 }
 
-void eval_non_literate_file(XY* xy, char* filename) {
+void eval_non_literate_file(XY* xy, const char* filename) {
   cout << "Loading " << filename << endl;
   ifstream file(filename);
   ostringstream out;
@@ -63,12 +63,14 @@ void eval_non_literate_file(XY* xy, char* filename) {
   xy->eval();
 }
 
-void eval_file(XY* xy, char* filename) {
+void eval_file(XY* xy, const char* fn) {
+  char* filename = strdup(fn);
   char* ext = strrchr(filename, '.');
   if (ext && strcmp(ext, ".lcf") == 0)
     eval_literate_file(xy, filename);
   else
     eval_non_literate_file(xy, filename);
+  free(filename);
   GarbageCollector::GC.collect();
 }
 
@@ -87,6 +89,7 @@ int main(int argc, char* argv[]) {
   eval_file(xy, "prelude.cf");
   eval_file(xy, "bench.lcf");
   eval_file(xy, "test.lcf");
+  eval_file(xy, "factorial.lcf");
 
   // Clear children of root so it can be safely
   // deleted after GC
