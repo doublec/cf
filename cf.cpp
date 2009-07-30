@@ -322,6 +322,7 @@ void XYObject::addSlot(std::string const& n, XYObject* value, bool readOnly) {
 void XYObject::addMethod(std::string const& name, XYList* method) {
   XYObject* o = new XYObject();
   o->addSlot("code", method);
+  o->addSlot("args", new XYList());
   addMethod(name, o);
 }
 
@@ -2045,7 +2046,7 @@ static void primitive_add_data_slot(XY* xy) {
   xy_assert(object, XYError::TYPE);
   xy->mX.pop_back();
 
-  object->addSlot(name->mValue, value, true);
+  object->addSlot(name->mValue, value, false);
   xy->mX.push_back(object);
 }
 
@@ -2159,9 +2160,51 @@ static void primitive_call_method(XY* xy) {
   xy->mY.push_front(new XYSymbol("code"));
   xy->mY.push_front(frame);
 
+  // Populate the frame's argument slots with items on the stack
+  xy->mY.push_front(new XYSymbol("set-method-args"));
+  xy->mY.push_front(frame);
+
+  // Get the list of arguments that this method takes.
+  xy->mY.push_front(new XYSymbol("."));
+  xy->mY.push_front(new XYSymbol("lookup"));
+  xy->mY.push_front(new XYSymbol("args"));
+  xy->mY.push_front(frame);
+
   // Set the current frame to be the one for this method call
   xy->mY.push_front(new XYSymbol("set-frame"));
   xy->mY.push_front(frame);
+}
+
+// set-method-args set-method-args [X^...^args^method Y] -> [X Y]
+// For each argument the method requires, pops an item off
+// the stack and sets a slot in the method object with that value.
+// 'args' is a list of symbols containing the argument names.
+static void primitive_set_method_args(XY* xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
+
+  XYObject* method(xy->mX.back());
+  xy_assert(method, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYSequence* args(dynamic_cast<XYSequence*>(xy->mX.back()));
+  xy_assert(args, XYError::TYPE);
+  xy->mX.pop_back();
+
+  xy_assert(xy->mX.size() >= args->size(), XYError::STACK_UNDERFLOW);
+  for (int i=0; i < args->size(); ++i) {
+    XYSymbol* name = dynamic_cast<XYSymbol*>(args->at(i));
+    xy_assert(name, XYError::TYPE);
+
+    XYObject* arg(xy->mX.back());
+    xy_assert(arg, XYError::TYPE);
+    xy->mX.pop_back();
+
+    xy->mY.push_front(new XYSymbol("."));
+    xy->mY.push_front(new XYSymbol("lookup"));
+    xy->mY.push_front(new XYSymbol(name->mValue + ":"));
+    xy->mY.push_front(method);    
+    xy->mY.push_front(arg);    
+  }
 }
 
 // lookup lookup [X^object^name Y] -> [X^object^method Y]
@@ -2335,6 +2378,7 @@ XY::XY(boost::asio::io_service& service) :
   mP["get-slot-value"] = new XYPrimitive("get-slot-value", primitive_get_slot_value);
   mP["set-slot-value"] = new XYPrimitive("set-slot-value", primitive_set_slot_value);
   mP["call-method"] = new XYPrimitive("call-method", primitive_call_method);
+  mP["set-method-args"] = new XYPrimitive("set-method-args", primitive_set_method_args);
   mP["lookup"] = new XYPrimitive("lookup", primitive_lookup);
   mP["frame"] = new XYPrimitive("frame", primitive_frame);
   mP["set-frame"] = new XYPrimitive("set-frame", primitive_set_frame);

@@ -198,4 +198,18 @@ Testing prototype object lookup
 >         foo lookup .
 >       ] test.
 
+Testing calling methods with args
+> [ "xabcd" "xdefg" ] [
+>   object copy [ "x" frame a lookup ., ] code add-data-slot
+>   [ a ] args add-data-slot
+>   object a add-data-slot
+>   object copy
+>   swap.
+>   foo add-method-slot
+>   "abcd" over.
+>   foo lookup.
+>   swap. "defg" swap.
+>   foo lookup.
+> ] test.
+
 > "Test run completed\n" write
