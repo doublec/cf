@@ -2,22 +2,22 @@ Compare overhead of object factorial computation vs non-object version
 
 \begin{code}
 object copy 
-  [ 
+  [] [ 
     is-one. [ 
       self.
     ] [
       self. dup. pred;. factorial;. multiply;.
     ] if
-  ] factorial add-method-slot
-  [
+  ] factorial add-method
+  [] [
     n. 1 - self. copy n:;.
-  ] pred add-method-slot
+  ] pred add-method
   [lhs] [
     lhs. n;. n. * self. copy n:;.
-  ] multiply add-method-with-args
-  [
+  ] multiply add-method
+  [] [
     n. 1 =
-  ] is-one add-method-slot
+  ] is-one add-method
 object copy
   swap. parent* add-data-slot
   20000 n add-data-slot

@@ -345,13 +345,12 @@ Method slots take a list representing the program to run when the
 message is sent. When a message is sent that results in a method slot a
 frame object is created. This frame object has a parent slot called 'self'
 that points to the original object holding the method. Slot values of this
-original object can be retrieved by accessing this frame object. Eventually
-this will support named arguments.
+original object can be retrieved by accessing this frame object.
 
-  add-method-slot ( object list name -- object )
+  add-method ( object args code name -- object )
   frame ( -- object )
 
-  object copy [ frame message lookup . print ] display add-method-slot
+  object copy [] [ frame message lookup . print ] display add-method
   object copy "hello" message add-data-slot
   swap. parent* add-data-slot
   display lookup .
@@ -376,9 +375,16 @@ environment, then it will be looked up in the frame object using
 'lookup'. This makes '.' similar to Self's implicit self sends:
 
   object copy 25 foo add-data-slot
-  [ foo. println ] print-foo add-method-slot
-  foo;.
+  [] [ foo. println ] print-foo add-method
+  print-foo;.
     => 25
+
+This works with arguments to methods too:
+
+  object copy 
+  [msg] [ msg. println ] print-msg add-method
+  "hello" swap. print-msg;.
+    => "hello"
 
 Troubleshooting
 ===============

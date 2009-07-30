@@ -178,21 +178,21 @@ Testing prototype object lookup
 >       ] test.
 > [ "foo!" ] [ 
 >         object;copy 
->           [ frame self lookup . message lookup . ] foo add-method-slot 
+>           [] [ frame self lookup . message lookup . ] foo add-method 
 >         object;copy "foo!" message add-data-slot 
 >         swap;. parent* add-data-slot
 >         message lookup .
 >       ] test.
 > [ "foo!" ] [ 
 >         object;copy 
->           [ frame self lookup . message lookup . ] foo add-method-slot 
+>           [] [ frame self lookup . message lookup . ] foo add-method 
 >         object;copy "foo!" message add-data-slot 
 >         swap;. parent* add-data-slot
 >         foo lookup .
 >       ] test.
 > [ "foo!" ] [ 
 >         object;copy 
->           [ frame message lookup . ] foo add-method-slot 
+>           [] [ frame message lookup . ] foo add-method 
 >         object;copy "foo!" message add-data-slot 
 >         swap;. parent* add-data-slot
 >         foo lookup .
@@ -205,7 +205,7 @@ Testing calling methods with args
 >   object a add-data-slot
 >   object copy
 >   swap.
->   foo add-method-slot
+>   [] swap. foo add-method
 >   "abcd" over.
 >   foo lookup.
 >   swap. "defg" swap.
