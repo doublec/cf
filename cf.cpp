@@ -319,17 +319,25 @@ void XYObject::addSlot(std::string const& n, XYObject* value, bool readOnly) {
   }
 }
 
-void XYObject::addMethod(std::string const& name, XYList* method) {
+void XYObject::addMethod(std::string const& name, XYList* method, XYSequence* args) {
   XYObject* o = new XYObject();
   o->addSlot("code", method);
-  o->addSlot("args", new XYList());
+  o->addSlot("args", args);
+  if (args->size() > 0) {
+    XYObject* nil = new XYObject();
+    for (int i=0; i < args->size(); ++i) {
+      XYSymbol* s = dynamic_cast<XYSymbol*>(args->at(i));
+      assert(s);
+      o->addSlot(s->mValue, nil, false);
+    }
+  }
   addMethod(name, o);
 }
 
 void XYObject::addMethod(std::string const& name, XYPrimitive* method) {
   XYList* list = new XYList();
   list->mList.push_back(method);
-  addMethod(name, list);
+  addMethod(name, list, new XYList());
 }
 
 void XYObject::addMethod(std::string const& name, XYObject* method) {
@@ -2111,7 +2119,40 @@ static void primitive_add_method_slot(XY* xy) {
 
   XYList* list = dynamic_cast<XYList*>(method);
   if (list)
-    object->addMethod(name->mValue, list);
+    object->addMethod(name->mValue, list, new XYList());
+  else
+    object->addMethod(name->mValue, method);
+
+  xy->mX.push_back(object);
+}
+
+// add-method-with-args add-method-with-args [X^object^args^method^name Y] -> [X^object Y]
+// Adds a method that takes arguments to the object w
+static void primitive_add_method_with_args(XY* xy) {
+  xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
+
+  XYSymbol* name(dynamic_cast<XYSymbol*>(xy->mX.back()));
+  xy_assert(name, XYError::TYPE);
+  xy->mX.pop_back();
+
+  // Parent slots can't be methods
+  xy_assert(name->mValue[name->mValue.size()-1] != '*', XYError::INVALID_SLOT_TYPE);
+
+  XYObject* method(xy->mX.back());
+  xy_assert(method, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYSequence* args(dynamic_cast<XYSequence*>(xy->mX.back()));
+  xy_assert(args, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYObject* object(xy->mX.back());
+  xy_assert(object, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYList* list = dynamic_cast<XYList*>(method);
+  if (list)
+    object->addMethod(name->mValue, list, args);
   else
     object->addMethod(name->mValue, method);
 
@@ -2417,6 +2458,7 @@ XY::XY(boost::asio::io_service& service) :
   mP["copy"] = new XYPrimitive("copy", primitive_copy);
   mP["add-data-slot"] = new XYPrimitive("add-data-slot", primitive_add_data_slot);
   mP["add-method-slot"] = new XYPrimitive("add-method-slot", primitive_add_method_slot);
+  mP["add-method-with-args"] = new XYPrimitive("add-method-with-args", primitive_add_method_with_args);
   mP["get-slot-value"] = new XYPrimitive("get-slot-value", primitive_get_slot_value);
   mP["set-slot-value"] = new XYPrimitive("set-slot-value", primitive_set_slot_value);
   mP["call-method"] = new XYPrimitive("call-method", primitive_call_method);

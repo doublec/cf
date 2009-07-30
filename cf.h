@@ -110,7 +110,7 @@ class XYObject : public GCObject
   void addSlot(std::string const& name, XYObject* value, bool readOnly = true);
 
   // Adds a method Slot. Different overloadings to make things easier.
-  void addMethod(std::string const& name, XYList* method);
+  void addMethod(std::string const& name, XYList* method, XYSequence* args);
   void addMethod(std::string const& name, XYPrimitive* method);
   void addMethod(std::string const& name, XYObject* method);
 		 

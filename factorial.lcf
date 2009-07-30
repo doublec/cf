@@ -12,9 +12,9 @@ object copy
   [
     n. 1 - self. copy n:;.
   ] pred add-method-slot
-  [
-    n;. n. * self. copy n:;.
-  ] multiply add-method-slot
+  [lhs] [
+    lhs. n;. n. * self. copy n:;.
+  ] multiply add-method-with-args
   [
     n. 1 =
   ] is-one add-method-slot
