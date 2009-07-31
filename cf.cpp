@@ -2100,15 +2100,22 @@ static void primitive_has_slot(XY* xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
 
   XYSymbol* name(dynamic_cast<XYSymbol*>(xy->mX.back()));
-  xy_assert(name, XYError::TYPE);
+  XYString* name2(dynamic_cast<XYString*>(xy->mX.back()));
+  xy_assert(name || name2, XYError::TYPE);
   xy->mX.pop_back();
 
   XYObject* object(xy->mX.back());
   xy_assert(object, XYError::TYPE);
   xy->mX.pop_back();
 
+  string name3;
+  if (name)
+    name3 = name->mValue;
+  if (name2)
+    name3 = name2->mValue;
+
   set<XYObject*> circular;
-  XYSlot* slot = object->lookup(name->mValue, circular, 0);
+  XYSlot* slot = object->lookup(name3, circular, 0);
   xy->mX.push_back(new XYInteger(slot ? 1 : 0));
 }
 
