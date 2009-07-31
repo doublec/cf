@@ -1941,13 +1941,22 @@ static void primitive_clone(XY* xy) {
   xy->mX.push_back(r);
 }
 
-// clone [X^o Y] -> [X^string Y]
+// to-string [X^o Y] -> [X^string Y]
 static void primitive_to_string(XY* xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
   XYObject* o(xy->mX.back());
   xy->mX.pop_back();
 
   xy->mX.push_back(new XYString(o->toString(true)));
+}
+
+// to-symbol [X^o Y] -> [X^symbol Y]
+static void primitive_to_symbol(XY* xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
+  XYObject* o(xy->mX.back());
+  xy->mX.pop_back();
+
+  xy->mX.push_back(new XYSymbol(o->toString(false)));
 }
 
 // foldl [X^seq^seed^quot Y] -> [X^seq Y]
@@ -2548,6 +2557,7 @@ XY::XY(boost::asio::io_service& service) :
   mP["enum"]   = new XYPrimitive("+", primitive_enum);
   mP["clone"]   = new XYPrimitive("clone", primitive_clone);
   mP["to-string"] = new XYPrimitive("to-string", primitive_to_string);
+  mP["to-symbol"] = new XYPrimitive("to-symbol", primitive_to_symbol);
   mP["split"] = new XYPrimitive("split", primitive_split);
   mP["sdrop"] = new XYPrimitive("sdrop", primitive_sdrop);
   mP["stake"] = new XYPrimitive("stake", primitive_stake);
