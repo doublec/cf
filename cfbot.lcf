@@ -120,6 +120,9 @@ prelude:
 The following words operate on responses from the server. 
 
 \begin{code}
+[
+] parse-response set
+
 [ 
   dup. 32 ? 1 + sdrop 
   dup. 32 ? stake 

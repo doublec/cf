@@ -2363,6 +2363,34 @@ static void primitive_frame(XY* xy) {
   xy->mX.push_back(xy->mFrame);
 }
 
+// match [X^regexp^string Y] [X^[...] Y] 
+// Returns a sequence of matches for the regexp in
+// the string.
+static void primitive_match(XY* xy) {
+  using namespace boost::xpressive;
+
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
+
+  XYString* str(dynamic_cast<XYString*>(xy->mX.back()));
+  xy_assert(str, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYString* regexp(dynamic_cast<XYString*>(xy->mX.back()));
+  xy_assert(regexp, XYError::TYPE);
+  xy->mX.pop_back();
+  
+  sregex sre = sregex::compile(regexp->mValue);
+  boost::xpressive::smatch what;
+  XYList* result = new XYList();
+  if (regex_match(str->mValue, what, sre)) {
+    for(boost::xpressive::smatch::iterator it = what.begin();
+	it != what.end();
+	++it)
+      result->mList.push_back(new XYString(*it));
+  }
+  xy->mX.push_back(result);
+}
+
 // XYTimeLimit
 XYTimeLimit::XYTimeLimit(unsigned int milliseconds) :
   mMilliseconds(milliseconds) {
@@ -2500,6 +2528,7 @@ XY::XY(boost::asio::io_service& service) :
   mFrame = new XYObject();
   XYObject* primitives = new XYObject();
   primitives->addMethod("printline", new XYPrimitive("println", primitive_println));
+  primitives->addMethod("match", new XYPrimitive("match", primitive_match));
 
   mEnv["object"] = mFrame;
   mEnv["primitives"] = primitives;

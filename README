@@ -263,7 +263,9 @@ cleave     - 1 [1 +] [2 +] cleave => 2 3
 time       - [100 fac.drop.] time. => 7
 fac        - 5 fac. => 120
 fac2       - same as 'fac' but uses a fold/unfold and is much slower.
-
+match      - ( regexp string -- seq ) 
+             matches string against the regular expression, returning
+             a sequence of matches. 
 REPL
 ====
 repl.cf contains a tiny repl implemented in cf. It calls the 'tokenize' and
