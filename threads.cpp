@@ -142,6 +142,7 @@ static void primitive_thread_resume(XY* xy) {
 
   XYSequence* y(dynamic_cast<XYSequence*>(xy->mX.back()));
   xy_assert(y, XYError::TYPE);
+  xy->mX.pop_back();
   
   int n = y->size();
   for (int i=0; i < n; ++i)

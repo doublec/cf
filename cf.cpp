@@ -2275,16 +2275,17 @@ static void primitive_call_method(XY* xy) {
   XYSequence* args = dynamic_cast<XYSequence*>(method->getSlot("args")->mValue);
   xy_assert(args, XYError::TYPE);
 
-#if 0
+#if 1
 // DEBUG
 //xy->print();
-  cout << "call-method " << xy->mY.size();
+cout << "call-method " << xy->mX.size() << " " << xy->mY.size();
   if (xy->mY.size() >= 2) {
     XYSymbol* x = dynamic_cast<XYSymbol*>(xy->mY[1]);
     if (x)
       cout << " " << x->mValue;
   }
   cout << endl;
+
 #endif
 
   // Tail call optimisation. If the next items on the Y queue are
