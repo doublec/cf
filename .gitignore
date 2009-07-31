@@ -1,6 +1,9 @@
 *.swp
 *~
 *.o
+*.aux
+*.log
+*.pdf
 cf
 testcf
 leakcf
