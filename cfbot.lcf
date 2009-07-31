@@ -30,6 +30,7 @@ bot;bot-traits;parent* add-slot.
 "6667"             port      add-slot
 "cfevalbot"        nickname  add-slot
 "#doublec"         channel   add-slot
+object copy        clients   add-ro-slot
 10000              timelimit set
 200                textlimit set
 \end{code}
@@ -106,15 +107,16 @@ responses have yet been received.
 ] bot-responses add-method
 \end{code}
 
-Utility words to evaluate cf code. These should probably be in the
-prelude:
+Evaluate cf code for a particular user.
 
 \begin{code}
-[ 
-  tokenize parse 'gc,[[]]` timelimit;
+object copy
+[][ 
+  request.tokenize parse 'gc,[[]]` timelimit;
   make-limited-thread spawn thread-join 
   to-string 2 sdrop dup. count 2 - stake 
-] eval set
+] eval add-method
+request-trait set
 \end{code}
 
 Use regular expressions to parse the incoming IRC message
@@ -172,8 +174,11 @@ Get all responses, filter for the messages we want
 \begin{code}
 [][
   bot-responses.[
-    wanted-messages.
-  ]map.[]filter.
+    object copy 
+      request-trait; parent* add-ro-slot
+      over. response add-ro-slot
+      swap. wanted-messages. request add-ro-slot
+  ]map.[request;.]filter.
 ] messages-to-eval add-method
 \end{code}
 
@@ -188,7 +193,7 @@ Build the expression to evaluate on another thread:
 ] limit-string set
 [][
   messages-to-eval.[
-    eval.limit-string.channel.swap.say.42
+    eval;.limit-string.channel.swap.say.42
   ] map.drop.
 ] handle-messages add-method
 
