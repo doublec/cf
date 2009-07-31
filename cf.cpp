@@ -2275,7 +2275,7 @@ static void primitive_call_method(XY* xy) {
   XYSequence* args = dynamic_cast<XYSequence*>(method->getSlot("args")->mValue);
   xy_assert(args, XYError::TYPE);
 
-#if 1
+#if 0
 // DEBUG
 //xy->print();
 cout << "call-method " << xy->mX.size() << " " << xy->mY.size();
