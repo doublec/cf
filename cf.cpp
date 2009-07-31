@@ -2204,6 +2204,35 @@ static void primitive_call_method(XY* xy) {
   XYSequence* args = dynamic_cast<XYSequence*>(method->getSlot("args")->mValue);
   xy_assert(args, XYError::TYPE);
 
+#if 0
+  // DEBUG
+  cout << "call-method " << xy->mY.size();
+  if (xy->mY.size() >= 2) {
+    XYSymbol* x = dynamic_cast<XYSymbol*>(xy->mY[1]);
+    if (x)
+      cout << " " << x->mValue;
+  }
+  cout << endl;
+#endif
+
+  // Tail call optimisation. If the next items on the Y queue are
+  // to restore the stack frame from the current method call, remove
+  // them and use that frame value that was to be restored as the
+  // original frame. This prevents a buildup of stack frame setters
+  // when methods are tail called.
+  if (xy->mY.size() >= 2) {
+    XYSymbol* ins = dynamic_cast<XYSymbol*>(xy->mY[1]);
+    if (ins && ins->mValue == "set-frame") {
+      // This call-method is occurring immediately before
+      // a set-frame. Manually process the set-frame call
+      // and remove from the Y queue.
+      XYObject* f = xy->mY[0];
+      xy->mFrame = f;
+      xy->mY.pop_front();
+      xy->mY.pop_front();
+    }
+  }
+
   // Restore the original frame
   XYObject* oldFrame = xy->mFrame;
   xy->mY.push_front(new XYSymbol("set-frame"));
