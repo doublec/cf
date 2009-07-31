@@ -2094,6 +2094,24 @@ static void primitive_copy(XY* xy) {
   xy->mX.push_back(o->copy());
 }
 
+// has-slot? has-slot? [X^object^name Y] -> [X^bool Y]
+// Returns true if the object has a slot with the given name
+static void primitive_has_slot(XY* xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
+
+  XYSymbol* name(dynamic_cast<XYSymbol*>(xy->mX.back()));
+  xy_assert(name, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYObject* object(xy->mX.back());
+  xy_assert(object, XYError::TYPE);
+  xy->mX.pop_back();
+
+  set<XYObject*> circular;
+  XYSlot* slot = object->lookup(name->mValue, circular, 0);
+  xy->mX.push_back(new XYInteger(slot ? 1 : 0));
+}
+
 // add-slot add-slot [X^object^value^name Y] -> [X^object Y]
 // Adds a data slot to the object
 static void primitive_add_slot(XY* xy) {
@@ -2535,6 +2553,7 @@ XY::XY(boost::asio::io_service& service) :
   // Object system test primitives. These will change
   // when the system settles down.
   mP["copy"] = new XYPrimitive("copy", primitive_copy);
+  mP["has-slot?"] = new XYPrimitive("has-slot?", primitive_has_slot);
   mP["add-slot"] = new XYPrimitive("add-slot", primitive_add_slot);
   mP["add-ro-slot"] = new XYPrimitive("add-ro-slot", primitive_add_ro_slot);
   mP["add-method"] = new XYPrimitive("add-method", primitive_add_method);
