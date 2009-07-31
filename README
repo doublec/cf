@@ -334,6 +334,9 @@ added with 'add-slot':
   object copy 42 foo add-data 25 over. foo: lookup . foo lookup .
     => 25
 
+There is also an 'add-ro-slot' which adds a read only slot. No setter will
+be added for this type of slot.
+
 Parent slots have a name ending in '*'. If a message is not found when
 looked up in an object then all that objects parent slots are also searched
 for the message. This is how the prototype object system handles inheritance:

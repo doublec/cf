@@ -5,6 +5,8 @@
 [ab-ba] swap set
 [a-aa] dup set
 [ab-aba] over set
+[abc-abca] pick set
+[ab-b] nip set
 
 ** Lists **
 [ puncons ] uncons set

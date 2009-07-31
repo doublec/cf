@@ -102,7 +102,7 @@ responses have yet been received.
 
 \begin{code}
 [][ 
-  bot-lines.line-channel-getall 
+  bot-lines.line-channel-getall [parse-response.] map.
 ] bot-responses add-method
 \end{code}
 
@@ -117,47 +117,32 @@ prelude:
 ] eval set
 \end{code}
 
-The following words operate on responses from the server. 
+Use regular expressions to parse the incoming IRC message
+into an object with appropriate slots.
 
 \begin{code}
+object copy 
+  [][ type. "PRIVMSG" = ] privmsg? add-method
+irc-message-trait set
+  
 [
+  ":([^!]+)!(\S+)\s+(\S+)\s+:?(\S+)\s*(?:[:+-]+(.*))?" swap. match
+  object copy 
+  irc-message-trait; parent* add-ro-slot
+  1 pick. @ from add-ro-slot
+  2 pick. @ address add-ro-slot
+  3 pick. @ type add-ro-slot
+  4 pick. @ to add-ro-slot
+  5 pick. @ message add-ro-slot
+  nip.
 ] parse-response set
-
-[ 
-  dup. 32 ? 1 + sdrop 
-  dup. 32 ? stake 
-] response-type set
-
-[ 
-  dup. 32 ? 1 + sdrop 
-  dup. 32 ? 1 + sdrop 
-  dup. 32 ? stake 
-] response-channel set
-
-[ 
-  dup. 32 ? 1 + sdrop 
-  dup. 32 ? 1 + sdrop 
-  dup. 32 ? 2 + sdrop 
-] response-text set
-\end{code}
-
-Is it a private message?
-
-\begin{code}
-[ response-type. "PRIVMSG" swap. = ] privmsg? set
-\end{code}
-
-Is it for the channel we are monitoring?
-
-\begin{code}
-[ [response-channel.]`= ] channel? set
 \end{code}
 
 Is it for us?
 
 \begin{code}
-[][ 
-  response-text. nickname. swap. head?. 
+[r][ 
+  nickname.r.message;.head?. 
 ] for-bot? add-method
 \end{code}
 
@@ -165,19 +150,19 @@ Map expression used to pick up the responses we are interested in. Anything
 we aren't interested in results in a 0 which is later filtered out.
 
 \begin{code}
-[][ 
-  dup.privmsg?.[
-    dup.channel.channel?.[
-      dup.self.for-bot?;.[
-        response-text.nickname.count 1 + sdrop
+[r][ 
+  r.privmsg?;.[
+    r.to;.channel. = [
+      r.for-bot?.[
+        r.message;.nickname.count 1 + sdrop
       ][
-        drop.0
+        0
       ]if
     ][
-      drop.0
+      0
     ]if
   ][
-    drop.0
+    0
   ]if
 ] wanted-messages add-method
 \end{code}

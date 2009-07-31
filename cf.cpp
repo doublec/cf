@@ -2115,6 +2115,27 @@ static void primitive_add_slot(XY* xy) {
   xy->mX.push_back(object);
 }
 
+// add-roslot add-ro-slot [X^object^value^name Y] -> [X^object Y]
+// Adds a read only data slot to the object
+static void primitive_add_ro_slot(XY* xy) {
+  xy_assert(xy->mX.size() >= 3, XYError::STACK_UNDERFLOW);
+
+  XYSymbol* name(dynamic_cast<XYSymbol*>(xy->mX.back()));
+  xy_assert(name, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYObject* value(xy->mX.back());
+  xy_assert(value, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYObject* object(xy->mX.back());
+  xy_assert(object, XYError::TYPE);
+  xy->mX.pop_back();
+
+  object->addSlot(name->mValue, value, true);
+  xy->mX.push_back(object);
+}
+
 // add-method add-method [X^object^args^method^name Y] -> [X^object Y]
 // Adds a method that takes arguments to the object w
 static void primitive_add_method(XY* xy) {
@@ -2515,6 +2536,7 @@ XY::XY(boost::asio::io_service& service) :
   // when the system settles down.
   mP["copy"] = new XYPrimitive("copy", primitive_copy);
   mP["add-slot"] = new XYPrimitive("add-slot", primitive_add_slot);
+  mP["add-ro-slot"] = new XYPrimitive("add-ro-slot", primitive_add_ro_slot);
   mP["add-method"] = new XYPrimitive("add-method", primitive_add_method);
   mP["get-slot-value"] = new XYPrimitive("get-slot-value", primitive_get_slot_value);
   mP["set-slot-value"] = new XYPrimitive("set-slot-value", primitive_set_slot_value);
