@@ -113,7 +113,11 @@ Evaluate cf code for a particular user.
 object copy
 [][ 
   find-thread.thread-join 
-  to-string 2 sdrop dup. count 2 - stake 
+  dup.count 0 = [
+    drop."Stack empty."
+  ] [
+    to-string 2 sdrop dup. count 2 - stake 
+  ] if
 ] eval add-method
 [][
   ircbot.clients;.
