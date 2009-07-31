@@ -133,7 +133,7 @@ static void primitive_spawn(XY* xy) {
   thread->spawn();
 }
 
-// thread-resume [X^[...]^thread Y] -> [X Y]
+// thread-resume [X^[...]^thread Y] -> [X^thread Y]
 static void primitive_thread_resume(XY* xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
   XYThread* thread(dynamic_cast<XYThread*>(xy->mX.back()));
@@ -148,6 +148,7 @@ static void primitive_thread_resume(XY* xy) {
     thread->mXY->mY.push_front(y->at(n-i-1));
 
   thread->spawn();
+  xy->mX.push_back(thread);
 }
 
 // thread-stacks [X^thread Y] -> [X^stack^queue Y]
