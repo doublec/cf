@@ -1241,12 +1241,28 @@ static void primitive_unquote(XY* xy) {
 	// it up in the current frame.
 	assert(xy->mFrame);
 	set<XYObject*> circular;
-	XYSlot* slot = xy->mFrame->lookup(symbol->mValue, circular, 0);
+	XYObject* context = 0;
+	XYSlot* slot = xy->mFrame->lookup(symbol->mValue, circular, &context);
 	if (slot) {
 	  xy_assert(slot->mMethod, XYError::INVALID_SLOT_TYPE);
-	  xy->mX.push_back(xy->mFrame);
-	  xy->mX.push_back(slot->mMethod);
-	  primitive_unquote(xy);
+	  xy_assert(context, XYError::INVALID_SLOT_TYPE);
+
+	  // Use the frame for the object here if we are getting data from
+	  // the frame. Otherwise pass the receiver as 'self' so that calls
+	  // to self from object methods actually get self and not the frame.
+	  if (context == xy->mFrame) {
+	    xy->mX.push_back(xy->mFrame);
+	    xy->mX.push_back(slot->mMethod);
+	    primitive_unquote(xy);
+	  }
+	  else {
+	    XYSlot* selfSlot = xy->mFrame->getSlot("self");
+	    xy_assert(selfSlot, XYError::INVALID_SLOT_TYPE);
+	    xy_assert(selfSlot->mValue, XYError::INVALID_SLOT_TYPE);
+	    xy->mX.push_back(selfSlot->mValue);
+	    xy->mX.push_back(slot->mMethod);
+	    primitive_unquote(xy);	    	    
+	  }
 	}
 	else {
 	  // Return the symbol itself if not in the environment
@@ -2187,15 +2203,15 @@ static void primitive_set_slot_value(XY* xy) {
 // the current frame, and running the code.
 static void primitive_call_method(XY* xy) {
   xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
-
+  
   XYObject* method(xy->mX.back());
   xy_assert(method, XYError::TYPE);
   xy->mX.pop_back();
-
+  
   XYObject* object(xy->mX.back());
   xy_assert(object, XYError::TYPE);
   xy->mX.pop_back();
-
+  
   XYObject* frame = method->copy();
   frame->addSlot("self*", object);
 
@@ -2205,7 +2221,8 @@ static void primitive_call_method(XY* xy) {
   xy_assert(args, XYError::TYPE);
 
 #if 0
-  // DEBUG
+// DEBUG
+//xy->print();
   cout << "call-method " << xy->mY.size();
   if (xy->mY.size() >= 2) {
     XYSymbol* x = dynamic_cast<XYSymbol*>(xy->mY[1]);

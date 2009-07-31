@@ -212,4 +212,22 @@ Testing calling methods with args
 >   foo lookup.
 > ] test.
 
+Test that implicit calls propogate 'self' correcty.
+
+\begin{code}
+[ 1 1 1 1 ] [
+object copy
+[][ abar. ] afoo add-method
+[][ self. ] abar add-method
+object copy 
+  [][self.] abaz add-method 
+  [][afoo.] aboz add-method 
+  parent* add-slot
+dup. dup. abar;. = swap.
+dup. dup. afoo;. = swap.
+dup. dup. abaz;. = swap.
+dup. aboz;. = swap.
+] test.
+\end{code}
+
 > "Test run completed\n" write
