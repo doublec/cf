@@ -172,7 +172,7 @@ Get all responses, filter for the messages we want
 \begin{code}
 [][
   bot-responses.[
-    self.wanted-messages;.
+    wanted-messages.
   ]map.[]filter.
 ] messages-to-eval add-method
 \end{code}
