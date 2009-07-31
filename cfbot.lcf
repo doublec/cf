@@ -112,10 +112,23 @@ Evaluate cf code for a particular user.
 \begin{code}
 object copy
 [][ 
-  request.tokenize parse 'gc,[[]]` timelimit;
-  make-limited-thread spawn thread-join 
+  find-thread.thread-join 
   to-string 2 sdrop dup. count 2 - stake 
 ] eval add-method
+[][
+  ircbot.clients;.
+  response.from;.
+  has-slot? [
+    request.tokenize parse 'gc,
+    ircbot.clients;.response.from;.to-symbol ;.
+    thread-resume
+  ] [
+    request.tokenize parse 'gc,[[]]` timelimit;
+    make-limited-thread 
+    ircbot.clients;.over.response.from;.to-symbol add-ro-slot
+    drop. spawn
+  ] if
+] find-thread add-method
 request-trait set
 \end{code}
 
@@ -178,6 +191,7 @@ Get all responses, filter for the messages we want
       request-trait; parent* add-ro-slot
       over. response add-ro-slot
       swap. wanted-messages. request add-ro-slot
+      self. ircbot add-ro-slot
   ]map.[request;.]filter.
 ] messages-to-eval add-method
 \end{code}
