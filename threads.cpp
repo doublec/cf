@@ -133,6 +133,23 @@ static void primitive_spawn(XY* xy) {
   thread->spawn();
 }
 
+// thread-resume [X^[...]^thread Y] -> [X Y]
+static void primitive_thread_resume(XY* xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
+  XYThread* thread(dynamic_cast<XYThread*>(xy->mX.back()));
+  xy_assert(thread, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYSequence* y(dynamic_cast<XYSequence*>(xy->mX.back()));
+  xy_assert(y, XYError::TYPE);
+  
+  int n = y->size();
+  for (int i=0; i < n; ++i)
+    thread->mXY->mY.push_front(y->at(n-i-1));
+
+  thread->spawn();
+}
+
 // thread-stacks [X^thread Y] -> [X^stack^queue Y]
 static void primitive_thread_stacks(XY* xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
@@ -173,6 +190,7 @@ void install_thread_primitives(XY* xy) {
   xy->mP["make-thread"] = new XYPrimitive("make-thread", primitive_make_thread);
   xy->mP["thread-stacks"] = new XYPrimitive("thread-stacks", primitive_thread_stacks);
   xy->mP["thread-join"] = new XYPrimitive("thread-join", primitive_thread_join);
+  xy->mP["thread-resume"] = new XYPrimitive("thread-resume", primitive_thread_resume);
   xy->mP["spawn"] = new XYPrimitive("spawn", primitive_spawn);
 }
 
