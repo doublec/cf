@@ -32,8 +32,13 @@ public:
   void readln(XY* xy);
   void handleReadln(XY* xy, boost::system::error_code const& err);
 
-  void close();
+  // Reads n characters from the socket. This
+  // is done asynchronously. The XY thread is stopped and
+  // resumed in 'handleReadn' when it completes.
+  void readn(XY* xy, unsigned int n);
+  void handleReadn(XY* xy, unsigned int n, boost::system::error_code const& err);
 
+  void close();
 
   virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
   virtual void eval1(XY* xy);
@@ -118,6 +123,44 @@ void XYSocket::handleReadln(XY* xy, boost::system::error_code const& err) {
       result = result.substr(0, result.size()-1);
     
     xy->mX.push_back(new XYString(result));
+    xy->mService.post(bind(&XY::evalHandler, xy));
+  }
+  else if (err != boost::asio::error::eof) {
+    cout << "Socket error: " << err << endl;
+  }
+}
+
+void XYSocket::readn(XY* xy, unsigned int n) {
+  GarbageCollector::GC.addRoot(this);
+  GarbageCollector::GC.addRoot(xy);
+  if (n <= mResponse.size()) 
+    handleReadn(xy, n, boost::system::error_code());
+  else {      
+    boost::asio::async_read(mSocket, 
+			    mResponse,
+			    boost::asio::transfer_at_least(n-mResponse.size()),
+			    boost::bind(&XYSocket::handleReadn, 
+					this,
+					xy,
+					n,
+					boost::asio::placeholders::error));
+  }
+}
+
+void XYSocket::handleReadn(XY* xy, unsigned int n, boost::system::error_code const& err) {
+  GarbageCollector::GC.removeRoot(xy);
+  GarbageCollector::GC.removeRoot(this);
+
+  if (!err) {
+    char* buffer = new char[n+1];
+    assert(buffer);
+    buffer[n] = '\0';
+
+    istream stream(&mResponse);
+    stream.read(buffer, n);
+    
+    xy->mX.push_back(new XYString(string(buffer)));
+    delete[] buffer;
     xy->mService.post(bind(&XY::evalHandler, xy));
   }
   else if (err != boost::asio::error::eof) {
@@ -272,6 +315,21 @@ static void primitive_socket_readln(XY* xy) {
   throw XYError(xy, XYError::WAITING_FOR_ASYNC_EVENT);
 }
 
+// socket-readn [X^n^socket Y] -> [X^string Y]
+static void primitive_socket_readn(XY* xy) {
+  xy_assert(xy->mX.size() >= 2, XYError::STACK_UNDERFLOW);
+  XYSocket* socket(dynamic_cast<XYSocket*>(xy->mX.back()));
+  xy_assert(socket, XYError::TYPE);
+  xy->mX.pop_back();
+
+  XYNumber* n(dynamic_cast<XYNumber*>(xy->mX.back()));
+  xy_assert(n, XYError::TYPE);
+  xy->mX.pop_back();
+
+  socket->readn(xy, n->as_uint());
+  throw XYError(xy, XYError::WAITING_FOR_ASYNC_EVENT);
+}
+
 // line-channel [X^socket Y] -> [X^channel Y]
 static void primitive_line_channel(XY* xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
@@ -344,6 +402,7 @@ void install_socket_primitives(XY* xy) {
   xy->mP["socket"] = new XYPrimitive("socket", primitive_socket);
   xy->mP["socket-writeln"] = new XYPrimitive("socket-writeln", primitive_socket_writeln);
   xy->mP["socket-readln"] = new XYPrimitive("socket-readln", primitive_socket_readln);
+  xy->mP["socket-readn"] = new XYPrimitive("socket-readn", primitive_socket_readn);
   xy->mP["socket-close"] = new XYPrimitive("socket-close", primitive_socket_close);
   xy->mP["line-channel"] = new XYPrimitive("line-channel", primitive_line_channel);
   xy->mP["line-channel-get"] = new XYPrimitive("line-channel-get", primitive_line_channel_get);
