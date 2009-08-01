@@ -17,6 +17,7 @@ class XYSocket : public XYObject {
 public:
   boost::asio::io_service& mService;
   tcp::socket mSocket;
+  boost::asio::streambuf mResponse;
 
 public:
   XYSocket(boost::asio::io_service& service);
@@ -24,7 +25,15 @@ public:
   void connect(string const& host, std::string const& port);
   void writeln(XYString* seq);
   void writeln(XYSequence* seq);
+
+  // Reads a line terminated with \r\n from the socket. This
+  // is done asynchronously. The XY thread is stopped and
+  // resumed in 'handleReadln' when a line is retrieved.
+  void readln(XY* xy);
+  void handleReadln(XY* xy, boost::system::error_code const& err);
+
   void close();
+
 
   virtual void print(std::ostringstream& stream, CircularSet& seen, bool parse) const;
   virtual void eval1(XY* xy);
@@ -83,6 +92,37 @@ void XYSocket::writeln(XYSequence* seq) {
   }
   request_stream << "\r\n";
   boost::asio::write(mSocket, request);
+}
+
+void XYSocket::readln(XY* xy) {
+  GarbageCollector::GC.addRoot(this);
+  GarbageCollector::GC.addRoot(xy);
+  boost::asio::async_read_until(mSocket, 
+				mResponse,
+				"\r\n",
+				boost::bind(&XYSocket::handleReadln, 
+					    this,
+					    xy,
+					    boost::asio::placeholders::error));
+ }
+
+void XYSocket::handleReadln(XY* xy, boost::system::error_code const& err) {
+  GarbageCollector::GC.removeRoot(xy);
+  GarbageCollector::GC.removeRoot(this);
+
+  if (!err) {
+    istream stream(&mResponse);
+    string result;
+    std::getline(stream, result);
+    if (result[result.size()-1] == 13)
+      result = result.substr(0, result.size()-1);
+    
+    xy->mX.push_back(new XYString(result));
+    xy->mService.post(bind(&XY::evalHandler, xy));
+  }
+  else if (err != boost::asio::error::eof) {
+    cout << "Socket error: " << err << endl;
+  }
 }
 
 void XYSocket::close() {
@@ -221,6 +261,17 @@ static void primitive_socket_writeln(XY* xy) {
     socket->writeln(seq);
 }
 
+// socket-readln [X^socket Y] -> [X^string Y]
+static void primitive_socket_readln(XY* xy) {
+  xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
+  XYSocket* socket(dynamic_cast<XYSocket*>(xy->mX.back()));
+  xy_assert(socket, XYError::TYPE);
+  xy->mX.pop_back();
+
+  socket->readln(xy);
+  throw XYError(xy, XYError::WAITING_FOR_ASYNC_EVENT);
+}
+
 // line-channel [X^socket Y] -> [X^channel Y]
 static void primitive_line_channel(XY* xy) {
   xy_assert(xy->mX.size() >= 1, XYError::STACK_UNDERFLOW);
@@ -292,6 +343,7 @@ static void primitive_line_channel_count(XY* xy) {
 void install_socket_primitives(XY* xy) {
   xy->mP["socket"] = new XYPrimitive("socket", primitive_socket);
   xy->mP["socket-writeln"] = new XYPrimitive("socket-writeln", primitive_socket_writeln);
+  xy->mP["socket-readln"] = new XYPrimitive("socket-readln", primitive_socket_readln);
   xy->mP["socket-close"] = new XYPrimitive("socket-close", primitive_socket_close);
   xy->mP["line-channel"] = new XYPrimitive("line-channel", primitive_line_channel);
   xy->mP["line-channel-get"] = new XYPrimitive("line-channel-get", primitive_line_channel_get);
