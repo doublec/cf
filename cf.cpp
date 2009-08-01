@@ -29,14 +29,16 @@ using namespace boost;
 string unescape(string s) {
   string r1 = replace_all_copy(s, "\\\"", "\"");
   string r2 = replace_all_copy(r1, "\\n", "\n");
-  return r2;
+  string r3 = replace_all_copy(r2, "\\r", "\r");
+  return r3;
 }
  
 // Given an input string, escape any special characters
 string escape(string s) {
   string r1 = replace_all_copy(s, "\"", "\\\"");
   string r2 = replace_all_copy(r1, "\n", "\\n");
-  return r2;
+  string r3 = replace_all_copy(r2, "\r", "\\r");
+  return r3;
 }
  
 // Macro to implement double dispatch operations in class
