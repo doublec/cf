@@ -530,7 +530,7 @@ unsigned int XYFloat::as_uint() const {
 }
 
 XYInteger* XYFloat::as_integer() {
-  return new XYInteger(mValue);
+  return new XYInteger(mpz_class(mValue));
 }
 
 XYFloat* XYFloat::as_float() {
@@ -2950,7 +2950,7 @@ boost::xpressive::sregex re_symbol_end() {
 // Return regex for symbols
 boost::xpressive::sregex re_symbol() {
   using namespace boost::xpressive;
-  return !range('0', '9') >> +(re_non_special()) >> *(re_symbol_end());
+  return !boost::xpressive::range('0', '9') >> +(re_non_special()) >> *(re_symbol_end());
 }
 
 // Return regex for a character in a string
