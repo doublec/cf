@@ -12,7 +12,6 @@
 #include <boost/lambda/bind.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/test/minimal.hpp>
 #include "cf.h"
 

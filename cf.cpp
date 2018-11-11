@@ -12,8 +12,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/bind.hpp>
+#include <chrono>
 #include "cf.h"
 
 // If defined, compiles as a test applicatation that tests
@@ -1904,15 +1904,10 @@ static void primitive_getline(XY* xy) {
 // Runs the number of milliseconds on the stack since
 // 1 Janary 1970.
 static void primitive_millis(XY* xy) {
-  using namespace boost::posix_time;
-  using namespace boost::gregorian;
+  auto now = std::chrono::system_clock::now();
+  auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
 
-  ptime e(microsec_clock::universal_time());
-  ptime s(date(1970,1,1));
-
-  time_duration d(e - s);
-
-  xy->mX.push_back(new XYInteger(d.total_milliseconds()));
+  xy->mX.push_back(new XYInteger(millis));
 }
 
 // enum [X^n Y] -> [X^{0..n} Y]
