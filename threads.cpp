@@ -43,7 +43,7 @@ void XYThread::spawn() {
     (*it)->start(mXY);
   }
 
-  mXY->mIOContext.post(bind(&XY::evalHandler, mXY));
+  boost::asio::post(mXY->mIOContext, bind(&XY::evalHandler, mXY));
 }
 
 void XYThread::print(std::ostringstream& stream, CircularSet&, bool) const {

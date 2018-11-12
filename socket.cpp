@@ -123,7 +123,7 @@ void XYSocket::handleReadln(XY* xy, boost::system::error_code const& err) {
       result = result.substr(0, result.size()-1);
     
     xy->mX.push_back(new XYString(result));
-    xy->mIOContext.post(bind(&XY::evalHandler, xy));
+    boost::asio::post(xy->mIOContext, bind(&XY::evalHandler, xy));
   }
   else if (err != boost::asio::error::eof) {
     cout << "Socket error: " << err << endl;
@@ -161,7 +161,7 @@ void XYSocket::handleReadn(XY* xy, unsigned int n, boost::system::error_code con
     
     xy->mX.push_back(new XYString(string(buffer)));
     delete[] buffer;
-    xy->mIOContext.post(bind(&XY::evalHandler, xy));
+    boost::asio::post(xy->mIOContext, bind(&XY::evalHandler, xy));
   }
   else if (err != boost::asio::error::eof) {
     cout << "Socket error: " << err << endl;
@@ -225,7 +225,7 @@ void XYLineChannel::handleRead(boost::system::error_code const& err) {
     mLines.push_back(new XYString(result));
     if (mWaiting.size() > 0) {
       for(XYWaitingList::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
-	(*it)->mIOContext.post(bind(&XY::evalHandler, (*it)));
+        boost::asio::post((*it)->mIOContext, bind(&XY::evalHandler, (*it)));
       }
       mWaiting.clear();
     }

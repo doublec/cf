@@ -1884,7 +1884,7 @@ static void getlineHandler(XY* xy, boost::system::error_code const& err) {
     string input;
     std::getline(stream, input);
     xy->mX.push_back(new XYString(input));
-    xy->mIOContext.post(bind(&XY::evalHandler, xy));
+    boost::asio::post(xy->mIOContext, bind(&XY::evalHandler, xy));
   }
 }
 
@@ -2633,7 +2633,7 @@ void XY::stdioHandler(boost::system::error_code const& err) {
       (*it)->start(this);
     }
 
-    mIOContext.post(bind(&XY::evalHandler, this));
+    boost::asio::post(mIOContext, bind(&XY::evalHandler, this));
   }
   else if (err != boost::asio::error::eof) {
     boost::asio::streambuf buffer;
@@ -2666,13 +2666,13 @@ void XY::evalHandler() {
       // We've completed. Inform waiting interpreters we're done.
       if (mWaiting.size() > 0) {
 	for(XYWaitingList::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
-	  (*it)->mIOContext.post(bind(&XY::evalHandler, (*it)));
+          boost::asio::post((*it)->mIOContext, bind(&XY::evalHandler, (*it)));
 	}
 	mWaiting.clear();
       }
     }
     else {
-      mIOContext.post(bind(&XY::evalHandler, this));
+      boost::asio::post(mIOContext, bind(&XY::evalHandler, this));
     }
   }
   catch(XYError& e) {
@@ -2704,7 +2704,7 @@ void XY::evalHandler() {
       // We've completed. Inform waiting interpreters we're done.
       if (!mRepl && mWaiting.size() > 0) {
 	for(XYWaitingList::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
-	  (*it)->mIOContext.post(bind(&XY::evalHandler, (*it)));
+          boost::asio::post((*it)->mIOContext, bind(&XY::evalHandler, (*it)));
 	}
 	mWaiting.clear();
       }
@@ -2714,14 +2714,14 @@ void XY::evalHandler() {
 	  (*it)->start(this);
 	}
 
-	mIOContext.post(bind(&XY::evalHandler, this));
+        boost::asio::post(mIOContext, bind(&XY::evalHandler, this));
       }
     }
   }
 }
 
 void XY::yield() {
-  mIOContext.post(bind(&XY::evalHandler, this));
+  boost::asio::post(mIOContext, bind(&XY::evalHandler, this));
   throw XYError(this, XYError::WAITING_FOR_ASYNC_EVENT);
 }
 
