@@ -391,6 +391,62 @@ This works with arguments to methods too:
   "hello" swap. print-msg;.
     => "hello"
 
+Threads
+=======
+
+A lightweight preemptive threading system is implemented in
+threads.cpp. The threads are non-native threads and all threads run
+under a single operating system native thread.
+
+The functions introduced by threads.cpp include:
+
+make-thread [X^stack^queue Y] -> [X^thread Y]
+  Expects two lists on the stack as arguments. These are the initial
+  stack and queue for the thread. A thread object is left on the stack
+  but the thread is not yet running. See the spawn function for starting
+  a created thread.
+  
+make-limited-thread [X^stack^queue^timeout_ms Y] -> [X^thread Y]
+  Like make-thread but the thread has a time limit for execution. If
+  it runs for longer than the timeout_ms passed on the stack then it
+  will throw an exception.
+
+spawn [X^thread Y] -> [X^thread Y]
+  Given a thread on the stack, moves it to the running state.
+
+thread-resume [X^[...]^thread Y] -> [X^thread Y]
+  Given a sequence on the stack, and a thread which has
+  run to completion, resume that thread with the items in
+  the sequence added to that threads Y queue - effectively
+  restarting it with new instructions but with its
+  existing stack.
+  
+thread-stacks [X^thread Y] -> [X^stack^queue Y]
+  Given a thread on the stack, pushes the current stack and queue
+  for that thread on the current stack.
+  
+thread-join [X^thread Y]->[X^stack Y]
+  Given a thread on the stack, blocks the current thread until
+  the given thread finishes running, leaving that threads resulting
+  stack on the stack of the current thread.
+
+Examples:
+
+  [] [5 fac.] make-thread spawn
+  => thread
+
+  dup. thread-join
+  => thread [ 120 ]
+
+  drop. [ 10 fac. ] swap. thread-resume
+  => thread
+
+  thread-join
+  => [ 120 3628800 ]
+
+The cfbot.lcf example uses threads and thread resumption for holding
+the stacks of computations for users interacting with the bot.
+  
 Troubleshooting
 ===============
 Error handling started of as being C++ assertions so a lot of
