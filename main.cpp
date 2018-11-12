@@ -77,7 +77,7 @@ void eval_files(XY* xy, InputIterator first, InputIterator last) {
 }
 
 int main(int argc, char* argv[]) {
-  boost::asio::io_service io;
+  boost::asio::io_context io;
 
   XY* xy(new XY(io));
   install_socket_primitives(xy);
@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
 				  "\n",
 				  bind(&XY::stdioHandler, xy, boost::asio::placeholders::error));
 
-    xy->mService.run();
+    xy->mIOContext.run();
   }
 
   return 0;

@@ -43,7 +43,7 @@ void XYThread::spawn() {
     (*it)->start(mXY);
   }
 
-  mXY->mService.post(bind(&XY::evalHandler, mXY));
+  mXY->mIOContext.post(bind(&XY::evalHandler, mXY));
 }
 
 void XYThread::print(std::ostringstream& stream, CircularSet&, bool) const {
@@ -73,7 +73,7 @@ static void primitive_make_thread(XY* xy) {
   xy_assert(stack, XYError::TYPE);
   xy->mX.pop_back();
 
-  XY* child(new XY(xy->mService));
+  XY* child(new XY(xy->mIOContext));
   stack->pushBackInto(child->mX);
 
   XYSequence::List temp;
@@ -106,7 +106,7 @@ static void primitive_make_limited_thread(XY* xy) {
   xy_assert(stack, XYError::TYPE);
   xy->mX.pop_back();
 
-  XY* child(new XY(xy->mService));
+  XY* child(new XY(xy->mIOContext));
   stack->pushBackInto(child->mX);
 
   XYSequence::List temp;

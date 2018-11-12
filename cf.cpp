@@ -1884,7 +1884,7 @@ static void getlineHandler(XY* xy, boost::system::error_code const& err) {
     string input;
     std::getline(stream, input);
     xy->mX.push_back(new XYString(input));
-    xy->mService.post(bind(&XY::evalHandler, xy));
+    xy->mIOContext.post(bind(&XY::evalHandler, xy));
   }
 }
 
@@ -2508,10 +2508,10 @@ string XYError::message() {
 }
 
 // XY
-XY::XY(boost::asio::io_service& service) :
-  mService(service),
-  mInputStream(service, ::dup(STDIN_FILENO)),
-  mOutputStream(service, ::dup(STDOUT_FILENO)),
+XY::XY(boost::asio::io_context& io) :
+  mIOContext(io),
+  mInputStream(io, ::dup(STDIN_FILENO)),
+  mOutputStream(io, ::dup(STDOUT_FILENO)),
   mFrame(0),
   mRepl(true) {
   mP["+"]   = new XYPrimitive("+", primitive_addition);
@@ -2633,7 +2633,7 @@ void XY::stdioHandler(boost::system::error_code const& err) {
       (*it)->start(this);
     }
 
-    mService.post(bind(&XY::evalHandler, this));
+    mIOContext.post(bind(&XY::evalHandler, this));
   }
   else if (err != boost::asio::error::eof) {
     boost::asio::streambuf buffer;
@@ -2642,7 +2642,7 @@ void XY::stdioHandler(boost::system::error_code const& err) {
     boost::asio::write(mOutputStream, buffer);
   }
   else {
-    mService.stop();
+    mIOContext.stop();
   }
 }
 
@@ -2666,13 +2666,13 @@ void XY::evalHandler() {
       // We've completed. Inform waiting interpreters we're done.
       if (mWaiting.size() > 0) {
 	for(XYWaitingList::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
-	  (*it)->mService.post(bind(&XY::evalHandler, (*it)));
+	  (*it)->mIOContext.post(bind(&XY::evalHandler, (*it)));
 	}
 	mWaiting.clear();
       }
     }
     else {
-      mService.post(bind(&XY::evalHandler, this));
+      mIOContext.post(bind(&XY::evalHandler, this));
     }
   }
   catch(XYError& e) {
@@ -2704,7 +2704,7 @@ void XY::evalHandler() {
       // We've completed. Inform waiting interpreters we're done.
       if (!mRepl && mWaiting.size() > 0) {
 	for(XYWaitingList::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
-	  (*it)->mService.post(bind(&XY::evalHandler, (*it)));
+	  (*it)->mIOContext.post(bind(&XY::evalHandler, (*it)));
 	}
 	mWaiting.clear();
       }
@@ -2714,14 +2714,14 @@ void XY::evalHandler() {
 	  (*it)->start(this);
 	}
 
-	mService.post(bind(&XY::evalHandler, this));
+	mIOContext.post(bind(&XY::evalHandler, this));
       }
     }
   }
 }
 
 void XY::yield() {
-  mService.post(bind(&XY::evalHandler, this));
+  mIOContext.post(bind(&XY::evalHandler, this));
   throw XYError(this, XYError::WAITING_FOR_ASYNC_EVENT);
 }
 

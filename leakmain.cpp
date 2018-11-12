@@ -81,7 +81,7 @@ void eval_files(XY* xy, InputIterator first, InputIterator last) {
 }
 
 int main(int argc, char* argv[]) {
-  boost::asio::io_service io;
+  boost::asio::io_context io;
 
   XY* xy(new XY(io));
   GarbageCollector::GC.addRoot(xy);

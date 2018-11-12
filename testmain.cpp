@@ -18,7 +18,7 @@ using namespace std;
 using namespace boost;
 using namespace boost::lambda;
 
-void testParse(boost::asio::io_service& io) 
+void testParse(boost::asio::io_context& io) 
 {
   {
     // Simple number parsing
@@ -389,7 +389,7 @@ void testParse(boost::asio::io_service& io)
 
 }
 
-void testObjects(boost::asio::io_service& io) 
+void testObjects(boost::asio::io_context& io) 
 {
   {
     XYObject* o1 = new XYObject();
@@ -428,7 +428,7 @@ void testObjects(boost::asio::io_service& io)
 }
 
 int test_main(int argc, char* argv[]) {
-  boost::asio::io_service io;
+  boost::asio::io_context io;
 
   testParse(io);
   testObjects(io);

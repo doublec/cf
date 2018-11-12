@@ -15,12 +15,12 @@ using boost::asio::ip::tcp;
 
 class XYSocket : public XYObject {
 public:
-  boost::asio::io_service& mService;
+  boost::asio::io_context& mIOContext;
   tcp::socket mSocket;
   boost::asio::streambuf mResponse;
 
 public:
-  XYSocket(boost::asio::io_service& service);
+  XYSocket(boost::asio::io_context& io);
 
   void connect(string const& host, std::string const& port);
   void writeln(XYString* seq);
@@ -67,14 +67,14 @@ public:
 };
 
 // XYSocket
-XYSocket::XYSocket(boost::asio::io_service& service) :
-  mService(service),
-  mSocket(service)
+XYSocket::XYSocket(boost::asio::io_context& io) :
+  mIOContext(io),
+  mSocket(io)
 {
 }
 
 void XYSocket::connect(string const& host, std::string const& port) {
-  tcp::resolver resolver(mService);
+  tcp::resolver resolver(mIOContext);
   tcp::resolver::query query(tcp::v4(), host, port);
   tcp::resolver::iterator iterator = resolver.resolve(query);
   mSocket.connect(*iterator);
@@ -123,7 +123,7 @@ void XYSocket::handleReadln(XY* xy, boost::system::error_code const& err) {
       result = result.substr(0, result.size()-1);
     
     xy->mX.push_back(new XYString(result));
-    xy->mService.post(bind(&XY::evalHandler, xy));
+    xy->mIOContext.post(bind(&XY::evalHandler, xy));
   }
   else if (err != boost::asio::error::eof) {
     cout << "Socket error: " << err << endl;
@@ -161,7 +161,7 @@ void XYSocket::handleReadn(XY* xy, unsigned int n, boost::system::error_code con
     
     xy->mX.push_back(new XYString(string(buffer)));
     delete[] buffer;
-    xy->mService.post(bind(&XY::evalHandler, xy));
+    xy->mIOContext.post(bind(&XY::evalHandler, xy));
   }
   else if (err != boost::asio::error::eof) {
     cout << "Socket error: " << err << endl;
@@ -225,7 +225,7 @@ void XYLineChannel::handleRead(boost::system::error_code const& err) {
     mLines.push_back(new XYString(result));
     if (mWaiting.size() > 0) {
       for(XYWaitingList::iterator it = mWaiting.begin(); it != mWaiting.end(); ++it ) {
-	(*it)->mService.post(bind(&XY::evalHandler, (*it)));
+	(*it)->mIOContext.post(bind(&XY::evalHandler, (*it)));
       }
       mWaiting.clear();
     }
@@ -271,7 +271,7 @@ static void primitive_socket(XY* xy) {
   xy_assert(host, XYError::TYPE);
   xy->mX.pop_back();
 
-  XYSocket* socket(new XYSocket(xy->mService));
+  XYSocket* socket(new XYSocket(xy->mIOContext));
   socket->connect(host->mValue, port->toString(false));
   xy->mX.push_back(socket);
 }

@@ -477,11 +477,11 @@ typedef std::vector<XY*> XYWaitingList;
 // the interpreter.
 class XY : public GCObject {
   public:
-    // io service for handling asynchronous events
-    // The lifetime of the service is controlled by
+    // io context for handling asynchronous events
+    // The lifetime of the context is controlled by
     // the owner of the XY object and should generally
     // be around for the entire lifetime of the running program.
-    boost::asio::io_service& mService;
+    boost::asio::io_context& mIOContext;
 
     // Input stream, allow asyncronous reading of data from stdin.
     boost::asio::posix::stream_descriptor mInputStream;
@@ -525,7 +525,7 @@ class XY : public GCObject {
   public:
     // Constructor installs any primitives into the
     // environment.
-    XY(boost::asio::io_service& service);
+    XY(boost::asio::io_context& io);
     virtual ~XY() { }
 
     virtual void markChildren();
