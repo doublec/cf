@@ -9,6 +9,7 @@
 #include <vector>
 #include <deque>
 #include <sstream>
+#include <chrono>
 #include <boost/xpressive/xpressive.hpp>
 #include <boost/asio.hpp>
 #include <gmpxx.h>
@@ -422,7 +423,7 @@ class XYLimit : public GCObject {
 class XYTimeLimit : public XYLimit {
  public:
   unsigned int mMilliseconds;
-  unsigned int mStart;
+  std::chrono::time_point<std::chrono::system_clock> mStart;
 
  public:
   XYTimeLimit(unsigned int milliseconds);

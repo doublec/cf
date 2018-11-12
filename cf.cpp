@@ -11,7 +11,6 @@
 #include <set>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/bind.hpp>
 #include <chrono>
 #include "cf.h"
@@ -2450,15 +2449,12 @@ XYTimeLimit::XYTimeLimit(unsigned int milliseconds) :
 }
 
 void XYTimeLimit::start(XY* xy) {
-  using namespace boost::posix_time;
-  
-  mStart = (microsec_clock::universal_time() - ptime(min_date_time)).total_milliseconds();
+  mStart = std::chrono::system_clock::now();
 }
 
 bool XYTimeLimit::check(XY* xy) {
-  using namespace boost::posix_time;
-  unsigned int now = (microsec_clock::universal_time() - ptime(min_date_time)).total_milliseconds();
-  return (now - mStart >= mMilliseconds);
+  auto now = std::chrono::system_clock::now();
+  return std::chrono::duration_cast<std::chrono::milliseconds>(now - mStart).count() >= mMilliseconds;
 }
 
 // XYError
